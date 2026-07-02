@@ -95,8 +95,7 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
   if (!upsertError) {
     // Fire acute detection asynchronously (non-blocking)
     fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
-    // Fire entity extraction asynchronously (non-blocking)
-    fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
+    // Bypassed Chronic Layer: fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
     return;
   }
 
@@ -143,8 +142,7 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
 
   // Fire acute detection asynchronously (non-blocking)
   fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
-  // Fire entity extraction asynchronously (non-blocking)
-  fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
+  // Bypassed Chronic Layer: fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
 }
 
 /**

@@ -217,8 +217,9 @@ export async function runPlatformSyncDirect(
     }
 
     // L-FINAL-2: trigger async cognitive extraction after successful direct sync
-    const extractBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    triggerCognitiveExtraction(extractBaseUrl, userId);
+    // Bypassed Chronic Layer
+    // const extractBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    // triggerCognitiveExtraction(extractBaseUrl, userId);
 
     return {
       platform,
