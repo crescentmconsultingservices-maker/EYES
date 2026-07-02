@@ -2,282 +2,553 @@
   {
     "text": "I'll have the revised pitch deck on your desk by tomorrow morning.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "DELIVERABLE", "text": "revised pitch deck"},
-      {"label": "DEADLINE", "text": "tomorrow morning"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "DELIVERABLE",
+        "text": "revised pitch deck"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "tomorrow morning"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Commitment", "tail": "revised pitch deck on your desk by tomorrow morning"}
+      {
+        "head": "I",
+        "type": "Commitment",
+        "tail": "revised pitch deck"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "Let me take care of the server migration this weekend.",
     "entities": [
-      {"label": "SUBJECT", "text": "me"},
-      {"label": "ACTION", "text": "take care of the server migration"},
-      {"label": "DEADLINE", "text": "this weekend"}
+      {
+        "label": "SUBJECT",
+        "text": "me"
+      },
+      {
+        "label": "ACTION",
+        "text": "take care of the server migration"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "this weekend"
+      }
     ],
     "relations": [
-      {"head": "me", "type": "Commitment", "tail": "take care of the server migration this weekend"}
+      {
+        "head": "me",
+        "type": "Commitment",
+        "tail": "take care of the server migration"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "Consider the UI bugs fixed by EOD.",
     "entities": [
-      {"label": "SUBJECT", "text": "UI bugs"},
-      {"label": "ACTION", "text": "fixed"},
-      {"label": "DEADLINE", "text": "EOD"}
+      {
+        "label": "SUBJECT",
+        "text": "UI bugs"
+      },
+      {
+        "label": "ACTION",
+        "text": "fixed"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "EOD"
+      }
     ],
     "relations": [
-      {"head": "UI bugs", "type": "Commitment", "tail": "fixed by EOD"}
+      {
+        "head": "UI bugs",
+        "type": "Commitment",
+        "tail": "fixed"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We're still waiting for the green light from the legal department.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "BOTTLENECK", "text": "green light from the legal department"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "BOTTLENECK",
+        "text": "green light from the legal department"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Delayed_On", "tail": "green light from the legal department"}
+      {
+        "head": "We",
+        "type": "Blocked_By",
+        "tail": "green light from the legal department"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "The vendor hasn't replied to our integration request yet.",
     "entities": [
-      {"label": "SUBJECT", "text": "The vendor"},
-      {"label": "ACTION", "text": "replied to our integration request"}
+      {
+        "label": "SUBJECT",
+        "text": "The vendor"
+      },
+      {
+        "label": "ACTION",
+        "text": "replied to our integration request"
+      }
     ],
     "relations": [
-      {"head": "The vendor", "type": "Delayed_On", "tail": "replied to our integration request"}
+      {
+        "head": "The vendor",
+        "type": "Blocked_By",
+        "tail": "replied to our integration request"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "Let's pass on the Tailwind rewrite for now.",
     "entities": [
-      {"label": "SUBJECT", "text": "Let's"},
-      {"label": "EVENT", "text": "Tailwind rewrite"}
+      {
+        "label": "SUBJECT",
+        "text": "Let's"
+      },
+      {
+        "label": "EVENT",
+        "text": "Tailwind rewrite"
+      }
     ],
     "relations": [
-      {"head": "Let's", "type": "Decided_Against", "tail": "Tailwind rewrite"}
+      {
+        "head": "Let's",
+        "type": "Decided_Against",
+        "tail": "Tailwind rewrite"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We're going to go in a different direction with the marketing agency.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "TARGET", "text": "marketing agency"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "TARGET",
+        "text": "marketing agency"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Decided_Against", "tail": "marketing agency"}
+      {
+        "head": "We",
+        "type": "Decided_Against",
+        "tail": "marketing agency"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I can definitely handle the client onboarding call on Tuesday.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "ACTION", "text": "handle the client onboarding call"},
-      {"label": "DEADLINE", "text": "Tuesday"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "ACTION",
+        "text": "handle the client onboarding call"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "Tuesday"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Commitment", "tail": "handle the client onboarding call on Tuesday"}
+      {
+        "head": "I",
+        "type": "Commitment",
+        "tail": "handle the client onboarding call"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "It looks like the API integration is going to take longer than expected.",
     "entities": [
-      {"label": "SUBJECT", "text": "API integration"},
-      {"label": "STATE", "text": "take longer than expected"}
+      {
+        "label": "SUBJECT",
+        "text": "API integration"
+      },
+      {
+        "label": "STATE",
+        "text": "take longer than expected"
+      }
     ],
     "relations": [
-      {"head": "API integration", "type": "Delayed_On", "tail": "take longer than expected"}
+      {
+        "head": "API integration",
+        "type": "Delayed_On",
+        "tail": "take longer than expected"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I don't think the enterprise tier pricing makes sense for us right now.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "TARGET", "text": "enterprise tier pricing"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "TARGET",
+        "text": "enterprise tier pricing"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Decided_Against", "tail": "enterprise tier pricing"}
+      {
+        "head": "I",
+        "type": "Decided_Against",
+        "tail": "enterprise tier pricing"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "Leave the database schema updates to me.",
     "entities": [
-      {"label": "SUBJECT", "text": "me"},
-      {"label": "ACTION", "text": "database schema updates"}
+      {
+        "label": "SUBJECT",
+        "text": "me"
+      },
+      {
+        "label": "ACTION",
+        "text": "database schema updates"
+      }
     ],
     "relations": [
-      {"head": "me", "type": "Commitment", "tail": "database schema updates"}
+      {
+        "head": "me",
+        "type": "Commitment",
+        "tail": "database schema updates"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We are stuck because AWS support hasn't escalated the ticket.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "BOTTLENECK", "text": "AWS support hasn't escalated the ticket"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "BOTTLENECK",
+        "text": "AWS support hasn't escalated the ticket"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Delayed_On", "tail": "AWS support hasn't escalated the ticket"}
+      {
+        "head": "We",
+        "type": "Blocked_By",
+        "tail": "AWS support hasn't escalated the ticket"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We'll scrap the V1 architecture and start fresh.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "TARGET", "text": "V1 architecture"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "TARGET",
+        "text": "V1 architecture"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Decided_Against", "tail": "V1 architecture"}
+      {
+        "head": "We",
+        "type": "Decided_Against",
+        "tail": "V1 architecture"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I'll make sure the investor update goes out tonight.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "DELIVERABLE", "text": "investor update"},
-      {"label": "DEADLINE", "text": "tonight"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "DELIVERABLE",
+        "text": "investor update"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "tonight"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Commitment", "tail": "investor update goes out tonight"}
+      {
+        "head": "I",
+        "type": "Commitment",
+        "tail": "investor update"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "The design team is still pushing back on the new layout.",
     "entities": [
-      {"label": "SUBJECT", "text": "new layout"},
-      {"label": "BOTTLENECK", "text": "design team is still pushing back"}
+      {
+        "label": "SUBJECT",
+        "text": "new layout"
+      },
+      {
+        "label": "BOTTLENECK",
+        "text": "design team is still pushing back"
+      }
     ],
     "relations": [
-      {"head": "new layout", "type": "Delayed_On", "tail": "design team is still pushing back"}
+      {
+        "head": "new layout",
+        "type": "Blocked_By",
+        "tail": "design team is still pushing back"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I'm dropping the Vue.js idea, it's too much overhead.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "TARGET", "text": "Vue.js idea"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "TARGET",
+        "text": "Vue.js idea"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Decided_Against", "tail": "Vue.js idea"}
+      {
+        "head": "I",
+        "type": "Decided_Against",
+        "tail": "Vue.js idea"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "You can count on me to finish the Q3 projections.",
     "entities": [
-      {"label": "SUBJECT", "text": "me"},
-      {"label": "ACTION", "text": "finish the Q3 projections"}
+      {
+        "label": "SUBJECT",
+        "text": "me"
+      },
+      {
+        "label": "ACTION",
+        "text": "finish the Q3 projections"
+      }
     ],
     "relations": [
-      {"head": "me", "type": "Commitment", "tail": "finish the Q3 projections"}
+      {
+        "head": "me",
+        "type": "Commitment",
+        "tail": "finish the Q3 projections"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We're blocked by the Stripe verification process.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "BOTTLENECK", "text": "Stripe verification process"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "BOTTLENECK",
+        "text": "Stripe verification process"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Delayed_On", "tail": "Stripe verification process"}
+      {
+        "head": "We",
+        "type": "Blocked_By",
+        "tail": "Stripe verification process"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "Let's pull the plug on the ad campaign, it's burning cash.",
     "entities": [
-      {"label": "SUBJECT", "text": "Let's"},
-      {"label": "TARGET", "text": "ad campaign"}
+      {
+        "label": "SUBJECT",
+        "text": "Let's"
+      },
+      {
+        "label": "TARGET",
+        "text": "ad campaign"
+      }
     ],
     "relations": [
-      {"head": "Let's", "type": "Decided_Against", "tail": "ad campaign"}
+      {
+        "head": "Let's",
+        "type": "Decided_Against",
+        "tail": "ad campaign"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I'll push the code to staging right after lunch.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "ACTION", "text": "push the code to staging"},
-      {"label": "DEADLINE", "text": "right after lunch"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "ACTION",
+        "text": "push the code to staging"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "right after lunch"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Commitment", "tail": "push the code to staging right after lunch"}
+      {
+        "head": "I",
+        "type": "Commitment",
+        "tail": "push the code to staging"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "The compliance audit is holding everything up.",
     "entities": [
-      {"label": "SUBJECT", "text": "everything"},
-      {"label": "BOTTLENECK", "text": "compliance audit"}
+      {
+        "label": "SUBJECT",
+        "text": "everything"
+      },
+      {
+        "label": "BOTTLENECK",
+        "text": "compliance audit"
+      }
     ],
     "relations": [
-      {"head": "everything", "type": "Delayed_On", "tail": "compliance audit"}
+      {
+        "head": "everything",
+        "type": "Blocked_By",
+        "tail": "compliance audit"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We've opted not to renew the enterprise license.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "TARGET", "text": "enterprise license"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "TARGET",
+        "text": "enterprise license"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Decided_Against", "tail": "enterprise license"}
+      {
+        "head": "We",
+        "type": "Decided_Against",
+        "tail": "enterprise license"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I'll jump on that bug as soon as my meeting ends.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "ACTION", "text": "jump on that bug"},
-      {"label": "DEADLINE", "text": "as soon as my meeting ends"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "ACTION",
+        "text": "jump on that bug"
+      },
+      {
+        "label": "DEADLINE",
+        "text": "as soon as my meeting ends"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Commitment", "tail": "jump on that bug as soon as my meeting ends"}
+      {
+        "head": "I",
+        "type": "Commitment",
+        "tail": "jump on that bug"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "We're spinning our wheels waiting for the client's feedback.",
     "entities": [
-      {"label": "SUBJECT", "text": "We"},
-      {"label": "BOTTLENECK", "text": "client's feedback"}
+      {
+        "label": "SUBJECT",
+        "text": "We"
+      },
+      {
+        "label": "BOTTLENECK",
+        "text": "client's feedback"
+      }
     ],
     "relations": [
-      {"head": "We", "type": "Delayed_On", "tail": "client's feedback"}
+      {
+        "head": "We",
+        "type": "Blocked_By",
+        "tail": "client's feedback"
+      }
     ],
     "is_implicit": true
   },
   {
     "text": "I'm killing the new feature branch, it's too buggy.",
     "entities": [
-      {"label": "SUBJECT", "text": "I"},
-      {"label": "TARGET", "text": "new feature branch"}
+      {
+        "label": "SUBJECT",
+        "text": "I"
+      },
+      {
+        "label": "TARGET",
+        "text": "new feature branch"
+      }
     ],
     "relations": [
-      {"head": "I", "type": "Decided_Against", "tail": "new feature branch"}
+      {
+        "head": "I",
+        "type": "Decided_Against",
+        "tail": "new feature branch"
+      }
     ],
     "is_implicit": true
   }

@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 from gliner import GLiNER
 import os
 import json
-from litellm import completion
+from litellm import acompletion
 from supabase import create_client, Client
 from datetime import datetime
 
@@ -131,7 +131,10 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
 
             if not relations and is_potentially_implicit:
                 try:
-                    entity_list_str = ", ".join([f"[{e['label']}] {e['text']}" for e in entities])
+                    # Only include entities that exist within the truncated text to prevent hallucinations
+                    valid_entities = [e for e in entities if e.get('end', 0) <= 2000]
+                    entity_list_str = ", ".join([f"[{e['label']}] {e['text']}" for e in valid_entities])
+                    
                     system_prompt = (
                         "You are a knowledge graph relationship extractor. "
                         "Extract relationships between the provided entities based on the text. "
@@ -144,7 +147,7 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
                     user_prompt = f"Text:\n{request.text[:2000]}\n\nEntities Found:\n{entity_list_str}"
 
                     # Route through the EYES LLM Gateway as defined in .env.local
-                    response = completion(
+                    response = await acompletion(
                         model="gemini/gemini-1.5-flash-8b", # Switched to Flash-Lite for cost optimization (Phase 3)
                         api_base=os.environ.get("LITELLM_BASE_URL"),
                         api_key=os.environ.get("LITELLM_KEY"),

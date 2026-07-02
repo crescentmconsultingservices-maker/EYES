@@ -21,17 +21,13 @@ if SECRET:
 def run_real_data_test():
     print("--- Fetching Real User Data from Supabase ---")
     
-    # 1. Get user_id for godfredabhishek123@gmail.com
-    user_resp = supabase.table('user_profiles').select('id').eq('email', 'godfredabhishek123@gmail.com').execute()
-    if not user_resp.data:
-        print("User godfredabhishek123@gmail.com not found in user_profiles.")
-        return
-        
-    user_id = user_resp.data[0]['id']
-    print(f"Found User ID: {user_id}")
+    # 1. Directly use the Auth User ID for godfred.abhishek@gmail.com
+    # (The memories table uses the Auth User ID directly, not the Profile ID)
+    user_id = '043eff80-871a-4b89-a3fa-b65dbe8717bb'
+    print(f"Using Auth User ID: {user_id}")
     
     # 2. Fetch memories from DB for this user
-    response = supabase.table('memories').select('content').eq('user_id', user_id).neq('content', 'No description provided.').limit(20).execute()
+    response = supabase.table('memories').select('content').eq('user_id', user_id).neq('content', 'No description provided.').execute()
     
     memories = response.data
     if not memories:
@@ -63,15 +59,15 @@ def run_real_data_test():
                     label = rel.get("label")
                     if label in edges_found:
                         edges_found[label] += 1
-                        print(f"    \u2705 MOAT EDGE: [{rel.get('head')}] --({label})--> [{rel.get('tail')}]")
+                        print(f"    [SUCCESS] MOAT EDGE: [{rel.get('head')}] --({label})--> [{rel.get('tail')}]")
                     else:
                         edges_found["other"] += 1
-                        print(f"    \u25b6 Other Edge: [{rel.get('head')}] --({label})--> [{rel.get('tail')}]")
+                        print(f"    [OTHER] Other Edge: [{rel.get('head')}] --({label})--> [{rel.get('tail')}]")
             else:
-                print(f"[{i+1}/{total}] \u274c Engine Error {res.status_code}")
+                print(f"[{i+1}/{total}] [ERROR] Engine Error {res.status_code}")
                 
         except Exception as e:
-            print(f"[{i+1}/{total}] \u274c Network Error")
+            print(f"[{i+1}/{total}] [ERROR] Network Error")
             
     end_time = time.time()
     print("\n--- Real Data Volume Test Summary ---")
