@@ -124,7 +124,12 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
                 print(f"[Relationship Engine] Local RE Error: {local_err}. Falling back to LLM.")
 
             # 2B. Fallback to LiteLLM (Gemini) only if local extraction yielded nothing
-            if not relations:
+            # Add a cheap keyword filter for implicit speech acts to prevent hitting the LLM for every single record
+            implicit_keywords = ["i'll", "ill", "tomorrow", "delayed", "weekend", "we'll", "will", "promise", "taking care", "decided", "won't", "blocking", "blocked", "waiting"]
+            text_lower = request.text.lower()
+            is_potentially_implicit = any(kw in text_lower for kw in implicit_keywords)
+
+            if not relations and is_potentially_implicit:
                 try:
                     entity_list_str = ", ".join([f"[{e['label']}] {e['text']}" for e in entities])
                     system_prompt = (
@@ -140,7 +145,7 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
 
                     # Route through the EYES LLM Gateway as defined in .env.local
                     response = completion(
-                        model="openai/auto-extract",
+                        model="gemini/gemini-1.5-flash-8b", # Switched to Flash-Lite for cost optimization (Phase 3)
                         api_base=os.environ.get("LITELLM_BASE_URL"),
                         api_key=os.environ.get("LITELLM_KEY"),
                         messages=[

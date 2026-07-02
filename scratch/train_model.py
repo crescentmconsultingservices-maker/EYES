@@ -52,6 +52,7 @@ def train_model():
         args=training_args,
         train_dataset=training_data,
         eval_dataset=training_data,
+        data_collator=model.data_collator_class(model.config, data_processor=model.data_processor) if hasattr(model, 'data_collator_class') else None,
     )
     
     print("Starting Fine-Tuning Process (This may take some time depending on your GPU/CPU)...")
