@@ -56,16 +56,8 @@ export function useBackgroundSync(
           return;
         }
 
-        const response = await fetch('/api/sync/all?background=1', {
-          method: 'POST',
-          cache: 'no-store',
-          keepalive: true,
-          credentials: 'include',  // L10: ensure session cookie is sent
-        });
-
-        if (!response.ok && response.status !== 202) {
-          console.warn(`[Auth] Background sync fan-out returned ${response.status}.`);
-        }
+        // Background sync is now handled exclusively via cron/Vercel Scheduler
+        // No client-side fan-out required.
       } catch (error) {
         console.warn('[Auth] Background sync fan-out failed:', error);
       } finally {

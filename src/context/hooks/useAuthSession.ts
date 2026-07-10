@@ -265,15 +265,7 @@ export function useBackgroundSync(
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
-        const response = await fetch('/api/sync/all?background=1', {
-          method: 'POST',
-          cache: 'no-store',
-          keepalive: true,
-          credentials: 'include',
-        });
-        if (!response.ok && response.status !== 202) {
-          console.warn(`[Auth] Background sync returned ${response.status}.`);
-        }
+        // Background sync is now handled exclusively via cron/Vercel Scheduler
       } catch (err) {
         console.warn('[Auth] Background sync failed:', err);
       } finally {

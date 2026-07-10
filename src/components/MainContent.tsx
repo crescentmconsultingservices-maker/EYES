@@ -130,7 +130,7 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       try {
         console.log('[Automatic Sync] Initiating background sync...');
         sessionStorage.setItem('eyes-auto-sync-timestamp', now.toString());
-        await fetch('/api/sync/all?background=true', { method: 'POST' });
+        // Background sync is now handled exclusively via cron/Vercel Scheduler
       } catch (e) {
         console.warn('[Automatic Sync] Pulse failed to dispatch:', e);
       }

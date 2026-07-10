@@ -20,7 +20,6 @@ vi.mock('@/app/api/sync/notion/route', () => ({ POST: vi.fn() }));
 vi.mock('@/app/api/sync/reddit/route', () => ({ POST: vi.fn() }));
 vi.mock('@/app/api/sync/slack/route', () => ({ POST: vi.fn() }));
 vi.mock('@/app/api/sync/discord/route', () => ({ POST: vi.fn() }));
-vi.mock('@/app/api/sync/embeddings/route', () => ({ POST: vi.fn() }));
 
 import { POST as syncGithub } from '@/app/api/sync/github/route';
 const syncGithubMock = vi.mocked(syncGithub);

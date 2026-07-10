@@ -336,9 +336,7 @@ vi.mock('@/services/ai/ai', () => ({
   chatCompletion: hoisted.chatCompletionMock,
 }));
 
-import { POST as syncGithubPost } from '@/app/api/sync/github/route';
-import { POST as syncEmbeddingsPost } from '@/app/api/sync/embeddings/route';
-import { POST as chatPost } from '@/app/api/chat/route';
+import { POST as syncGithubPost } from '@/app/api/sync/github/route';import { POST as chatPost } from '@/app/api/chat/route';
 
 describe('pipeline flow: sync -> embeddings -> chat', () => {
   beforeEach(() => {
@@ -382,12 +380,6 @@ describe('pipeline flow: sync -> embeddings -> chat', () => {
     expect(syncPayload.ok).toBe(true);
     expect(syncPayload.syncedRepos).toBe(1);
     expect(hoisted.state.rawEvents.length).toBe(1);
-
-    const embeddingResponse = await syncEmbeddingsPost(new Request('http://localhost/api/sync/embeddings', { method: 'POST' }));
-    const embeddingPayload = (await embeddingResponse.json()) as { indexed?: number; indexedChunks?: number };
-
-    expect(embeddingResponse.status).toBe(200);
-    expect(embeddingPayload.indexed).toBe(1);
 
     const chatResponse = await chatPost(
       new Request('http://localhost/api/chat', {
