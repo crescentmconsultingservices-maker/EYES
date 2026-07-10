@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The EYES - Digital Product Brochure</title>
+  <style>
+    :root {
+      --primary: #1E1B4B; /* Deep Navy */
+      --secondary: #D4AF37; /* Gold */
+      --dark: #0F172A; /* Slate Dark */
+      --body: #334155; /* Charcoal Text */
+      --light-bg: #F8FAFC; /* Soft Card Gray */
+      --border: #E2E8F0;
+      --white: #FFFFFF;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0B0F19;
+      color: var(--body);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Presentation Container */
+    .deck-container {
+      width: 90vw;
+      max-width: 1000px;
+      height: 80vh;
+      max-height: 600px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.20);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Slide Frame */
+    .slides-wrapper {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transform: translateX(50px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      pointer-events: none;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      background: var(--white);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--secondary);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+
+    .slide-title {
+      color: var(--primary);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .slide-category {
+      color: var(--secondary);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    /* Slide contents */
+    .slide-content {
+      flex: 1;
+      display: grid;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    /* Cover Slide Styling (Dark Mode) */
+    .slide.cover-slide {
+      background: linear-gradient(135deg, #0B0F19 0%, #1E1B4B 100%);
+      color: var(--white);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px;
+    }
+
+    .cover-logo-container {
+      background: var(--white);
+      padding: 15px 30px;
+      border-radius: 8px;
+      border: 2px solid var(--secondary);
+      margin-bottom: 30px;
+      display: inline-block;
+      max-width: 320px;
+    }
+
+    .cover-logo {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .cover-title {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      color: var(--white);
+    }
+
+    .cover-subtitle {
+      font-size: 16px;
+      color: var(--secondary);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .cover-tagline {
+      font-size: 12px;
+      color: #94A3B8;
+      font-style: italic;
+      margin-bottom: 30px;
+    }
+
+    .cover-meta {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 16px 24px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+      text-align: left;
+    }
+
+    .meta-item {
+      font-size: 11px;
+    }
+    .meta-label {
+      color: var(--secondary);
+      font-weight: 700;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .meta-val {
+      color: #F8FAFC;
+    }
+
+    /* Grids & Cards */
+    .grid-2x2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .grid-3-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--light-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      position: relative;
+      border-left: 4px solid var(--secondary);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border-left-color: var(--primary);
+    }
+
+    .card-title {
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .card-body {
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--body);
+    }
+
+    .card-body ul {
+      list-style-type: none;
+    }
+
+    .card-body li {
+      margin-bottom: 8px;
+      padding-left: 12px;
+      position: relative;
+    }
+
+    .card-body li::before {
+      content: "•";
+      color: var(--secondary);
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+
+    /* Split Layout */
+    .split-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 30px;
+      align-items: start;
+    }
+
+    /* Browser Mockup */
+    .browser-mockup {
+      background: var(--dark);
+      border-radius: 8px;
+      border: 1px solid #334155;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .browser-header {
+      background: #1E293B;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .browser-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #EF4444; }
+    .dot-yellow { background: #F59E0B; }
+    .dot-green { background: #10B981; }
+
+    .browser-url-bar {
+      margin-left: 20px;
+      background: var(--dark);
+      border-radius: 4px;
+      padding: 3px 12px;
+      font-size: 10px;
+      color: #64748B;
+      flex: 1;
+      max-width: 280px;
+      font-family: monospace;
+    }
+
+    .browser-viewport {
+      width: 100%;
+      height: 250px;
+      background: #FFFFFF;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .browser-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-caption {
+      font-size: 11px;
+      color: var(--muted-text);
+      font-style: italic;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* CTA Slide */
+    .cta-card {
+      background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+      border: 1px solid var(--secondary);
+      border-radius: 8px;
+      padding: 24px;
+      color: #F8FAFC;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .cta-title {
+      color: var(--secondary);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .cta-link-btn {
+      display: inline-block;
+      border: 1px solid var(--secondary);
+      padding: 6px 16px;
+      border-radius: 4px;
+      color: var(--secondary);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 10px;
+      transition: var(--transition);
+      align-self: flex-start;
+    }
+
+    .cta-link-btn:hover {
+      background: var(--secondary);
+      color: var(--primary);
+    }
+
+    /* Navigation Bar */
+    .nav-bar {
+      background: var(--light-bg);
+      border-top: 1px solid var(--border);
+      height: 50px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .nav-btn {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .nav-btn:hover {
+      background: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+
+    .page-indicator {
+      font-size: 11px;
+      color: var(--muted-text);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="deck-container">
+    <div class="slides-wrapper">
+      
+      <!-- Slide 1: Cover -->
+      <div class="slide cover-slide active" id="slide-1">
+        <div class="cover-logo-container">
+          <img src="./crescent_moon_logo.png" alt="Crescent Moon Logo" class="cover-logo">
+        </div>
+        <h1 class="cover-title">THE EYES</h1>
+        <h2 class="cover-subtitle">Everything You Ever Said</h2>
+        <p class="cover-tagline">The Neural Memory OS & Digital Auditing Hub</p>
+        
+        <div class="cover-meta">
+          <div class="meta-item">
+            <div class="meta-label">DOCUMENT TYPE</div>
+            <div class="meta-val">Interactive Product Portfolio</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">LIVE SANDBOX</div>
+            <div class="meta-val">eyes-app-sigma.vercel.app</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">SECURITY STANDARD</div>
+            <div class="meta-val">PII Shielding & GDPR Purges</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">PUBLISHED BY</div>
+            <div class="meta-val">Crescent Moon Services</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 2: Pipeline -->
+      <div class="slide" id="slide-2">
+        <div class="slide-header">
+          <div class="slide-title">How The EYES Works</div>
+          <div class="slide-category">01. Simply Connected</div>
+        </div>
+        <div class="slide-content grid-3-col">
+          <div class="card">
+            <div class="card-title">1. One-Click Connection</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Supported Applications:</strong> Works with Gmail, Slack, GitHub, Notion, Discord, and Dropbox.</li>
+                <li><strong>Password-Free Access:</strong> Links accounts using safe, industry-standard authentication.</li>
+                <li><strong>Automatic Updates:</strong> Syncs new files, tasks, and conversations automatically in the background.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">2. Privacy Shielding</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Exclude Private Accounts:</strong> Block personal email domains, specific keywords, or chat channels.</li>
+                <li><strong>Automatic Scrubbing:</strong> Masks credit card numbers, passwords, and IDs before indexing.</li>
+                <li><strong>Clean Timelines:</strong> Organizes communication events into a unified, private history log.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">3. Smart Search & Ask</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Natural Questions:</strong> Search past chats and files using simple queries like "What did I promise to send Sai?".</li>
+                <li><strong>Direct Source Links:</strong> Every answer is backed by a direct link to the original email or message.</li>
+                <li><strong>Reliable Facts:</strong> The AI only responds using your verified history, eliminating made-up answers.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 3: Acute Memory -->
+      <div class="slide" id="slide-3">
+        <div class="slide-header">
+          <div class="slide-title">Conversations With Your Past</div>
+          <div class="slide-category">02. Smart Search</div>
+        </div>
+        <div class="slide-content grid-2-col">
+          <div class="card">
+            <div class="card-title">Find What You Mean, Not Just What You Type</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Smart Conceptual Search:</strong> If you search for "website feedback", it will find chats discussing "page fixes" or "design revisions".</li>
+                <li><strong>Exact Detail Matching:</strong> Prioritizes exact terms when looking for specific dates, names, file types, or transaction IDs.</li>
+                <li><strong>Fast Results:</strong> Delivers highly accurate, relevant answers from all connected apps in seconds.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Answers You Can Verify and Trust</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Verifiable Proof:</strong> Every single answer includes a direct, clickable link pointing back to the original Slack chat, email, or Notion doc.</li>
+                <li><strong>Factual Boundaries:</strong> The AI is locked to only answer using verified documents. If it doesn't know, it tells you honestly.</li>
+                <li><strong>Context-Aware:</strong> Remembers your active projects to tailor answers to your current work.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 4: Chronic Auditing -->
+      <div class="slide" id="slide-4">
+        <div class="slide-header">
+          <div class="slide-title">Track Commitments & Promises</div>
+          <div class="slide-category">03. Reliability Ledger</div>
+        </div>
+        <div class="slide-content grid-2-col">
+          <div class="card">
+            <div class="card-title">Automatic Promise Ledger</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Auto-Logs Deliverables:</strong> Detects whenever you or a contact promises a deliverable or schedules a deadline.</li>
+                <li><strong>Categorizes Obligations:</strong> Organizes items as active commitments, delayed tasks, or items that were explicitly cancelled.</li>
+                <li><strong>Follow-Through Index:</strong> Displays a visual dashboard showing your personal follow-through rates over time.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Calendar Verification</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Calendar Cross-Check:</strong> Automatically scans Google Calendar entries around task due dates.</li>
+                <li><strong>Automatic Status Checks:</strong> Marks commitments as completed if a corresponding calendar entry is found, or flags them as pending.</li>
+                <li><strong>Next-Step Action Prompts:</strong> Recommends quick follow-up draft messages for overdue promises.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 5: Workspace UI -->
+      <div class="slide" id="slide-5">
+        <div class="slide-header">
+          <div class="slide-title">Live Application Interface</div>
+          <div class="slide-category">04. User Workspace</div>
+        </div>
+        <div class="slide-content split-layout">
+          <div class="card" style="height: 100%;">
+            <div class="card-title">The EYES Workspace UI</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>Central Search Bar:</strong> Type questions about your life and work naturally.</li>
+                <li><strong>Sidebar Navigation:</strong> Quick tabs for Connectors, Feeds, Timelines, and Audits.</li>
+                <li><strong>Source Health:</strong> Displays how many channels are connected and your overall reliability score.</li>
+                <li><strong>Chat History:</strong> Shows your past searches so you can jump back into them.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="browser-mockup">
+            <div class="browser-header">
+              <div class="browser-dot dot-red"></div>
+              <div class="browser-dot dot-yellow"></div>
+              <div class="browser-dot dot-green"></div>
+              <div class="browser-url-bar">eyes-app-sigma.vercel.app</div>
+            </div>
+            <div class="browser-viewport">
+              <img src="./product_screenshot.png" alt="Product Screenshot" class="browser-image">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 6: Security & CTA -->
+      <div class="slide" id="slide-6">
+        <div class="slide-header">
+          <div class="slide-title">Data Trust & Privacy Policies</div>
+          <div class="slide-category">05. Security & Onboarding</div>
+        </div>
+        <div class="slide-content grid-2-col">
+          <div class="card">
+            <div class="card-title">Privacy First: Your Data, Your Control</div>
+            <div class="card-body">
+              <ul>
+                <li><strong>1-Click Data Self-Destruct:</strong> Permanently delete your profile and erase all indexed memories, linked app credentials, and history logs from our servers. This is completely non-reversible.</li>
+                <li><strong>Automatic Information Scrubbing:</strong> Automatically hides sensitive details (like credit card numbers, bank records, and personal passwords) before processing any text.</li>
+                <li><strong>Zero Data Training Guarantees:</strong> Your work data is processed using private enterprise connections and is never stored, reviewed, or used to train public AI models.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="cta-card">
+            <div class="cta-title">Get Started with The EYES</div>
+            <div class="card-body" style="color: #E2E8F0;">
+              <p style="margin-bottom: 8px;">Explore the live sandbox portal or contact our onboarding desk:</p>
+              <p>• Live Portal: <strong>eyes-app-sigma.vercel.app</strong></p>
+              <p>• Support Desk: <strong>info@the-eyes.com</strong></p>
+              <a href="https://eyes-app-sigma.vercel.app/" target="_blank" class="cta-link-btn">Launch Live Application</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Navigation Footer -->
+    <div class="nav-bar">
+      <div class="page-indicator" id="page-indicator">Slide 1 of 6</div>
+      <div class="nav-buttons">
+        <button class="nav-btn" id="prev-btn" onclick="prevSlide()">Previous</button>
+        <button class="nav-btn" id="next-btn" onclick="nextSlide()">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 6;
+
+    function showSlide(index) {
+      if (index < 1 || index > totalSlides) return;
+      
+      // Deactivate old slide
+      document.querySelector('.slide.active').classList.remove('active');
+      
+      // Activate new slide
+      document.getElementById(`slide-${index}`).classList.add('active');
+      
+      currentSlide = index;
+      
+      // Update footer indicator
+      document.getElementById('page-indicator').textContent = `Slide ${currentSlide} of ${totalSlides}`;
+      
+      // Enable/disable buttons
+      document.getElementById('prev-btn').disabled = (currentSlide === 1);
+      document.getElementById('next-btn').disabled = (currentSlide === totalSlides);
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        showSlide(currentSlide + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        showSlide(currentSlide - 1);
+      }
+    }
+
+    // Keyboard support
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'ArrowRight' || event.key === 'Space') {
+        nextSlide();
+      } else if (event.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+
+    // Initialize button state
+    document.getElementById('prev-btn').disabled = true;
+  </script>
+</body>
+</html>

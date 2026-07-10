@@ -27,7 +27,7 @@ function toSyncRoutePlatform(platform: string) {
  * Called after successful platform syncs to keep the Chronic Layer up to date.
  * Never awaited — does not block sync completion.
  */
-function triggerCognitiveExtraction(baseUrl: string, userId: string): void {
+export function triggerCognitiveExtraction(baseUrl: string, userId: string): void {
   const url = `${baseUrl}/api/cognitive/extract`;
   fetch(url, {
     method: 'POST',
@@ -145,89 +145,38 @@ export async function runPlatformSyncDirect(
   const startedAt = Date.now();
 
   try {
-    let handler: ((request: Request) => Promise<Response>) | null = null;
-
-    switch (routePlatform) {
-      case 'github': {
-        const mod = await import('@/app/api/sync/github/route');
-        handler = mod.POST;
-        break;
-      }
-      case 'gmail': {
-        const mod = await import('@/app/api/sync/gmail/route');
-        handler = mod.POST;
-        break;
-      }
-      case 'google-calendar': {
-        const mod = await import('@/app/api/sync/google-calendar/route');
-        handler = mod.POST;
-        break;
-      }
-      case 'notion': {
-        const mod = await import('@/app/api/sync/notion/route');
-        handler = mod.POST;
-        break;
-      }
-      case 'reddit': {
-        const mod = await import('@/app/api/sync/reddit/route');
-        handler = mod.POST;
-        break;
-      }
-      case 'slack': {
-        const mod = await import('@/app/api/sync/slack/route');
-        handler = mod.POST;
-        break;
-      }
-      case 'discord': {
-        const mod = await import('@/app/api/sync/discord/route');
-        handler = mod.POST;
-        break;
-      }
-    }
-
-    if (!handler) {
-      // Fallback for newer platforms or platforms without direct imports
-      const secret = process.env.CRON_SECRET || '';
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      return await runPlatformSyncViaHttp(baseUrl, platform, userId, secret);
-    }
-
-    const requestUrl = `http://localhost:3000/api/sync/${routePlatform}`;
-    const req = new Request(requestUrl, {
-      method: 'POST',
-      headers: {
-        'x-cron-secret': process.env.CRON_SECRET || '',
-        'x-cron-user-id': userId,
-      },
-    });
-
-    const response = await handler(req);
-    const rawBody = await response.text();
-    const body = parseResponsePayload(rawBody);
-
-    if (!response.ok) {
+    // --- Dynamic Provider Registry (New Architecture) ---
+    const { syncProviders } = await import('@/services/sync/provider-registry');
+    
+    // Check if the platform has been migrated to the new registry
+    if (syncProviders[platform] || syncProviders[routePlatform]) {
+      const providerKey = syncProviders[routePlatform] ? routePlatform : platform;
+      const provider = syncProviders[providerKey];
+      
+      const { createAdminClient } = await import('@/utils/supabase/server');
+      const adminClient = await createAdminClient();
+      
+      const result = await provider.executeSync({
+        supabase: adminClient,
+        userId: userId,
+        mode: 'cron'
+      }, 'delta');
+      
+      if (result.status !== 200) throw new Error(result.error);
+      
       return {
         platform,
         routePlatform,
-        success: false,
-        status: response.status,
+        success: true,
+        status: 200,
         durationMs: Date.now() - startedAt,
-        error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Sync failed (${response.status})`,
       };
     }
 
-    // L-FINAL-2: trigger async cognitive extraction after successful direct sync
-    // Bypassed Chronic Layer
-    // const extractBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    // triggerCognitiveExtraction(extractBaseUrl, userId);
-
-    return {
-      platform,
-      routePlatform,
-      success: true,
-      status: response.status,
-      durationMs: Date.now() - startedAt,
-    };
+    // Fallback for newer platforms or platforms without direct imports
+    const secret = process.env.CRON_SECRET || '';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    return await runPlatformSyncViaHttp(baseUrl, platform, userId, secret);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {

@@ -1,0 +1,932 @@
+
+
+=== EYES_Pre_Launch_Checklist.pdf ===
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Pre-Launch Checklist — June 20, 2026
+CONFIDENTIAL — Crescent Moon engineering. A pre-flight check, not a directive.
+Page 1
+Pre-Launch Checklist
+EYES  ·  June 20, 2026  ·  Launch 17:00 IST / 12:30 CET  ·  A pre-flight check
+This is a calm pre-flight checklist for launch day — not a directive and not a list of demands. Everything here is
+either a fact to verify or a small thing that might want sorting before the doors open. The build is in good shape; this
+is just the walk-around before takeoff. Launch is a soft, public-but-small opening — we're expecting on the order of
+ten to fifty people, not a flood. The checklist is sized for exactly that.
+Two facts that set the frame for today:  (1) Payments run in Stripe TEST mode — the audit flow works end to end
+for users but collects no real money today. That is a deliberate choice; real payments are a calm post-launch step.
+ (2) We are not inviting in waves — it's open — but the realistic volume is small, so concurrent load is a thing to
+watch, not a thing to fear.
+1 — The core flow works cold
+This is the product. A stranger, with no help, gets from the front page to a real cited answer. If everything else on
+this page is perfect and this one isn't, the launch isn't ready — and if this one is solid, most everything else is
+cosmetic. Worth running once, start to finish, on a fresh account before 17:00.
+■  A brand-new account can sign up with no manual help from the team.
+If not — note where it needed a hand, and smooth that one step.
+■  Google (Gmail) and GitHub connect cleanly through OAuth.
+If not — check the OAuth redirect/verification state shows something honest while pending.
+■  Indexing runs and shows truthful progress — no fake 'complete' or 'optimal'.
+If not — a plain 'still indexing' line is better than a number that isn't real.
+■  A question returns a grounded answer with a citation.
+■  Clicking a citation opens the real source (the actual Gmail / GitHub item) — not an internal feed.
+If not — this is the trust moat; if chips still point inward, it's the highest-value thing to sort.
+■  A follow-up question shows the chat remembered the previous turn.
+2 — Nothing leaks between users
+The one gate that isn't cosmetic if it fails. With real strangers connecting real Gmail accounts, the line between one
+person's data and another's has to be absolute. Worth proving directly rather than assuming.
+■  Two test accounts confirmed: User B cannot retrieve any of User A's records, in chat or anywhere else.
+If not — this is the one item on the page that's worth holding the clock for. Everything else can ship imperfect; this can't.
+3 — It holds with a few people at once
+Until now the product has mostly been used by one to three people at a time. Today is the first time a handful of
+strangers may hit it together. At ten-to-fifty scale this is very manageable — just worth a glance at the places that
+behave differently under concurrent use.
+■  The Vercel Pro upgrade is live, so the serverless timeout is 60s — long syncs and audits won't cut off
+mid-run.
+If not — if Vercel is still on free tier, that 10s ceiling is the thing most likely to bite during a first sync. Worth confirming it
+went through.
+■  Several accounts connecting and syncing at once doesn't stall the sync queue.
+If not — if the queue backs up, letting people in a few at a time across the evening keeps every first experience fast —
+no announcement needed, just pacing.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Pre-Launch Checklist — June 20, 2026
+CONFIDENTIAL — Crescent Moon engineering. A pre-flight check, not a directive.
+Page 2
+■  Gateway rate limits sit comfortably above what a dozen concurrent users generate.
+■  The database holds steady with several connections open together (Supabase Pro pooling).
+4 — The payment loop (test mode)
+Stripe is in test mode today, so this is about proving the machinery works — not collecting money. A user can walk
+the whole audit-purchase path and it completes, using a test card. Real charging is a later, deliberate step once the
+entity side is squared away.
+■  The audit checkout opens and completes with test card 4242 4242 4242 4242.
+■  The webhook fires, is signature-verified, and the audit unlocks for that user.
+■  It's clear to a user that they're not being charged today (or the audit is simply framed as free/included for the
+founding group).
+If not — no real card can be charged in test mode, so there's no risk here — just make sure the framing doesn't promise
+a charge that won't happen.
+5 — The first thing people see
+Small, visible things shape the first impression more than anything under the hood. None of these are hard; they're
+just worth a glance because every single user meets them in the first ten seconds.
+■  The text-clipping on EYES messages is sorted — messages start at the first word, not mid-sentence.
+If not — this one shows on every message, so it's the highest-visibility small fix on the page. Likely a
+streaming/markdown trim.
+■  The landing page loads and the value proposition reads clearly in one pass.
+■  No invented metrics or 'optimal' badges are visible anywhere a user lands.
+■  Error and empty states say something honest when data is still syncing.
+The first two hours — who's watching
+Not a checklist item so much as a quiet plan. The first couple of hours after opening are when anything unexpected
+shows up. Two things worth having in place:
+■  Someone is watching the logs for the first ~2 hours and can spot errors as they happen.
+■  There's a way to pause new signups if needed — without taking the product down for people already in.
+If not — if something breaks badly, being able to quietly stop new entries while keeping current users running is the soft
+landing. Good to know it exists before it's needed.
+That's the walk-around. If gate 1 (cold flow) and gate 2 (no leaks) are solid, the launch is genuinely ready — the
+rest is polish that can keep improving after the doors open. It's a soft opening to a small group; the goal today is
+that the people who come in have a real experience, not a perfect one. Good luck — it's a real product, and it's
+close.
+EYES — the questions you never asked.
+
+
+
+=== EYES_Final_Sprint_Direct (2).pdf ===
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 1
+Final Sprint Directive to Public Launch
+EYES — Everything You Ever Said  ·  Issued June 17, 2026  ·  Launch: June 20, 2026, 17:00 CET
+This is the final binding directive before public launch. It supersedes every prior directive, handover, and report
+where they conflict. The team is to work from this document and this document only. Today is Wednesday, June
+17. Public launch is Saturday, June 20, at 17:00 Central European Time (20:30 IST). That is three full build
+days: the 17th, 18th, and 19th, with the 20th reserved for the go/no-go gate and launch.
+The product does not need to be perfect on launch day. It needs to do the one thing it exists to do, flawlessly: a
+stranger connects their accounts, their digital life is indexed, and they hold a real conversation with an intelligence
+that knows them — grounded, cited, and able to contradict and connect. Everything in this document serves that
+single outcome. Polish is negotiable. The core is not.
+THE STANDARD FOR THIS SPRINT. Every previous directive gave you the destination. This one gives you the
+destination, the route, the daily checkpoints, and the exact words the product must speak — on a platter. There is
+no remaining ambiguity to resolve and therefore no excuse for drift. Read every section. Execute in order. Report
+every night.
+00 — To the Engineering Team and Their AI Assistants
+This document will be pasted into AI coding assistants. Treat the following as hard constraints:
+–Execute in the order written. The day-by-day plan in Section 05 is sequenced by dependency — earlier items
+unblock later ones. Do not reorder.
+–Every constraint is mandatory unless explicitly marked optional. If a constraint conflicts with the existing
+codebase, STOP and report it to the founder the same day — do not silently work around it.
+–Do not invent vocabulary, metrics, screens, or features. If it is not in this document or already shipped, it is out
+of scope for launch.
+–The four gateway aliases (auto-chat, auto-extract, auto-classify, auto-embed) are the ONLY path to any model.
+No provider SDKs in application code.
+–A nightly report is mandatory (Section 07). It is not a WhatsApp message. It is the fixed template, filled and
+returned, every night by 23:00 IST.
+–The conversational core (Section 04) is the launch gate. No amount of progress on any other layer substitutes
+for it.
+01 — Honest Current State, Layer by Layer
+This assessment is built from your own DPR v1.0 and every prior report. It is deliberately blunt. The purpose is not
+criticism — it is to point every remaining hour at the real gap.
+Layer
+State
+Reading
+Infrastructure / Gateway
+100%
+Complete and verified June 12. All four aliases live. Nothing remains.
+Data ingestion (Gmail, GitHub, Slack, Notion)
+~75%
+Strong. OAuth, sync depth governance, retry/dead-letter queues all built. Reddit unresolved (see gate).
+Database & vector search
+~80%
+48+ migrations, HNSW index, hybrid search RPC. One blocking contradiction on dimensions — Section 02.
+Reputation audit engine
+~80%
+Six-stage pipeline, four lenses, calendar cross-ref. Needs live Stripe trigger + the Thinking Veil experience.
+Chronic layer (clusters, loops, drift)
+~75%
+Over-invested here relative to priority. Genuinely capable.
+Acute layer (Action Queue, detection)
+~50%
+Detection and draft exist; full draft-approve-execute loop incomplete.
+Conversational core — THE product
+~30%
+The one-sentence treatment in the DPR tells the story. Retrieval exists; the intelligence in Section 04 does not yet. This is the entire job of this sprint.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 2
+Layer
+State
+Reading
+Citations to real external sources
+Unproven
+Chips reported opening internal feeds. Launch blocker K2.
+Payments end-to-end
+Buildable now
+All credentials delivered June 12. The test-mode loop should already exist.
+Overall: roughly 60–65% of V1. The gap is concentrated almost entirely in one layer — the conversational core
+— which is exactly the layer that defines the product. The team has built an excellent memory engine and a weak
+conversation on top of it. This sprint exists to close that gap and prove a stranger can use it cold.
+02 — BLOCKING GATE: Embedding Dimension Reconciliation
+STOP. This is Day-1, hour-1, before any other work. Your DPR v1.0 states embeddings are 1024-dimensional
+(Gemini / Voyage AI, 1024-dim HNSW index). The embedding endpoint verified live on the gateway on June 12
+was OpenAI text-embedding-3-small at 1536 dimensions, chosen to match the existing pgvector schema.
+These cannot both be true. If index-time and query-time embeddings ever disagree on model or dimension,
+semantic search silently returns garbage and every cited answer breaks — destroying the product's entire trust
+premise.
+Required actions, Day 1, before anything else:
+–Report the EXACT model and dimension that auto-embed currently returns in the live environment. Prove it:
+paste the length of one real vector from the memories table and one freshly generated query embedding. They
+must be identical integers.
+–Confirm the HNSW index dimension matches that number. If the DPR's 1024 index exists but the gateway
+returns 1536 (or vice versa), the index is wrong and search is already broken — fix before launch.
+–State definitively which embedding provider is wired: OpenAI (1536) or Gemini/Voyage (1024). One of them. If
+a migration to 1024 happened in the last five days, say so and confirm every historical vector was re-embedded
+— partial re-embedding is as broken as none.
+Until this is reported and consistent, treat search as unverified. No conversational acceptance test can
+pass on a broken index. This gate clears in one honest check — do it first.
+02B — Ownership, Access, and IP (read before proceeding)
+As we finalize EYES for public launch, infrastructure access is being consolidated under the founder. This is
+standard practice at launch and is framed collaboratively — the team continues working exactly as it is. Nothing in
+this section requires transferring, moving, or rebuilding anything, and nothing here should break a single deploy.
+02B.1 — Ownership position
+All EYES infrastructure, source code, data, embeddings, and associated intellectual property belong to the founder
+and the EYES entity. Crescent Moon is engaged as a vendor implementing engineering work; the work product
+and IP are owned by EYES. A formal IP Assignment / Work-for-Hire agreement will be provided for signature —
+this directive initiates that process and does not replace the legal document. The founder is arranging that
+agreement separately; the team's cooperation in signing it is expected.
+02B.2 — What is already under founder ownership
+For clarity, the following are already owned and controlled by the founder and are provided to the team for use, not
+ownership:
+–The LiteLLM gateway and its dedicated Supabase database.
+–All model and service API keys (Anthropic, OpenAI, the Vertex AI service account / Google Cloud Vertex
+project).
+–The Stripe account and all payment credentials.
+02B.3 — Day-1 disclosure (required in the nightly report)
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 3
+The founder requires a clear, proven answer to who currently owns each production service. For EACH of the
+following, state the exact account/email it lives under and paste the dashboard URL as proof:
+–Production Supabase project (the main EYES application database — distinct from the gateway database).
+–Production Vercel project (hosting).
+–Any EYES-specific Google Cloud project (the OAuth app and related services — distinct from the founder's
+Vertex project).
+–The GitHub repository / codebase.
+02B.4 — Launch-critical access (by end of Day 1, zero-risk)
+The founder is to be granted Owner or Admin role on every production service listed above by end of Day 1. This is
+access only — no ownership transfer, no project move, no rebuild. Adding the founder as an additional
+owner/admin does not interrupt deploys, env connections, or running services. It ensures the founder cannot be
+locked out and holds ultimate control of EYES infrastructure during and after launch.
+–Supabase: invite the founder's email as an Organization Owner on the project's organization.
+–Vercel: add the founder's email to the project's team/owner with Owner role.
+–Google Cloud (EYES OAuth project): grant the founder's email the Owner role via IAM.
+–GitHub: add the founder's account as an Owner/Admin on the repository (or the org that holds it).
+Full ownership transfer is explicitly NOT required this week. Transferring project ownership or migrating
+repositories mid-sprint can disrupt deploys and is deliberately deferred. The founder receiving admin/owner access
+secures control now with zero launch risk. The complete ownership transfer of all services is scheduled for
+immediately post-launch as a separate, planned step — see Section 10.
+#
+Rule
+N1
+All embeddings — index-time AND query-time — from auto-embed, identical model and dimension. (See Gate, Section 02.)
+N2
+All model calls route through the four gateway aliases. No Anthropic/Google/OpenAI SDKs in application code.
+N3
+Every factual claim the chat makes is grounded in a retrieved record and carries a citation that opens the REAL external source (the Gmail message, the GitHub issue, the Slack permalink) — never an internal memory-feed abstraction.
+N4
+No user-facing number exists that is not derivable from the database. No invented metrics, no decorative percentages, no fake 'optimal' badges.
+N5
+Credentials live in environment variables only. The shared gateway key is swappable for per-developer keys post-launch with zero code change.
+N6
+Stripe stays in TEST mode until the founder performs the live-key swap at go-live. No live transactions before that moment.
+N7
+Multi-tenant isolation (RLS) is enforced and proven: a test user can NEVER retrieve another user's records. This is verified explicitly in the Stranger Test, Section 06.
+N8
+User data does not flow through any uncontrolled free-tier fallback provider. (See fallback decision, Section 03.1.)
+03.1 — Decision: Fallback Provider Chain
+Your DPR revealed the gateway's fallback chain for chat as: LiteLLM → Groq (rotating keys) → OpenRouter
+(free-tier model pool) → Gemini REST; and for embeddings: LiteLLM → Gemini REST. This is new information and
+it carries a privacy risk that strikes at the core of EYES's positioning.
+Decision for launch: remove the free-tier OpenRouter and Groq fallbacks from any path that carries user data.
+Free-tier and rotating-key endpoints frequently retain prompt data for training or abuse-monitoring under terms you
+do not control and cannot disclose to users. For a GDPR-first product whose entire moat is that personal data is
+never mined, routing a user's most intimate records through an uncontrolled free endpoint — even as a fallback —
+is an unacceptable contradiction.
+–Permitted launch chain (chat): LiteLLM gateway (primary) → Gemini REST via the same controlled EU project
+(single fallback). Nothing else.
+–Permitted launch chain (embeddings): LiteLLM gateway only, with the confirmed auto-embed model. No
+fallback that changes the embedding dimension — a different-dimension fallback silently corrupts search (N1).
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 4
+–If availability concerns are raised: the gateway's own circuit-breaker plus Anthropic and Vertex uptime are
+sufficient for a 100-user beta. Resilience does not justify a privacy hole. Revisit richer fallbacks post-launch with
+paid, retention-controlled providers only.
+If the team believes a fallback is genuinely required beyond Gemini REST, they must propose it in the
+nightly report with the provider's written data-retention terms attached — not add it silently.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 5
+04 — The Conversational Core (the launch gate, in full)
+This is the product. Everything else is scaffolding around it. The DPR gave this layer one sentence — that is the
+central failure this sprint must correct. Below is the complete specification, re-stated in full so this document is
+self-contained and nothing depends on retrieving an earlier directive.
+The difference, stated once, plainly: a memory search engine answers “find my conversations about France.”
+EYES answers “you keep saying you'll move to France — you've mentioned it 27 times since 2023, always in
+January, always after a hard week — but you've never once looked at a visa. What's actually going on there?” The
+first retrieves. The second understands. Launch gates on the second.
+04.1 — The Orchestration Loop
+Every user message runs through this loop. It is not a single LLM call — it is a pipeline:
+–1. Retrieve. The retrieval planner (auto-classify) converts the user's message + rolling conversation summary
+into a structured retrieval plan (JSON): what to search, which connectors, what time windows, semantic vs.
+keyword weighting. Execute the hybrid search RPC against the user's records.
+–2. Ground. Assemble the retrieved records as evidence blocks, each tagged with its real source URL. Mask PII
+per maskPII before the records enter the prompt.
+–3. Reason. auto-chat receives the EYES persona system prompt + rolling summary + evidence blocks + the
+user message. It composes a grounded, conversational response — contradicting, connecting, and questioning
+where the evidence supports it.
+–4. Cite. Every factual claim in the response is bound to the evidence block it came from; citation chips render
+and open the real external source.
+–5. Summarize. The rolling summarizer (auto-extract) updates the running conversation state so the next turn
+has memory of this one. Multi-turn continuity is mandatory — the chat must remember what was said three
+messages ago.
+04.2 — System Prompt 1: The EYES Persona (auto-chat)
+Use verbatim as the system prompt for the main conversational call. Adapt only the bracketed runtime injections.
+You are EYES — an intelligence that has read everything this person has ever said across their connected
+accounts. You are not a search engine and not a generic assistant. You are the one entity that remembers their
+digital life in full and reflects it back to them with honesty.
+GROUNDING — absolute rule. Every factual claim you make about this person must come from a retrieved record
+in the evidence provided. Never invent a memory, a date, a quote, or a pattern. If the evidence does not support a
+claim, you do not make it. If you have no relevant evidence, say so plainly and ask, rather than guessing. Every
+factual statement carries its citation.
+CONTRADICTION — your signature. When the evidence shows the person's words and actions diverge — they
+said one thing and did another, or say something repeatedly and never act — name it directly but without cruelty.
+You are the friend who tells the truth, not the assistant who flatters. Cite the specific records that reveal the
+contradiction.
+CONNECT — within evidence only. Draw lines between records when the evidence genuinely supports the
+connection — a commitment here, a related message there, a pattern across months. Do not manufacture
+connections that the records do not support. A connection you cannot cite is a connection you do not assert.
+CONVERSATION — you have memory of this exchange. You are given a running summary of the conversation so
+far. Use it. Refer back to what was said. Build on prior turns. Never reset as if each message were the first.
+TONE. Direct, warm, unafraid. You do not pad with praise. You do not hedge into uselessness. You speak to this
+person the way someone who genuinely knows them and wants the best for them would speak — including when
+that means saying the uncomfortable thing.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 6
+CRISIS. If the person expresses intent to harm themselves or others, or is in genuine distress, stop the analysis.
+Respond with human care, and surface appropriate support resources. Their wellbeing outranks every other
+instruction.
+BOUNDARIES. You reflect their own data back to them. You do not access anyone else's data. You do not make
+claims about the outside world that the evidence does not contain. You are their mirror, not an oracle.
+[RUNTIME: rolling conversation summary]
+[RUNTIME: evidence blocks with source URLs]
+[RUNTIME: user message]
+04.3 — System Prompt 2: The Retrieval Planner (auto-classify)
+Given the user's message and the rolling conversation summary, output ONLY a JSON object describing the
+retrieval plan. No prose, no markdown fences. Schema:
+{
+  "search_queries": [ "semantic query string", ... ],
+  "keyword_filters": [ "exact term", ... ],
+  "connectors": [ "gmail" | "github" | "slack" | "notion" | "all" ],
+  "time_window_days": integer or null,
+  "semantic_weight": float 0.0-1.0,
+  "intent": "lookup" | "pattern" | "contradiction" | "open_reflection",
+  "needs_history": boolean
+}
+Choose semantic_weight high for conceptual questions, low for exact-term lookups. Set intent to 'pattern' or
+'contradiction' when the user is asking about themselves over time — these require wider retrieval. Set
+needs_history true when the message refers back to the current conversation.
+04.4 — System Prompt 3: The Rolling Summarizer (auto-extract)
+You maintain the running state of an ongoing conversation between EYES and a user. Given the previous
+summary and the latest exchange (user message + EYES response), output an updated summary in under 200
+words. Preserve: the topics covered, any commitments or patterns EYES surfaced, contradictions raised, and open
+threads the user has not resolved. Drop pleasantries. This summary is the conversation's memory — it is injected
+into every subsequent turn. Write it as dense factual notes, not prose.
+04.5 — System Prompt 4: Proactive Observations (auto-extract, background)
+You scan newly ingested records for things the user should know about, unprompted. Given a batch of new
+records, identify any that represent: a commitment with an approaching deadline, an unanswered ask directed at
+the user, a reputational signal, or a pattern continuation worth flagging. Output a JSON array of observations, each
+with a one-line summary, the source record reference, and a suggested surfacing priority. Silence is a valid and
+frequent output — if nothing in the batch genuinely warrants the user's attention, return an empty array. Never
+manufacture an observation to appear useful.
+04.6 — System Prompt 5: Action Queue Draft Reply (auto-chat)
+A high-confidence commitment or ask has been detected in the user's incoming mail. Draft a reply the user could
+send, in their own voice as inferred from their past sent messages. The draft is a STARTING POINT for the user to
+edit and approve — it is never sent automatically. Keep it concise, match the register of the original thread, and
+never invent facts the user has not expressed. Output only the draft body.
+04.7 — The Four Worked Examples (this IS the acceptance bar)
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 7
+These four exchanges define 'done' for the conversational core. The launch demo must reproduce this quality on
+real user data. If the chat cannot do these four things, it is not ready, regardless of how good the audit engine
+looks. Each example shows the failing 'search-engine' answer and the EYES-standard answer beside it.
+Example 1 — Contradiction across time
+User: “Do I actually follow through on the things I say I'll do?”
+INSUFFICIENT (search): “Here are 12 messages where you mentioned tasks and commitments. [list]”
+EYES STANDARD: “Mostly — on work, yes. Across your GitHub and Slack, when you commit to shipping
+something with a date attached, you hit it about 8 times out of 10. But there's one place you consistently
+don't: personal promises to yourself. You've said you'd 'start writing again' in 6 different messages since
+last March [citations], and there's no record of it happening. The work commitments have deadlines and
+other people watching. The personal ones have neither. That's the pattern.”
+Example 2 — Connect the dots within evidence
+User: “Why do I feel so behind on the Henderson project?”
+INSUFFICIENT (search): “Found 9 emails and 4 GitHub issues mentioning Henderson. [list]”
+EYES STANDARD: “Because the scope quietly tripled and nobody re-set the timeline. In the original brief
+on March 3 [citation] Henderson was one deliverable. By April you'd agreed to two more in separate
+threads [citations] — but the deadline never moved from the original date. You're not behind. You're on
+time for a project three times the size of the one you were scheduled for.”
+Example 3 — Honest 'I don't have that'
+User: “What did I promise Sarah about the budget?”
+INSUFFICIENT (hallucination): “You promised Sarah a 15% increase by Q3.” [no such record]
+EYES STANDARD: “I don't have a record of a specific budget promise to Sarah. I can see you and Sarah
+exchanged messages about budget on two occasions [citations], but neither contains a commitment from
+you — they're both her raising the question. If you made a promise verbally or somewhere I'm not
+connected to, it's not in what I can see. Want me to show you those two threads?”
+Example 4 — Multi-turn memory
+User (turn 3, after discussing the France pattern): “Okay but is it realistic?”
+INSUFFICIENT (reset): “Is what realistic? Could you provide more detail?”
+EYES STANDARD: “The France move we were just talking about — realistically? Based on what's actually
+in your records, the gap isn't desire, it's that you've never taken a single concrete step: no visa research,
+no budget, no timeline, in three years of saying it [citations]. It's realistic the moment one of those appears.
+Right now it reads as a recurring comfort-thought after hard weeks, not a plan. The honest answer is: not
+yet — but it could be.”
+Acceptance: the launch demo (Day 3) must show the live chat, on a real connected account, producing answers of
+this character — grounded, cited to real sources, contradiction-aware, and remembering the conversation across
+turns. A demo that only retrieves and lists does not pass.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 8
+05 — The Day-by-Day Plan
+Each day has a hard deliverable and an end-of-day definition of done. The nightly report (Section 07) is filed
+against these items. An item is not 'done' because code was written — it is done when it meets the stated proof.
+DAY 1 — Wednesday, June 17 — Clear the gate, prove the spine
+Theme: resolve the blocking contradiction and prove the retrieval spine end-to-end on one real account.
+Must be done by end of day:
+–Embedding gate cleared (Section 02). Live model + dimension reported with proof (two vector lengths
+matching). Index dimension confirmed consistent. PROOF: paste the two integers in the report.
+–Fallback chain corrected (Section 03.1). Free-tier OpenRouter/Groq removed from any user-data path.
+PROOF: paste the updated fallback configuration.
+–One real account fully indexed. A real Gmail+GitHub account connected, synced, and searchable. PROOF:
+record count in the memories table + one successful hybrid search returning correctly ranked results.
+–Retrieval planner returning valid JSON. The auto-classify planner (04.3) producing schema-valid plans for 3
+sample questions. PROOF: paste the 3 JSON outputs.
+–Production project name confirmed (with proof). Multiple conflicting names have appeared across reports
+("Neural Memory OS", "Active Fluid Mechanics", and the URLs the-eyes-gamma / eyes-blush). State the
+EXACT Vercel project name and live URL that EYES production runs on. PROOF: paste the project name and
+the production URL from the Vercel dashboard. EYES must not be running inside a project named after anything
+else.
+–Vercel Pro upgrade (founder-performed). Vercel is currently on the FREE tier with limits exhausted
+(team-confirmed June 17) — not Pro as earlier believed. The founder upgrades the existing production project to
+Pro in the founder's own account. The team does NOT create a new account and the project is NOT moved
+under the vendor. This lifts the serverless timeout from 10s to 60s, which Day-2 and Day-3 work depends on.
+PROOF: confirm Pro is active on the correct project.
+–Founder access + ownership disclosure (Section 02B). Owner/Admin role granted to the founder on every
+production service (Supabase, Vercel, GCP OAuth project, GitHub), and the disclosure of who currently owns
+each, with proof. PROOF: confirmation of founder admin access on each + the four ownership answers in the
+report.
+–[HELD OPEN] Reddit gate. See Section 06.1 — answer required from team.
+Definition of done: the contradiction is gone, the privacy hole is closed, the right production project is confirmed and on Pro, and
+a real question retrieves real, correctly-ranked records from a real account.
+DAY 2 — Thursday, June 18 — The conversation comes alive
+Theme: the full orchestration loop runs, and the four worked examples start passing on real data.
+Must be done by end of day:
+–Full orchestration loop wired (04.1). All five stages — retrieve, ground, reason, cite, summarize — running in
+sequence on the live account. PROOF: a transcript of a 4-turn conversation showing memory carried across
+turns.
+–Citations open real external sources (N3, K2). Every chip in the demo conversation opens the actual
+Gmail/GitHub/Slack source, not an internal feed. PROOF: screen recording clicking three chips to three real
+sources.
+–At least 2 of the 4 worked examples reproduced on real data — specifically the contradiction example (1)
+and the honest-'I-don't-have-it' example (3), because those prove grounding and anti-hallucination. PROOF:
+transcripts.
+–Stripe test loop proven end-to-end. Checkout → webhook received and signature-verified → audit unlocked.
+PROOF: screen recording with test card 4242 4242 4242 4242.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 9
+–Multi-tenant isolation tested (N7). A second test user cannot retrieve the first user's records. PROOF: a query
+as user B returning zero of user A's records.
+Definition of done: a real conversation that grounds, cites real sources, remembers itself, and refuses to hallucinate — plus a
+working paid-audit loop in test mode.
+DAY 3 — Friday, June 19 — Cold-user hardening and scale
+Theme: prove a STRANGER can do this with zero help, and the system survives 100 users.
+Must be done by end of day:
+–The Stranger Test passes (Section 06). A brand-new account, connected and used cold by someone who
+has never seen the product, reaches a real cited answer with no manual intervention. PROOF: full screen
+recording of the 11-step script.
+–All 4 worked examples reproduced on real data. PROOF: four transcripts.
+–The Thinking Veil audit experience replaces any agentic/pipeline UI on the audit run — frosted overlay, the
+user's own ghosted records behind glass, plain-language status lines firing only on real pipeline stages.
+PROOF: screen recording of one audit run.
+–100-user readiness verified (Section 08). Sync throughput, rate limits, serverless timeout, DB tier, and the
+staggered-invite plan all confirmed. PROOF: the readiness checklist filled and returned.
+–Onboarding interstitials honest. Any OAuth-verification-pending or indexing-in-progress states show truthful,
+plain-language messaging — no fake 'optimal' or 'complete' claims (N4). PROOF: screenshots of each state.
+Definition of done: a stranger gets to value cold, the four examples all pass, the audit experience is the Thinking Veil, and the
+system is confirmed to hold 100 staggered users.
+DAY 4 — Saturday, June 20 — Go / No-Go and Launch (17:00 CET)
+Theme: final verification against the gate, then launch. No new features today — only verification and
+fixes.
+Morning (by 12:00 CET) — final go/no-go checklist, every item proven:
+–Embedding consistency holds (Gate, Section 02). ■
+–Stranger Test passes on a freshly created account this morning. ■
+–All four worked examples pass on real data. ■
+–Citations open real external sources. ■
+–Multi-tenant isolation proven. ■
+–Stripe test loop proven; founder ready to swap to live keys at go-live. ■
+–100-user staggered-invite plan in place. ■
+The gate: if the four worked examples and the Stranger Test do not both pass, launch does not proceed at
+full scope — it proceeds as a smaller founding-cohort invite while the conversational core is hardened,
+and the founder makes that call at 12:00 CET. The conversational core is the line. Everything else can ship
+imperfect.
+17:00 CET — launch. Founder swaps Stripe to live keys. Invites go out in the first staggered wave.
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 10
+06 — The Stranger Test (the cold-user acceptance script)
+This is the single most important acceptance test, because it is the only one that simulates reality: a person who
+has never seen EYES, with no one helping them. Internal demos prove nothing — the team knows where to click.
+Run this exactly, on a freshly created account, with someone outside the build. Record the whole thing.
+Step
+Action
+Pass condition
+1
+Open the live site on a device that has never logged in
+Landing page loads; the value proposition is clear in one read
+2
+Sign up as a brand-new user
+Account created with no manual backend intervention
+3
+Connect Google (Gmail)
+OAuth completes; honest status if verification is pending
+4
+Connect a second source (GitHub)
+OAuth completes; both connectors show connected
+5
+Trigger indexing
+Indexing runs; progress is shown truthfully, no fake completion
+6
+Wait for the first records to be searchable
+Records appear in the user's index; count is real
+7
+Ask a simple lookup question in chat
+Grounded answer with a citation that opens the real source
+8
+Ask a pattern/contradiction question
+Answer reasons across records, not just a list — Section 04 quality
+9
+Ask a follow-up that refers back to the prior answer
+Chat remembers the prior turn (multi-turn memory)
+10
+Click three citation chips
+All three open the real external sources
+11
+Run a €39 audit in test mode
+Thinking Veil experience; checkout (test) → webhook → audit PDF delivered
+If any step requires a developer to step in, that step fails and is the highest-priority fix. The product must
+carry a stranger from landing page to cited insight to paid audit with zero hand-holding.
+06.1 — [HELD OPEN] Reddit Gate
+This section is intentionally left open pending the team's answer. The team has stated the Reddit integration was
+submitted; no confirmation of approval or working status has been received. Required in the Day-1 report: is
+Reddit (a) live and working for launch, (b) submitted-but-pending and therefore formally HIDDEN from the launch UI,
+or (c) cut. One answer. If pending or cut, the Reddit connector is hidden from the onboarding flow so no user can
+attempt a broken connection. The founder will finalize this line on receipt of the team's answer.
+07 — The Nightly Report (mandatory, every night by 23:00 IST)
+This is not a WhatsApp message. It is the following template, filled and returned as a document, every night of the
+sprint. Its purpose is to make progress and slippage equally visible. A day without a filed report is treated as a day
+of no progress.
+EYES — NIGHTLY SPRINT REPORT
+Date: ____________ · Day of sprint: ____ · Filed by: ____________ · Time: ____ IST
+1. TODAY'S COMMITTED ITEMS (from the day-by-day plan)
+For each item: DONE / PARTIAL / BLOCKED — with the required PROOF (link, transcript, screenshot, vector
+lengths, record counts) attached or pasted.
+   Item: __________________ Status: ______ Proof: __________________
+   Item: __________________ Status: ______ Proof: __________________
+   Item: __________________ Status: ______ Proof: __________________
+2. PROOF ARTIFACTS
+Links/recordings/transcripts demonstrating each DONE item. No proof = not done.
+3. BLOCKERS
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 11
+Anything stopping progress, what is needed to clear it, and from whom. Raise here — not after the fact.
+4. TOMORROW'S PLAN
+The specific items to be completed tomorrow, mapped to the day-by-day plan.
+5. CONFIDENCE ON JUNE 20 LAUNCH
+One line: ON TRACK / AT RISK / OFF TRACK — and the single biggest risk to the date.
+08 — 100-User Launch-Day Readiness
+Your DPR's own Phase comparison is the basis here. Supabase Pro is live. Vercel, however, was confirmed by
+the team on June 17 to still be on the FREE tier with limits exhausted — not Pro as earlier believed. The Pro
+upgrade is a Day-1 action, performed by the founder on the existing production project in the founder's own
+account (never a new account, never moved under the vendor). The real constraint beyond that is sync throughput,
+not raw capacity.
+Dimension
+Current (Phase 1)
+Launch target
+Action / reality
+Concurrent users
+1–3
+100
+Infra supports it; confirm no single-user assumptions remain in code
+Sync throughput
+~10 users/day
+100 users staggered
+THE bottleneck — see staggered-invite plan below
+Serverless timeout
+10s (free tier)
+60s
+Vercel still on FREE tier — Pro upgrade is a Day-1 action (Section 05). 60s ceiling required for long syncs/audits
+Database tier
+Pro
+Pro
+Supabase Pro live — confirm connection pooling under concurrent load
+AI rate limits
+Shared free
+Paid (2,000+ RPM)
+Gateway on paid Anthropic + Vertex + OpenAI Tier 1 — confirmed June 12
+Embeddings
+Free tier
+Production
+auto-embed on production key — confirm dimension per Gate
+08.1 — The Staggered-Invite Plan (turn the bottleneck into exclusivity)
+At ~10 syncs/day throughput, 100 users signing up at once would overwhelm the sync queue and produce a
+terrible first impression (the one thing the product cannot afford). The fix is also a marketing advantage:
+–Launch to a founding cohort — invite in waves of ~20 users per day across launch week, not 100 on
+Saturday.
+–Each wave's syncs complete cleanly before the next wave lands, keeping every user's first experience fast and
+correct.
+–Frame it publicly as deliberate exclusivity — 'founding 50', limited early access — which is true AND protects
+the experience. The founding-50 50%-audit-credit offer already fits this.
+–Post-launch, raise cron concurrency to lift the daily sync ceiling; revisit once the conversational core is stable
+under real load.
+09 — Cost to Run at Launch Scale
+Verified economics at 100 active users. Nothing here has changed the core picture: the product pays for itself from
+roughly three audit sales per month.
+Item
+Monthly at 100 users
+Note
+Supabase Pro
+~€25
+Live
+Vercel Pro
+~€20
+Live
+Fly.io gateway
+~€5
+Live
+Resend email
+~€0
+Free under 3k/month at this scale
+Gemini (auto-extract/classify/embed background)
+~€0
+On the €258 GCP credit through ~September
+
+CONFIDENTIAL — EYES INTERNAL
+EYES
+Final Sprint Directive to Public Launch — June 17–20, 2026
+CONFIDENTIAL — Crescent Moon engineering & their AI assistants only. Supersedes all prior directives where conflicting.
+Page 12
+Item
+Monthly at 100 users
+Note
+Claude (auto-chat conversational)
+~€20–35
+The only real variable: ~€0.20–0.35 per active user/month at bounded prompts
+OpenAI embeddings
+~€1–3
+text-embedding-3-small at €0.02/M tokens, if 1536-dim path confirmed
+TOTAL
+under ~€120/month
+Covered by ~3 audit sales (€39 each)
+Real cash exposure on the model accounts remains capped and prepaid: Anthropic prepaid balance, OpenAI
+prepaid balance, Gemini on free credit. No autopayment can run away. The founder monitors spend via the vendor
+dashboards until per-developer gateway keys land post-launch.
+10 — Out of Scope for June 20 (do not build these)
+Building any of the following before launch is a violation of this directive. They are real and valued — they are
+simply not this week.
+–MCP server (deferred ~2 weeks post-launch).
+–Image / screenshot upload in chat (first post-launch drop).
+–The visual Mind Map cluster graph (name reserved; the chat is the product).
+–Per-developer gateway keys and spend dashboard (founder-side, post-launch).
+–Any new metric, vocabulary, screen, or audit lens not already shipped.
+–Brand/palette re-unification beyond removing dishonest language and fake metrics.
+–Richer LLM fallback chains beyond the controlled launch chain in Section 03.1.
+–Full ownership TRANSFER of all production services (Supabase, Vercel, GCP, GitHub) from their current
+accounts to the founder/EYES entity. Founder admin access is secured during the sprint (Section 02B); the
+complete title transfer is a planned post-launch step, executed carefully to avoid disrupting the live service,
+alongside the signed IP Assignment agreement.
+–Migration of Supabase / Vercel / Google Cloud ownership from the founder's personal email to a company
+admin account (admin@eyes.app). The accounts work identically today; this is an ownership-hygiene step for
+before fundraising or team expansion — explicitly post-launch, not this week.
+Issued by the Founder's Office, EYES. This directive supersedes all prior directives, handovers, and reports where conflicting.
+The team works from this document. Execute in order. Prove every item. File the report every night. Launch June 20, 17:00
+CET.
+EYES — the questions you never asked.
+
+
+
+=== EYES_Build_Note_02.pdf ===
+
+INTERNAL · CRESCENT MOON ENGINEERING · FROM THE FOUNDER
+EYES
+EVERYTHING YOU EVER SAID
+Build Note 02
+The gate on Phase 5 — what un-mutes the graph into chat, the one
+document that opens it, and three fixes to make before it does.
+FROM
+Abhi · Founder, EYESTO
+Crescent Moon EngineeringDATE
+3 July 2026
+IN REPLY TO
+Build Status Report — July 3PAIRS WITH
+Build Note 01 · Directive v1.0 ·
+Pattern Library v0READ TIME
+Five minutes. Please read fully.EYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 1 / 7
+00The architecture is right. I see it.
+Real credit first — because the structural work in this report is genuinely the shape we
+agreed.
+I read the July 3 report closely. The structure that now exists is the directive's
+architecture, standing: receipts enforced at the exact text span, the bi-temporal schema
+live in migration 052, the real Splink DuckDBLinker with Fellegi–Sunter matching
+replacing the placeholder, nightly cron automation properly wired through Vercel to
+FastAPI, and — importantly — the bounded hybrid pipeline instead of a revert to LLM-
+on-everything. Every structural correction from Build Note 01 landed, fast and well. That
+is not a small thing, and I want it said plainly: the plumbing of this system is good, and it
+is yours.
+One thing in the report, though, decides everything else — and it's not something the report
+contains. It's something the report is missing.
+WHAT THE REPORT SAYS — AND WHAT IT DOESN'T
+Three days ago, the model failed our hand-labeled implicit-cases test. We agreed the next
+step: clean up the relation definitions, re-label, and measure the hybrid against that
+ground truth — real misses and hallucinations numbers.
+Today's report says the graph is "extracting perfectly in the background" — and contains
+no numbers, no memo, and no mention of that test. On this product, "perfectly" is a claim
+without its receipt — the exact thing our own anchoring rule forbids the product from
+doing. The failing test didn't pass. It just left the story. It needs to come back, be run, and
+be shown — whatever the numbers say.
+So this note does one thing: it defines, precisely, what opens the gate to Phase 5 — and lists
+three technical fixes to make while that gate-opener runs. It is short. All of it is doable this week.EYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 2 / 7
+01The gate: no surfacing without the memo
+Phase 5 stays muted until one document exists. Here is exactly what that document is.
+Phase 5 — un-muting the graph into live chat, formatting insights with the Pattern
+Library — is the moment EYES starts telling real people things about their own lives. If
+the extraction under it is unmeasured, we are not shipping insight; we are shipping
+confident guesses wearing the costume of insight. That is the one failure this product
+cannot survive. So the rule is simple:
+The accuracy memo is the key. The day it exists — with honest
+numbers, whatever they are — Phase 5 unlocks, and we ship it
+together.
+To remove all ambiguity, here is the memo's exact specification. This is the whole gate — nothing
+hidden, nothing moving:
+ELEMENT REQUIREMENT
+Corpus Real user records (Gmail-weighted — that's where commitments live), several
+hundred at minimum. Not synthetic, not sequential toy samples.
+Ground truth Hand-labeled true relations, labeled after the definitions in §02 are agreed —
+and the sample must include implicit cases ("I'll get it to you Friday," "leave it
+with me"), because that is where the misses live and that is most of real
+email.
+The three numbersMisses (true relations the pipeline failed to catch), hallucinations (relations it
+invented), duplicates (resolution failures) — as counts against the ground
+truth.
+Broken out by Relation type — commitment, delayed_on, decided_against reported
+separately from generic relations. Aggregate numbers hide exactly the
+weakness that matters.
+Pipeline tested The full hybrid as it will run in production: GLiNER primary plus the candidate
+filter plus the LLM fallback — not GLiNER alone.
+Verdict A go / no-go recommendation grounded in those numbers. A NO-GO is a
+fully acceptable outcome — it means the gate caught something before a user
+did, which is the gate doing its job.
+WHY I WILL NOT MOVE ON THIS — READ THIS PART AS THE POINT OF THE WHOLE NOTE
+Across the last week, the architecture has improved every single day — you respond to
+structural corrections faster than any team I've worked with. But the measurement stepEYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 3 / 7
+has now been skipped three times in three different forms: a five-record spike called a
+phase, placeholder numbers formatted as a memo, and now "perfectly" with no numbers at
+all. I don't think anyone intended it — it's what happens under pressure to show progress.
+But on this product, the proof is the progress.
+EYES's entire promise to a user is: I never claim what I cannot show. A build process that
+claims "perfectly" without showing it cannot produce a product that keeps that promise.
+The discipline we practice internally is the product. That is why the memo is the gate, and
+why nothing I say above will soften it.EYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 4 / 7
+02Three fixes, while the memo runs
+All three are small. The first one protects the single most important signal in the
+product.
+1Decay must be per relation type — the blanket 30-day rule is
+wrong
+WHAT THE REPORT SAYS
+"If an edge is not reinforced or mentioned for 30 days, it transitions to a historical fact
+(valid_to = NOW())."
+WHY IT CAN'T STAY
+Not being mentioned is not the same as no longer being true. Your mother is still your mother
+after 30 quiet days. works_at doesn't end through silence. In our bi-temporal substrate,
+valid_to means stopped being true in the world — a blanket mention-decay rule corrupts that
+meaning across the whole graph, and the graph starts forgetting stable, true facts.
+AND THE PART THAT MATTERS MOST
+A commitment that goes quiet for 30 days is not a historical fact — it is delayed_on, the
+accountability signal, the single most valuable thing EYES detects. The current rule would
+quietly archive exactly the edges we exist to surface. Silence on a commitment is the signal,
+not the expiry.
+THE FIX
+Decay policy keyed by relation type: (a) mention-frequency edges (discusses,
+referenced_alongside) may fade with silence; (b) identity/factual edges (works_at, member_of,
+located_in, family-type relations) end only on contradicting evidence — never on silence; (c)
+commitment edges that go quiet past their expected window escalate to delayed_on — they
+never silently archive.EYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 5 / 7
+2Show me what routes a record to the LLM fallback
+WHAT THE REPORT SAYS
+"For implicit or complex cases GLiNER misses, it securely falls back to the LiteLLM Gateway."
+THE PROBLEM
+GLiNER cannot flag its own misses. When it misses an implicit commitment, it doesn't error —
+it returns nothing, silently. So "falls back on misses" cannot work as written; something
+upstream has to decide which records even might contain an implicit case and route them.
+THE FIX
+The candidate filter we specified: a cheap local pattern pass that flags possible speech-act
+sentences — commitment signals ("I'll," "let me," "count on me," "leave it to," "we'll," "by
+[time]"), delay signals ("waiting," "blocked," "stuck," "still hasn't"), decision signals ("pass on,"
+"drop," "kill," "scrap," "opted not") — and sends only those candidates (~10–30% of records)
+to the LLM. In the next status, show the routing logic and the share of records it routes. If the
+filter isn't built yet, say so and build it — without it, the fallback never sees the cases it exists
+for.
+3Gemini 1.5 Flash is deprecated — move the alias
+WHAT THE REPORT SAYS
+The fallback targets "LiteLLM Gateway (Gemini 1.5 Flash)."
+THE FIX
+1.5 Flash is deprecated — this was flagged before and is still in the report. Point the gateway
+alias at Gemini 2.5 Flash (and consider Flash-Lite for the easy candidates — it's 3–6×
+cheaper). Five-minute change; please confirm it in the next status so we know the gateway
+config is being read.EYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 6 / 7
+THE WEEK, COMPRESSED
+One document opens the gate
+To make the path completely unambiguous, this is the whole of it:
+I want to be precise about the spirit of this, because tone is easy to lose in a document. This is not
+a brake, and it is not distrust of your work — the architecture you've built this week is proof of the
+opposite. It is the one discipline that turns everything you've built from a demo into the product:
+when we hand a number to each other — or to a user — it has been measured. The team that
+internalizes that is the team that gets to ship the most ambitious part of this system, which is
+exactly what Phase 5 is.
+Honest numbers unfreeze it — a NO-GO included. Adjectives don't.
+You are one test away.
+Send me the memo and the three confirmations, and we ship the un-mute together. Thank you for
+the week — the structure is real, and I see the speed. Let's put the proof under it.
+Abhi
+FOUNDER & CEO · EYES — EVERYTHING YOU EVER SAID
+INTERNAL · BUILD NOTE 02 · COMPANION TO THE CHRONIC LAYER BUILD DIRECTIVEAgree the relation definitions (one message, today): delayed_on = the user's own
+commitment slipping — external blockers ("vendor hasn't replied," "blocked by Stripe") are a
+different thing and get their own relation, not delayed_on.
+Re-label the ground-truth set against those definitions, implicit cases included.
+Run the full hybrid (GLiNER + candidate filter + LLM fallback) against it, and write the memo to
+the §01 spec — honest numbers, whatever they are.
+Make the three fixes — per-type decay, the routing filter, the model alias — and show them in
+the next status.
+Then we un-mute Phase 5 together. I want that to be this week just as much as you do.EYES — BUILD NOTE 02 INTERNAL · FROM THE FOUNDER
+3 JULY 2026 · CRESCENT MOON ENGINEERING PAGE 7 / 7
+
+
+=== EYES_Daily_Status_2026-06-30 (1).docx ===
+
+EYES Engineering Daily Status
+July 08, 2026
+From:	Crescent Moon Engineering Team.
+To:	Abhishek
+Regarding:	Comprehensive analysis of certain companies.
+
+AfterQuery
+What data are they ingesting? 
+
+They are ingesting human-created expert data for AI training.
+Specifically, they ingest:
+Coding challenges, debugging tasks, algorithms, and system design questions.
+Live production codebases and private GitHub repositories from domain experts.
+Expertise across various fields like Finance, Law, Healthcare, Math, and Physics.
+
+How often do they refresh? 
+
+Their data generation happens in "sprints." A sprint can last anywhere from 24 hours to a few weeks. The availability of tasks completely depends on client quotas—when a client needs data, tasks open up; when the quota is met, it pauses.
+
+Triggers updates?
+
+For the workers: Updates and new project alerts are triggered primarily through Slack announcements. Also, completing "Assessments" automatically triggers project matching.
+For the system: Client reviews and quotas trigger the opening or closing of task availability.
+
+Ranking? 
+
+They rank their data sources (the human experts) using Assessments and Tracks (like the "Silver track"). They have specific assessments (Generalist, Finance, Coding, Legal). Your score and specialization in these assessments dictate how you are ranked and matched to projects.
+
+What’s "signal" in their field?
+
+For AfterQuery, a true "signal" (highly valuable data) is specialized, production-grade knowledge. Generic answers aren't as valuable as specialized data from experts in niche domains (like Advanced Coding, Legal, or private GitHub repository histories).
+
+
+AlphaSense
+What data are they ingesting? 
+
+They ingest a massive variety of market and financial data, specifically:
+Public and private company documents (SEC filings, earnings call transcripts, investor presentations).
+News articles, press releases, and media.
+Professional research reports from analysts and financial firms.
+Web content (blogs, forums, and online discussions to track market sentiment).
+
+How often do they refresh?
+
+Real-time: For critical, time-sensitive data like earnings calls and breaking news, they update instantly (real-time).
+Daily/Hourly: For other general data types, they refresh on a very frequent basis (hourly or daily).
+
+Triggers updates? 
+
+Their system triggers updates to users in two main ways:
+Event-Based Triggers: Major business events trigger alerts (e.g., job changes, a company raising new funding, a new product launch, hiring a new VP, or an earnings call).
+Custom Alerts: Users can set their own triggers based on specific keywords or companies.
+
+Ranking?
+
+Relevance: The algorithm ranks search results based on how relevant they are to the user's specific query so the most important information surfaces first.
+Sentiment Analysis: They use AI to "rank" or analyze the mood of the text (e.g., is the market sentiment positive or negative regarding this stock?).
+
+What’s "signal" in their field? 
+
+For AlphaSense, a "signal" is an event that indicates a real market opportunity, risk, or buying window. The most valuable signals they track include:
+Key executive changes (like a new VP being hired).
+New funding rounds (Series A, B, etc.).
+New product launches.
+Adoption of new tech or major shifts in consumer trends.
+AlphaSense
+What data are they ingesting? 
+
+

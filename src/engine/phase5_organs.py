@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from litellm import completion
 
-load_dotenv('../../.env.local')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(current_dir, '..', '..', '.env.local'))
 supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL")
 supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
@@ -97,7 +98,7 @@ def run_phase5_organs(user_id: str) -> None:
     cont_res = supabase.table("chronic_edges") \
         .select("id, head_node_id, relation_label, tail_node_id, is_contradicted_by, valid_to, created_at") \
         .eq("user_id", user_id) \
-        .not_("is_contradicted_by", "is", None) \
+        .not_.is_("is_contradicted_by", "null") \
         .execute()
     contradictions = cont_res.data or []
     print(f"Found {len(contradictions)} explicit contradictions in the graph for this user.")
@@ -164,7 +165,9 @@ def run_phase5_organs(user_id: str) -> None:
             "Return JSON only: {\"narrative\": \"string\", \"identity\": \"string\"}"
         )
         response = completion(
-            model="gemini/gemini-1.5-flash",
+            model="openai/gemini-2.5-flash",
+            api_base=os.environ.get("LITELLM_BASE_URL"),
+            api_key=os.environ.get("LITELLM_KEY"),
             messages=[{"role": "user", "content": prompt}]
         )
         raw = response.choices[0].message.content.replace('```json', '').replace('```', '').strip()
@@ -176,7 +179,7 @@ def run_phase5_organs(user_id: str) -> None:
         insight = {
             "id": make_insight_id(user_id, "narrative_identity"),  # deterministic for upsert
             "user_id": user_id,
-            "kind": "narrative_identity",
+            "kind": "theme",
             "title": f"Identity: {res_json.get('identity', 'Unknown')}",
             "body": res_json.get('narrative', ''),
             "citations": citation_ids,
@@ -200,7 +203,7 @@ def run_phase5_organs(user_id: str) -> None:
             contradiction_insight = {
                 "id": make_insight_id(user_id, "contradiction"),  # deterministic for upsert
                 "user_id": user_id,
-                "kind": "contradiction",
+                "kind": "drift",
                 "title": f"{len(contradictions)} behavioral contradiction(s) detected in knowledge graph",
                 "body": (
                     f"The graph contains {len(contradictions)} edge(s) where a prior belief was superseded by new evidence. "

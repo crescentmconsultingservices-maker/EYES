@@ -95,7 +95,7 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
   if (!upsertError) {
     // Fire acute detection asynchronously (non-blocking)
     fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
-    // Bypassed Chronic Layer: fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
+    fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
     return;
   }
 
@@ -142,7 +142,7 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
 
   // Fire acute detection asynchronously (non-blocking)
   fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
-  // Bypassed Chronic Layer: fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
+  fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
 }
 
 /**
@@ -171,7 +171,7 @@ async function fireAcuteDetection(supabase: SupabaseClient, events: RawEventUpse
  * Fire-and-forget entity extraction on recently ingested events.
  * Sends data to the new Python FastAPI Chronic Engine running locally.
  */
-async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
+export async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
   const CHRONIC_ENGINE_URL = process.env.CHRONIC_ENGINE_URL || 'http://127.0.0.1:8000';
   
   try {
@@ -227,17 +227,29 @@ async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUp
           for (const rel of relations) {
             if (!rel.head || !rel.label || !rel.tail) continue;
             try {
-              const headLabel = findEntityLabel(rel.head);
-              const tailLabel = findEntityLabel(rel.tail);
+              const headClean = rel.head.toLowerCase().trim();
+              const tailClean = rel.tail.toLowerCase().trim();
+              
+              const headEntity = (entities as { text: string; label: string; start?: number; end?: number }[]).find(
+                (e) => e.text.toLowerCase().trim() === headClean
+              );
+              const tailEntity = (entities as { text: string; label: string; start?: number; end?: number }[]).find(
+                (e) => e.text.toLowerCase().trim() === tailClean
+              );
+              
+              const headLabel = headEntity ? headEntity.label : 'other';
+              const tailLabel = tailEntity ? tailEntity.label : 'other';
 
               const headNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.head, headLabel);
               const tailNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.tail, tailLabel);
 
               const recordId = event.platform_id || 'manual';
-              const startChar = 0;
-              const endChar = 0;
+              // Phase 2: Anchor receipts to the exact text span
+              const startChar = headEntity?.start ?? 0;
+              const endChar = tailEntity?.end ?? 0;
+              const sourceUrl = (event.metadata?.source_url as string) || (event.metadata?.url as string) || (event.metadata?.htmlLink as string) || null;
 
-              // Insert the edge
+              // Phase 2: Insert the edge with full bi-temporal schema and receipts
               const { error: edgeError } = await supabase.from('chronic_edges').insert({
                 user_id: event.user_id,
                 head_node_id: headNodeId,
@@ -245,10 +257,13 @@ async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUp
                 relation_label: rel.label,
                 confidence: Math.min(1, Math.max(0, rel.score || 0.7)),
                 source_record_id: recordId,
+                source_url: sourceUrl,
                 chunk_start_char: startChar,
                 chunk_end_char: endChar,
                 observed_from: new Date().toISOString(),
                 valid_from: new Date().toISOString(),
+                observed_to: null,
+                valid_to: null,
               });
 
               if (edgeError) {

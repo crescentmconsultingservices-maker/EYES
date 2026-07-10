@@ -22,6 +22,8 @@ export function useBackgroundSync(
     let cancelled = false;
     let syncInFlight = false;
 
+    const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
     const runBackgroundSync = async () => {
       if (cancelled || syncInFlight) {
         return;
@@ -29,6 +31,19 @@ export function useBackgroundSync(
 
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
         return;
+      }
+
+      // Smart Timer: Check if ANY tab has synced in the last 5 minutes
+      if (typeof window !== 'undefined') {
+        const lastSyncStr = window.localStorage.getItem('last_eyes_sync');
+        if (lastSyncStr) {
+          const lastSync = parseInt(lastSyncStr, 10);
+          if (Date.now() - lastSync < SYNC_INTERVAL_MS) {
+            return; // Too soon, let the other tab handle it
+          }
+        }
+        // Claim the lock
+        window.localStorage.setItem('last_eyes_sync', Date.now().toString());
       }
 
       syncInFlight = true;
@@ -66,11 +81,17 @@ export function useBackgroundSync(
 
     const interval = setInterval(() => {
       void runBackgroundSync();
-    }, 90000);
+    }, SYNC_INTERVAL_MS);
+
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void runBackgroundSync();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        // 5-second debounce to prevent spamming when rapidly switching tabs
+        debounceTimer = setTimeout(() => {
+          void runBackgroundSync();
+        }, 5000);
       }
     };
 
@@ -82,6 +103,7 @@ export function useBackgroundSync(
       cancelled = true;
       clearTimeout(initialDelay);
       clearInterval(interval);
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', onVisibilityChange);
       }

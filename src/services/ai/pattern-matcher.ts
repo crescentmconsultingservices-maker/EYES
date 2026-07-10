@@ -1,4 +1,5 @@
 import { SEEDED_PATTERNS, SeededPattern } from '../../config/seed_patterns';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Represents the structured graph data extracted by the Chronic Layer (GLiNER/GLiREL).
@@ -95,13 +96,47 @@ export class PatternMatcher {
   }
 
   /**
-   * The Confirms / Disconfirms Loop (Pending Phase 2 Graph DB)
-   * This will be called periodically to re-evaluate prior hypotheses against new data.
+   * Temporal Edge Invalidation (Supabase Implementation)
+   * Evaluates active graph edges against recent contradictions.
+   * If a user makes a new decision that contradicts an older active commitment,
+   * the older edge is invalidated (decayed).
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public static validateOngoingPatterns(userId: string, currentMatches: PatternMatchResult[], newGraphData: UserGraphData) {
-    // TODO: Implement temporal drift analysis and edge invalidation.
-    // This requires the Neo4j temporal graph to be active.
-    throw new Error("validateOngoingPatterns requires active Graph DB connection.");
+  public static async validateOngoingPatterns(userId: string, supabase: SupabaseClient): Promise<number> {
+    // 1. Fetch active commitments
+    const { data: commitments } = await supabase
+      .from('chronic_edges')
+      .select('id, tail_node_id')
+      .eq('user_id', userId)
+      .eq('relation_label', 'commitment')
+      .is('valid_to', null);
+
+    if (!commitments || commitments.length === 0) return 0;
+
+    // 2. Fetch active contradictions (e.g., User decided to drop/scrap a path)
+    const { data: contradictions } = await supabase
+      .from('chronic_edges')
+      .select('tail_node_id')
+      .eq('user_id', userId)
+      .eq('relation_label', 'decided_against')
+      .is('valid_to', null);
+
+    if (!contradictions || contradictions.length === 0) return 0;
+
+    const contradictionTails = new Set(contradictions.map(c => c.tail_node_id));
+    
+    // 3. Find commitments that share the exact same target as a recent 'decided_against'
+    const edgesToInvalidate = commitments
+      .filter(c => contradictionTails.has(c.tail_node_id))
+      .map(c => c.id);
+
+    // 4. Invalidate the old edges so the Mindmap is updated
+    if (edgesToInvalidate.length > 0) {
+      await supabase
+        .from('chronic_edges')
+        .update({ valid_to: new Date().toISOString() })
+        .in('id', edgesToInvalidate);
+    }
+
+    return edgesToInvalidate.length;
   }
 }

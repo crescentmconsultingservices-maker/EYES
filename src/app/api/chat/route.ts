@@ -103,6 +103,7 @@ function buildSystemPrompt(
   today: string,
   userMessage: string,
   graph: string,
+  environmentalContext: string,
 ): string {
   const evidenceBlock = [
     evidence ? `EVIDENCE:\n${evidence}` : 'EVIDENCE: No matching records found in your connected sources.',
@@ -129,6 +130,7 @@ CRISIS. If the person expresses intent to harm themselves or others, or is in ge
 BOUNDARIES. You reflect their own data back to them. You do not access anyone else's data. You do not make claims about the outside world that the evidence does not contain. You are their mirror, not an oracle.
 
 TODAY'S DATE: ${today}
+ENVIRONMENTAL CONTEXT: ${environmentalContext}
 USER'S NAME: ${userName}
 CONNECTED SOURCES: ${connectedSources.join(', ')}
 
@@ -254,7 +256,7 @@ async function retrieveEvidence(
   const citations: EyesCitation[] = [];
   const evidenceParts: string[] = [];
   let insightsText = '';
-  let graphText = '';
+  const graphText = '';
 
   // Calculate start_date if time_window_days is provided
   let start_date: string | undefined = undefined;
@@ -272,7 +274,7 @@ async function retrieveEvidence(
   
   let embedding: number[] | null = null;
   
-  const [embedResult, insightsResult, graphResult] = await Promise.all([
+  const [embedResult, insightsResult] = await Promise.all([
     invokeModel({
       capability: 'embed',
       messages: [{ role: 'user', content: primaryQ }],
@@ -529,6 +531,22 @@ async function handleChat(request: Request): Promise<Response> {
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Environmental Context extraction from IP headers
+    const city = request.headers.get('x-vercel-ip-city') || 'Unknown City';
+    const country = request.headers.get('x-vercel-ip-country') || 'Unknown Country';
+    const timezone = request.headers.get('x-vercel-ip-timezone') || 'UTC';
+    
+    let localTime = new Date().toISOString();
+    try {
+      if (timezone !== 'UTC') {
+        localTime = new Date().toLocaleString('en-US', { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      }
+    } catch (e) {
+      // fallback to ISO if Intl fails
+    }
+    const environmentalContext = `User is located in ${city}, ${country}. Their local time is ${localTime} (${timezone}).`;
+
     const historyMsgs = normalizeHistory(history).slice(-8); // last 4 turns
 
     // ── Fetch connected sources & user profile in parallel ───────────────
@@ -572,7 +590,7 @@ async function handleChat(request: Request): Promise<Response> {
 
     // ── Step 5: EYES persona system prompt ────────────────────────────────────
     const systemPrompt = buildSystemPrompt(
-      userName, userRole, userGoals, userPersona, connectedSources, evidence, insightsText, prevSummary, today, message, graphText
+      userName, userRole, userGoals, userPersona, connectedSources, evidence, insightsText, prevSummary, today, message, graphText, environmentalContext
     );
 
     const fullMessages: Msg[] = [

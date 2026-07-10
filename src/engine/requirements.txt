@@ -1,9 +1,11 @@
---extra-index-url https://download.pytorch.org/whl/cpu
 fastapi
 uvicorn[standard]
-gliner
+httpx
+modal
 litellm
 supabase
 python-dotenv
 pydantic
-torch
+pandas
+duckdb
+splink
