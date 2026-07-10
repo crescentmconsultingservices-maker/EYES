@@ -1,5 +1,5 @@
 import { SyncResult } from '@/services/sync/provider-registry';
-import { resolveSyncActor } from '@/utils/sync/actor';
+import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
 import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/upsert';
 import { getValidDiscordToken } from '@/services/auth/oauth';
 import { scoreDiscordEvent } from '@/utils/risk/scorer';

@@ -2,7 +2,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { decryptToken } from '@/services/auth/tokens';
-import { resolveSyncActor } from '@/utils/sync/actor';
+import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
 import { scoreNotionEvent } from '@/utils/risk/scorer';
 
 type NotionSearchResult = {

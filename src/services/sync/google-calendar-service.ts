@@ -2,7 +2,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 
 import { getValidGoogleToken } from '@/services/auth/oauth';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { resolveSyncActor } from '@/utils/sync/actor';
+import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type CalendarEventsResponse = {
