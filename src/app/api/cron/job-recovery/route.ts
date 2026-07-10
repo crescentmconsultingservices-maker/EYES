@@ -157,22 +157,6 @@ export async function POST(req: NextRequest) {
             errorDetail = `HTTP sync fallback failed with status ${response.status}`;
           }
         }
-      } else if (job.type === 'embedding') {
-        // Embeddings Sync execution
-        const requestUrl = new URL(`${baseUrl}/api/sync/embeddings`);
-        const response = await syncEmbeddings(
-          new Request(requestUrl.toString(), {
-            method: 'POST',
-            headers: {
-              'x-cron-secret': secret,
-              'x-cron-user-id': job.userId,
-            },
-          })
-        );
-        success = response.ok;
-        if (!success) {
-          errorDetail = `Embeddings sync failed with status ${response.status}`;
-        }
       } else {
         errorDetail = `Unknown job type: ${job.type}`;
       }

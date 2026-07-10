@@ -394,25 +394,7 @@ async function runEmbeddingsSync(baseUrl: string, userId: string, secret: string
       durationMs: Date.now() - startedAt,
     };
 
-    const rawBody = await response.text();
-    const body = parseResponsePayload(rawBody);
-
-    if (!response.ok) {
-      return {
-        attempted: true,
-        success: false,
-        status: response.status,
-        durationMs: Date.now() - startedAt,
-        error: typeof body === 'object' && body && 'error' in body ? String(body.error) : `Embeddings sync failed (${response.status})`,
-      };
-    }
-
-    return {
-      attempted: true,
-      success: true,
-      status: response.status,
-      durationMs: Date.now() - startedAt,
-    };
+    // (Dead code removed)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {

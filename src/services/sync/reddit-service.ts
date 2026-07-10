@@ -3,7 +3,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidRedditToken } from '@/services/auth/oauth';
 import { scoreRedditEvent } from '@/utils/risk/scorer';
-import { resolveSyncActor } from '@/utils/sync/actor';
+import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
 
 type RedditMe = { name: string };
 
