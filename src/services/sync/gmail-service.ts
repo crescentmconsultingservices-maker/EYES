@@ -92,8 +92,8 @@ function extractTextFromPart(part: GmailMessagePart | undefined): string {
 }
 
 export async function executeGmailSync(actor: SyncActor, mode: string = 'delta'): Promise<SyncResult> {
-  const { supabase, userId } = actor;
-    
+  try {
+    const { supabase, userId } = actor;
     // --- DATA LOCKDOWN GUARD ---
     // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
     const { data: activeAudit } = await supabase

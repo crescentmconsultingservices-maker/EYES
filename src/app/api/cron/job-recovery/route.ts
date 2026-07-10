@@ -10,7 +10,6 @@ import { POST as syncNotion } from '@/app/api/sync/notion/route';
 import { POST as syncReddit } from '@/app/api/sync/reddit/route';
 import { POST as syncSlack } from '@/app/api/sync/slack/route';
 import { POST as syncDiscord } from '@/app/api/sync/discord/route';
-import { POST as syncEmbeddings } from '@/app/api/sync/embeddings/route';
 
 function toSyncRoutePlatform(platform: string) {
   if (platform === 'google_calendar') return 'google-calendar';

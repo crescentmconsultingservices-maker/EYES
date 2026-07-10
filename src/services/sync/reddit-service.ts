@@ -56,7 +56,7 @@ export async function executeRedditSync(actor: SyncActor, mode: string = 'delta'
     });
 
     if (!meResponse.ok) {
-      return { status: 200, data: {  error: `Reddit profile request failed (${meResponse.status})` }, { status: 502  } };
+      return { status: 502, error: `Reddit profile request failed (${meResponse.status})` };
     }
 
     const me = (await meResponse.json()) as RedditMe;
