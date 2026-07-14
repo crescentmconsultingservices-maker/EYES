@@ -256,7 +256,7 @@ async function retrieveEvidence(
   const citations: EyesCitation[] = [];
   const evidenceParts: string[] = [];
   let insightsText = '';
-  const graphText = '';
+  let graphText = '';
 
   // Calculate start_date if time_window_days is provided
   let start_date: string | undefined = undefined;
