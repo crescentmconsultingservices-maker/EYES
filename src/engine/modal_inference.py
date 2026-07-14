@@ -8,7 +8,7 @@ image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "gliner", "torch", "huggingface_hub", "fastapi"
 )
 
-app = modal.App("eyes-gliner-engine")
+app = modal.App("gliner")
 
 # 2. Define the Request Schema
 class ExtractRequest(BaseModel):
@@ -18,7 +18,7 @@ class ExtractRequest(BaseModel):
 # 3. Define the Inference Class
 # A class allows us to load the heavy 1.7GB model once when the container starts,
 # keeping it hot in memory for all subsequent requests.
-@app.cls(image=image, cpu=2.0, memory=4096, scaledown_window=120)
+@app.cls(image=image, cpu=2.0, memory=4096, scaledown_window=120, region="eu")
 class GlinerEngine:
     
     @modal.enter()

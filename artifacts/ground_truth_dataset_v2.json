@@ -1,0 +1,354 @@
+{
+  "records": [
+    {
+      "record_id": "parakweet-yes-0",
+      "content": "Chris Calger wants the financing CP removed, and we have a call scheduled at 200 to see if we can get to agreement with Delta.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-0",
+      "content": "I look forward to meeting you and learning about your successful business.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-1",
+      "content": "FYI. Can you make a call tomorrow at 100?",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-1",
+      "content": "We look forward to seeing you next week!",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-2",
+      "content": "Here are a few questions I would like to submit before your floor meeting on the 32nd floor Wednesday.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-2",
+      "content": "A quick question before our meeting.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-3",
+      "content": "That way we can discuss it with Heather and make good use of our time.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-3",
+      "content": "After sunning and drinking all day we feasted on a fleisch dinner...that was all we had here to eat, so we grilled bauchfleisch, steaks and bratw?rst...WE ATE SOOO MUCH, but we had DRANK SO MUCH THAT WE NEEDED IT, good greasy stuff.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-4",
+      "content": "Also, as I mentioned, I am very impressed with your background and accomplishments, but I would like to have you meet a couple of other people in my group before making a final offer.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-4",
+      "content": "Also Tuesday, Kyle and Eric 1/2 hour.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-5",
+      "content": "As we discussed, JPMorgan would like to hear your views on the above issues.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-5",
+      "content": "Also, I made a change to paragraph 7 to include technical bulletins per Mitch's request which we did not discuss on our call.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-6",
+      "content": "Did anything get set up? I'm booked at 200, but otherwise available.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-6",
+      "content": "As i was pondering the meeting last night going home in my car, I realized that I forgot to talk about 2 people, including regulatory and your personal efforts.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-7",
+      "content": "Herman says he has a lot of accounting issues to go over, and I thought it would be best if we all heard the same thing at the same time, plus, how the heck is this puppy going to get financed?",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-7",
+      "content": "As you become the responsible lawyer, first in Mexico, and maybe in the rest of South America, you may have a different opinion on these issues and we can certainly change our policies at any time.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-8",
+      "content": "I hope you and Linda will keep this time open on your busy schedules and attend.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-8",
+      "content": "As you know, last year's congress attracted over 200 attendees and provided the ideal opportunity for leading institutions to discuss the key issues and latest developments in pricing, trading and risk management strategies for power and gas.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-9",
+      "content": "I need to know the nature of the discussions we will be having with this company so I know how to word the decription in the agreement.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-9",
+      "content": "As you may know, I am on the Compaq Computer board.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-10",
+      "content": "I want to hear what M. Cash said, and who else you are meeting with.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-10",
+      "content": "Ben is trying to set up a conference call with ABB for next Wednesday.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-11",
+      "content": "I will also send you a copy of this invoice in the mail and will be glad to send you the actual evaluation forms completed by the attendees if you would like to have them.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-11",
+      "content": "Central Time, Wednesday.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-12",
+      "content": "I would greatly appreciate the opportunity to discuss my interest in a position with Enron and will contact you within a week.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-12",
+      "content": "Christie is coming at 1:30 to meet the students and talk to me.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-13",
+      "content": "I would greatly appreciate your groups help in cutting some of these issues off at the pass.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-13",
+      "content": "Clickpaper.com will be out and live just before the analyst meetings.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-14",
+      "content": "I would like to have a brief (30 minute) meeting about the noise in the political system about synfuel and reaffirm Jordon's viewpoint on Section 29 credits.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-14",
+      "content": "Czy masz czas, by spotakc sie na obiad/lunch/kawe?",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-15",
+      "content": "I would love to include my friend Carlos Sole from EECC for my birthday lunch.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-15",
+      "content": "Darron is in Hawaii until next week.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-16",
+      "content": "I'd like your help in identifying a guest participant who may help us think through some of the issues from either (or both) of two perspectives:",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-16",
+      "content": "Date: Tuesday, May 29 Time: 11:00 a.m.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-17",
+      "content": "If that works for them, please reschedule the conference call, send a confirming email to Mike, Steve Swift, Kent, Marty, Scott, Rose, Sheila (and leave her a voice mail -she is on the road), etc.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-17",
+      "content": "Dear Keith, It was a pleasure to meet you and your colleagues in gas / power trading last week.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-18",
+      "content": "If you are available I think it would be a good idea.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-18",
+      "content": "Dev., TransCanada PipeLines IN-DEPTH SEMINARS Power Generator Seminar How Calpine Corporation is handling its gas storage and deliverability requirements Storage Pricing Seminar Comprehensive insights for 2002: storage pricing volatility, effects on commodity and options pricing, leveraging opportunities PROJECT DISPLAYS Current projects of North America's leading storage providers: How they're using new technology, handling challenges, seizing opportunities VALUABLE NETWORKING OPPORTUNITIES TEXAS WELCOME - Hosted by Bloomberg Pre-conference get-together, February 5, 7-10 p.m. Special invitation to all conference registrants DELEGATES' RECEPTION - Sponsored by Northwinds Pipeline February 6 at 5:00 p.m. - All conference delegates welcome For more information, please visit our website at www.ziffenergyconferences.com.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-19",
+      "content": "May I have your reaction to Rev. Jackson's comments by noon, Tuesday, Sept. 25?",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-19",
+      "content": "Diane, I will definitely show this to Ken, but he has a Dain Rauscher presentation near the Galleria at 8:00 a.m. that morning, so I know he can't attend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-20",
+      "content": "My only suggestion is to put in a statement like - that after all your discussions with business unit head and AAs we are (changing) improving the program on the suggestions that you all wanted to see.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-20",
+      "content": "Dr. Lay is unable to participate in the conference.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-21",
+      "content": "Second, we will need to add some drop downs to deal with online trading issues.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-21",
+      "content": "Drive carefully!! See you sometime this weekend",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-22",
+      "content": "The market developments you describe happen quite often and this is one of the reasons we want to have the model you are working on.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-22",
+      "content": "Enron Pres: Still Committed to Power Generation Business Wednesday, September 6, 2000 12:49 PM",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-23",
+      "content": "Therefore, we need to have BOTH dogs put up tomorrow, and the gate open.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-23",
+      "content": "Executive Committee Weekly Meeting Date: Monday, October 9 Time: 11:00 a.m.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "parakweet-yes-24",
+      "content": "Thursday is great.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "parakweet-no-24",
+      "content": "Friday June 8, 2001 7:30 pm Tickets: $10 general $5 Students/Seniors.",
+      "human_labels": [
+        "None"
+      ]
+    }
+  ]
+}

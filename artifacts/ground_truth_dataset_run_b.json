@@ -1,0 +1,706 @@
+{
+  "records": [
+    {
+      "record_id": "exam-b-1",
+      "content": "Get some rest and start studying for Wednesday and Thursday exams.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-2",
+      "content": "Giuseppe did not receive the invitation to the Thursday reception.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-3",
+      "content": "Given our good, long-term relationship with UT, I would recommend that you speak at this conference.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-4",
+      "content": "Good night to grill...",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-5",
+      "content": "Great to have you on board.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-6",
+      "content": "Have a good week.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-7",
+      "content": "Have a good weekend!",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-8",
+      "content": "He can join us by phone if needed.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-9",
+      "content": "He is anxious to see it and meet with you after he has had a chance to review it.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-10",
+      "content": "He should be here for the management conference.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-11",
+      "content": "He will be here next Monday at 3:00 p.m.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-12",
+      "content": "He will be in the office tomorrow.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-13",
+      "content": "He will return to the office tomorrow.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-14",
+      "content": "He would like to discuss small business development and Center for Houston's Future with him.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-15",
+      "content": "Here's the slide presentation from yesterday's meeting with the NE Power Team.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-16",
+      "content": "Holly, I already mailed the documents out to meet the Fedex deadline.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-17",
+      "content": "Hope to see you at the Houstonian tomorrow.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-18",
+      "content": "Hope you had a nice weekend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-19",
+      "content": "Hope you have a good day and have a happy Thanksgiving tomorrow.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-20",
+      "content": "Hope you have high water and not hell next weekend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-21",
+      "content": "Hope you've had a great weekend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-22",
+      "content": "However, I am unable to attend any of the other events due to my busy work schedule.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-23",
+      "content": "However, I don't expect any big issues, since it is so close to the original form.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-24",
+      "content": "However, there's always next week.",
+      "human_labels": [
+        "delayed_on"
+      ]
+    },
+    {
+      "record_id": "exam-b-25",
+      "content": "I can attend.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-26",
+      "content": "I cannot attend.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-27",
+      "content": "I cannot play on Thursday but thanks for letting me know.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-28",
+      "content": "I faxed you the schedule.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-29",
+      "content": "I have a staff meeting and will be unable to join.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-30",
+      "content": "I have to hurry and send in my money for the event.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-31",
+      "content": "I know that you'll give me hell for this but I'm out of town for my Sister-in-Law's wedding that weekend.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-32",
+      "content": "I left a message on Thursday evening for Rosemarie, but was out Friday, so was too busy to follow up today, but having said all that, Ken Lay wanted me to let you know that he would like to have the TFA board meeting at the Enron building.",
+      "human_labels": [
+        "delayed_on"
+      ]
+    },
+    {
+      "record_id": "exam-b-33",
+      "content": "I really appreciate your putting me up for the weekend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-34",
+      "content": "I shall attend.",
+      "human_labels": [
+        "commitment",
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-35",
+      "content": "I shall call Risk on Thursday.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-36",
+      "content": "I shall coordinate the meeting on May the 4th with her.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-37",
+      "content": "I shall probably ask Tanya to attend.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-38",
+      "content": "I shall read the articles on weekend.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-39",
+      "content": "I will have to give him a call tomorrow to wish him happy birthday.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-40",
+      "content": "I would like to attend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-41",
+      "content": "I'll at least leave a message for him this weekend.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-42",
+      "content": "I'll discuss with Carlos.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-43",
+      "content": "I'll have to check with Kathleen on the details of the documentation for the various development companies.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-44",
+      "content": "I'll have to go get one this weekend.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-45",
+      "content": "If no space is available, they are to go in at noon.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-46",
+      "content": "If so, Mike Miller is available to sign it.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-47",
+      "content": "If you are having trouble viewing the above web address, visit http://www.sendomatic.com/servlets/l?u=tori.kuykendall@enron.com and create an account to view the events you have received.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-48",
+      "content": "In that event the MinDQ would be 15,000 and Customer would purchase 15,000 from Company at the price in 1) and Company would purchase 3,000 from Customer at the price in 3).",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-49",
+      "content": "Is Titan Land Development the Owner?",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-50",
+      "content": "Is he availabe tomorrow?",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-51",
+      "content": "It does not meet the financial test on its own.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-52",
+      "content": "It has to be the following week.",
+      "human_labels": [
+        "delayed_on"
+      ]
+    },
+    {
+      "record_id": "exam-b-53",
+      "content": "It seems we may be scheduling a meeting with VEPCO to discuss the PPA.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-54",
+      "content": "Janice has also been revising her forms to deal with some EFP issues.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-55",
+      "content": "Ken Lay will not be able to attend.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-56",
+      "content": "Ken Lay will not be able to join this as he is on a cruise vacation.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-57",
+      "content": "Ken Lay would only be available on December 4, 2000 as we have an Enron Board dinner on Monday, December 11.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-58",
+      "content": "Lead and become hands-on involved in the financial analysis, preparation of proposal documents, responses to Requests For Information from the Federal clients, term sheets and negotiation of business terms and definitive agreements with the customer.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-59",
+      "content": "Let me bring it back tomorrow.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-60",
+      "content": "Let me review my calendar in the beginning of the next year and I shall E-mail you with a suggested date.",
+      "human_labels": [
+        "commitment",
+        "delayed_on"
+      ]
+    },
+    {
+      "record_id": "exam-b-61",
+      "content": "Looking forward to the long weekend to get some much needed rest.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-62",
+      "content": "Martin, Bruce's trader-made fun of his haircut last week - woody woodpecker.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-63",
+      "content": "Maybe I can leave on Saturday.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-64",
+      "content": "Maybe it is on the development phone list.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-65",
+      "content": "Maybe she can be a back up for next Thursday.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-66",
+      "content": "Mike asked me to follow up with you to pass along his schedule for his visit to OU in April.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-67",
+      "content": "Mr. Kenneth L. Lay, Chairman and CEO of Enron Corp. will not be able to attend the November 16 - 17, 2000 6th Olympiad of the Mind.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-68",
+      "content": "Must possess transactional savvy and a successful track record of building strong relationships and leading within all stages of the deal development process, including needs analysis, financial and technical due diligence, proposal development, customer interface and closing process.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-69",
+      "content": "My suspicion is that the EES discussions are not ultimately going to yield fruit.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-70",
+      "content": "No changes in the schedule.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-71",
+      "content": "No new deals for central desk since bid week.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-72",
+      "content": "Off to Oslo tomorrow.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-73",
+      "content": "On 11/1, I am thinking about having you meet with another faculty, I and a Ph.D student from 10am to 11am.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-74",
+      "content": "Our friends at UT are ready to make the reservations and send out invitations to this conference",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-75",
+      "content": "Overnight Accom.: N/A",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-76",
+      "content": "Ozzie had to leave town, and he wanted to participate in the first meeting.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-77",
+      "content": "Per my meeting today with Credit:",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-78",
+      "content": "Planning a trip to Tulsa this Friday, to visit with Oneok.",
+      "human_labels": [
+        "commitment"
+      ]
+    },
+    {
+      "record_id": "exam-b-79",
+      "content": "Q: Will sit-ups help prevent me from getting a little soft around the middle?",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-80",
+      "content": "Re the other 2 meetings, he has a conflict also - an outside board.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-81",
+      "content": "Re: sample master agreements...we recently had a group meeting where we were discouraged to send out sample masters.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-82",
+      "content": "Remind them that the list was changing as late as noon Friday.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-83",
+      "content": "Risk 2001 USA - Boston, 12-13 June 2001 Risk magazine's 7th annual US derivatives and risk management congress For a full program and the latest information visit: www.risk-conferences.com/risk2001usa",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-84",
+      "content": "SOCO did not want to pre-schedule anything for Wednesday.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-85",
+      "content": "Shawn Cumberland 20 has joined this group to lead and expand the origination opportunities in 20 this business.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-86",
+      "content": "Shortly after that discussion, I retired from McKinsey on very friendly terms to form my own firm.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-87",
+      "content": "Sorry I didn't respond yesterday, I didn't get out of here until 10 last night.",
+      "human_labels": [
+        "delayed_on"
+      ]
+    },
+    {
+      "record_id": "exam-b-88",
+      "content": "Sorry to hear about this weekend.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-89",
+      "content": "Stan Horton is currently planning to attend this event.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-90",
+      "content": "Still on conference call.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-91",
+      "content": "Suzanne, you'll find the document attached to an email I received from Fred on July 11, entitled Kendall New Development LLC.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-92",
+      "content": "Thank you so much for the presentation yesterday concerning accounting/financing issues in power development projects.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-93",
+      "content": "Thanks Marilou, but Ken Lay cannot attend.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-94",
+      "content": "Thanks for dinner.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-95",
+      "content": "The gas group would like to roll out some new products and new locations for existing products in the next few weeks.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-96",
+      "content": "The kit will be mailed during the first week of December that will include: conference call information, hotel & travel details, instructions for submitting final papers, complementary registration information, etc).",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-97",
+      "content": "The meeting shouldn't last more than 45 minutes.",
+      "human_labels": [
+        "None"
+      ]
+    },
+    {
+      "record_id": "exam-b-98",
+      "content": "Therefore, i have not removed that line from the address, At such time as the Purchase Order Number is available, please send a revised address notice to the company containing such number.",
+      "human_labels": [
+        "decided_against"
+      ]
+    },
+    {
+      "record_id": "exam-b-99",
+      "content": "These are FYI at this time; further discussions to follow.",
+      "human_labels": [
+        "delayed_on"
+      ]
+    },
+    {
+      "record_id": "exam-b-100",
+      "content": "They will come through as an amendment on tonight's list.",
+      "human_labels": [
+        "None"
+      ]
+    }
+  ]
+}

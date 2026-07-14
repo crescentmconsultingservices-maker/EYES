@@ -14,7 +14,7 @@ const supabase = createClient(
 const USER_ID = '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
 const EMAIL = 'thomasshelby251890@gmail.com';
 const ENGINE_URL = 'http://127.0.0.1:8000/extract';
-const MAX_RECORDS = 30;
+const MAX_RECORDS = 500;
 
 interface EngineEntity {
   label: string;
@@ -213,8 +213,8 @@ async function runVolumeTest() {
     samples_for_audit: reportSamples
   };
 
-  fs.mkdirSync('reports', { recursive: true });
-  const reportPath = 'reports/volume_test_results.json';
+  fs.mkdirSync('../artifacts', { recursive: true });
+  const reportPath = '../artifacts/500_record_extractions.json';
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), 'utf-8');
 
   console.log('\n[Volume Test Complete!]');
