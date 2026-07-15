@@ -59,8 +59,11 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
           const nodes = data.nodes.map((n: any) => ({
             id: n.id,
             name: n.data.label,
-            val: n.id === 'User' ? 12 : 5, // User is big, memory nodes are small
-            color: n.id === 'User' ? '#4F46E5' : '#2D2D3A'
+            val: n.id === 'User' ? 12 : 5,
+            color: n.id === 'User' ? '#4F46E5' : '#2D2D3A',
+            // Pin the User node to the D3 canvas origin so it's always in the center
+            fx: n.id === 'User' ? 0 : undefined,
+            fy: n.id === 'User' ? 0 : undefined,
           }));
           
           setGraphData({ nodes, links });
@@ -126,17 +129,8 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         linkDirectionalParticleSpeed={0.005}
         cooldownTicks={100}
         onEngineStop={() => {
-          // Physics settled. Fit the camera, then anchor on the User node for perfect centering.
-          if (fgRef.current) {
-            fgRef.current.zoomToFit(400, 80);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const userNode = graphData.nodes.find((n: any) => n.id === 'User');
-            if (userNode) {
-              setTimeout(() => {
-                fgRef.current.centerAt(userNode.x, userNode.y, 600);
-              }, 450);
-            }
-          }
+          // Physics settled with User node at center. Fit the camera to frame everything.
+          if (fgRef.current) fgRef.current.zoomToFit(600, 80);
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {
