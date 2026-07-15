@@ -30,32 +30,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
             color: e.label === 'commitment' ? '#34D399' : e.label === 'delayed_on' ? '#EF4444' : '#6B7280'
           }));
           
-          // Artificially link all floating nodes back to the User so the graph stays connected
-          const userNodeId = 'User';
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data.nodes.forEach((n: any) => {
-            if (n.id !== userNodeId) {
-               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-               const hasLink = links.some((l: any) => 
-                  (l.source === n.id && l.target === userNodeId) || 
-                  (l.target === n.id && l.source === userNodeId)
-               );
-               if (!hasLink) {
-                 links.push({
-                   source: n.id,
-                   target: userNodeId,
-                   label: 'belongs_to',
-                   val: 0.5,
-                   color: 'rgba(107, 114, 128, 0.2)', // Faint gray so it doesn't clutter
-                   data: {
-                     evidence: 'Implicit contextual ownership.',
-                     confidence: 1.0
-                   }
-                 });
-               }
-            }
-          });
-          
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const nodes = data.nodes.map((n: any) => ({
             id: n.id,
