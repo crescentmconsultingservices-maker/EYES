@@ -16,7 +16,14 @@ export async function GET(request: Request) {
 
     const { data: edges, error } = await supabase
       .from('chronic_edges')
-      .select('id, head_node_id, tail_node_id, relation_label, confidence_score, evidence_text')
+      .select(`
+        id, 
+        relation_label, 
+        confidence_score, 
+        evidence_text,
+        head:head_node_id(id, name),
+        tail:tail_node_id(id, name)
+      `)
       .eq('user_id', userId)
       .is('valid_to', null)
       .limit(100);
@@ -36,21 +43,24 @@ export async function GET(request: Request) {
         id: 'User',
         data: { label: 'You (The User)' },
         position: { x: 0, y: 0 },
-        type: 'custom', // We can define a custom node type later for styling
+        type: 'default',
       });
     }
 
-    edges?.forEach((edge) => {
+    edges?.forEach((edge: any) => {
       // Normalize heads/tails
-      const sourceId = edge.head_node_id.replace(/_/g, ' ');
-      const targetId = edge.tail_node_id.replace(/_/g, ' ');
+      const sourceId = edge.head?.id || 'User';
+      const sourceLabel = edge.head?.name || 'You (The User)';
+      const targetId = edge.tail?.id || 'Unknown';
+      const targetLabel = edge.tail?.name || 'Unknown';
 
       // Add Source Node if not exists
       if (!nodesMap.has(sourceId)) {
         nodesMap.set(sourceId, {
           id: sourceId,
-          data: { label: sourceId },
-          position: { x: 0, y: 0 }, // We will use Dagre on the frontend to calculate real positions
+          data: { label: sourceLabel },
+          position: { x: 0, y: 0 },
+          type: 'default',
         });
       }
 
@@ -58,8 +68,9 @@ export async function GET(request: Request) {
       if (!nodesMap.has(targetId)) {
         nodesMap.set(targetId, {
           id: targetId,
-          data: { label: targetId },
+          data: { label: targetLabel },
           position: { x: 0, y: 0 },
+          type: 'default',
         });
       }
 
@@ -69,7 +80,7 @@ export async function GET(request: Request) {
         source: sourceId,
         target: targetId,
         label: edge.relation_label,
-        type: 'smoothstep', // Looks clean for structured graphs
+        type: 'smoothstep',
         data: {
           evidence: edge.evidence_text,
           confidence: edge.confidence_score
