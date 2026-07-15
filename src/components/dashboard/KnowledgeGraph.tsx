@@ -124,7 +124,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         linkDirectionalParticles={(link: any) => link.label === 'commitment' ? 3 : 0}
         linkDirectionalParticleSpeed={0.005}
-        cooldownTicks={0}
+        cooldownTicks={100}
         onEngineStop={() => {
           // Physics is frozen immediately. Just fit the camera to the graph.
           if (fgRef.current) fgRef.current.zoomToFit(400, 80);
