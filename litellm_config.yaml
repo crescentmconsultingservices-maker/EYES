@@ -1,0 +1,16 @@
+model_list:
+  - model_name: auto-chat
+    litellm_params:
+      model: anthropic/claude-3-haiku-20240307
+
+  - model_name: auto-extract
+    litellm_params:
+      model: anthropic/claude-3-haiku-20240307
+
+  - model_name: auto-classify
+    litellm_params:
+      model: anthropic/claude-3-haiku-20240307
+
+  - model_name: auto-embed
+    litellm_params:
+      model: text-embedding-3-small
