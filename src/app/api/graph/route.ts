@@ -21,8 +21,7 @@ export async function GET(request: Request) {
       .select(`
         id, 
         relation_label, 
-        confidence, 
-        evidence_text,
+        confidence,
         head:head_node_id(id, name),
         tail:tail_node_id(id, name)
       `)
@@ -84,7 +83,7 @@ export async function GET(request: Request) {
         label: edge.relation_label,
         type: 'smoothstep',
         data: {
-          evidence: edge.evidence_text,
+          evidence: 'Evidence logged in Audit Feed.',
           confidence: edge.confidence
         }
       });
