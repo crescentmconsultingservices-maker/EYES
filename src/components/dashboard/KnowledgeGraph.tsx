@@ -12,6 +12,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
+  const initialCenterRef = useRef(false);
 
   useEffect(() => {
     async function fetchGraph() {
@@ -98,6 +99,19 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         linkDirectionalParticles={(link: any) => link.label === 'commitment' ? 3 : 0}
         linkDirectionalParticleSpeed={0.005}
         d3VelocityDecay={0.3}
+        onEngineStop={() => {
+          if (fgRef.current && !initialCenterRef.current) {
+            initialCenterRef.current = true;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const userNode = graphData.nodes.find((n: any) => n.id === 'User');
+            if (userNode) {
+              fgRef.current.centerAt(userNode.x, userNode.y, 1000);
+              fgRef.current.zoom(1.8, 1000); // Perfect, readable zoom scale
+            } else {
+              fgRef.current.zoomToFit(1000, 150);
+            }
+          }
+        }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {
           // Center camera gracefully on clicked node
