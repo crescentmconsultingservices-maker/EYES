@@ -82,7 +82,11 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
       fgRef.current.d3Force('charge').strength(-300);
       // Longer minimum distance for all links
       fgRef.current.d3Force('link').distance(100);
-      fgRef.current.d3ReheatSimulation();
+      
+      // Delay reheating the simulation slightly to ensure the CSS container has fully painted
+      setTimeout(() => {
+        if (fgRef.current) fgRef.current.d3ReheatSimulation();
+      }, 500);
     }
   }, [loading, graphData]);
 
