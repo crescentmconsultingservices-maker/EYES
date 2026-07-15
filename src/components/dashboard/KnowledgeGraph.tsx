@@ -74,6 +74,18 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
     }
     fetchGraph();
   }, [userId]);
+
+  // Force the physics engine to spread the nodes apart physically
+  useEffect(() => {
+    if (fgRef.current && !loading && graphData.nodes.length > 0) {
+      // Strong repulsion to prevent text overlap
+      fgRef.current.d3Force('charge').strength(-300);
+      // Longer minimum distance for all links
+      fgRef.current.d3Force('link').distance(100);
+      fgRef.current.d3ReheatSimulation();
+    }
+  }, [loading, graphData]);
+
   
   // Custom Canvas Rendering for Nodes (Beautiful Glassmorphic Circles + Text)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
