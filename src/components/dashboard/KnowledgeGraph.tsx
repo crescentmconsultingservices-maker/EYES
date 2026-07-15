@@ -30,32 +30,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
             color: e.label === 'commitment' ? '#34D399' : e.label === 'delayed_on' ? '#EF4444' : '#6B7280'
           }));
           
-          // Artificially link all floating nodes back to the User so the graph stays connected (but invisible)
-          const userNodeId = 'User';
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data.nodes.forEach((n: any) => {
-            if (n.id !== userNodeId) {
-               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-               const hasLink = links.some((l: any) => 
-                  (l.source === n.id && l.target === userNodeId) || 
-                  (l.target === n.id && l.source === userNodeId)
-               );
-               if (!hasLink) {
-                 links.push({
-                   source: n.id,
-                   target: userNodeId,
-                   label: 'belongs_to',
-                   val: 0.5,
-                   color: 'rgba(0, 0, 0, 0)', // Completely transparent so it doesn't clutter the UI
-                   data: {
-                     evidence: 'Implicit contextual ownership.',
-                     confidence: 1.0
-                   }
-                 });
-               }
-            }
-          });
-          
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const nodes = data.nodes.map((n: any) => ({
             id: n.id,
@@ -74,6 +49,14 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
     }
     fetchGraph();
   }, [userId]);
+
+  // Configure physics engine to repel isolated clusters so they don't clump
+  useEffect(() => {
+    if (fgRef.current && !loading) {
+      fgRef.current.d3Force('charge').strength(-400);
+      fgRef.current.d3Force('link').distance(60);
+    }
+  }, [loading, graphData]);
   
   // Custom Canvas Rendering for Nodes (Beautiful Glassmorphic Circles + Text)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128,14 +111,8 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         onEngineStop={() => {
           if (fgRef.current && !initialCenterRef.current) {
             initialCenterRef.current = true;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const userNode = graphData.nodes.find((n: any) => n.id === 'User');
-            if (userNode) {
-              fgRef.current.centerAt(userNode.x, userNode.y, 1000);
-              fgRef.current.zoom(1.8, 1000); // Perfect, readable zoom scale
-            } else {
-              fgRef.current.zoomToFit(1000, 150);
-            }
+            // Let the engine space out the organic clusters, then fit everything in view gracefully
+            fgRef.current.zoomToFit(1000, 60); 
           }
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
