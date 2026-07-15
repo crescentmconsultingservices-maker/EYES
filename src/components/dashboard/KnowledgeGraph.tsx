@@ -11,7 +11,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
 
   useEffect(() => {
     async function fetchGraph() {
