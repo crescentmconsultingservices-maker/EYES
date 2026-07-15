@@ -126,8 +126,17 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         linkDirectionalParticleSpeed={0.005}
         cooldownTicks={100}
         onEngineStop={() => {
-          // Physics is frozen immediately. Just fit the camera to the graph.
-          if (fgRef.current) fgRef.current.zoomToFit(400, 80);
+          // Physics settled. Fit the camera, then anchor on the User node for perfect centering.
+          if (fgRef.current) {
+            fgRef.current.zoomToFit(400, 80);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const userNode = graphData.nodes.find((n: any) => n.id === 'User');
+            if (userNode) {
+              setTimeout(() => {
+                fgRef.current.centerAt(userNode.x, userNode.y, 600);
+              }, 450);
+            }
+          }
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {
