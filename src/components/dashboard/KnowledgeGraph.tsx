@@ -82,11 +82,15 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
       fgRef.current.d3Force('charge').strength(-300);
       // Longer minimum distance for all links
       fgRef.current.d3Force('link').distance(100);
+      fgRef.current.d3ReheatSimulation();
       
-      // Delay reheating the simulation slightly to ensure the CSS container has fully painted
+      // Delay the initial camera framing by 1 second to ensure the React container is fully sized
+      // and the physics engine has successfully pushed the nodes apart.
       setTimeout(() => {
-        if (fgRef.current) fgRef.current.d3ReheatSimulation();
-      }, 500);
+        if (fgRef.current) {
+           fgRef.current.zoomToFit(1500, 100);
+        }
+      }, 1000);
     }
   }, [loading, graphData]);
 
@@ -142,17 +146,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         linkDirectionalParticleSpeed={0.005}
         d3VelocityDecay={0.3}
         onEngineStop={() => {
-          if (fgRef.current && !initialCenterRef.current) {
-            initialCenterRef.current = true;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const userNode = graphData.nodes.find((n: any) => n.id === 'User');
-            if (userNode) {
-              fgRef.current.centerAt(userNode.x, userNode.y, 1000);
-              fgRef.current.zoomToFit(1000, 100); 
-            } else {
-              fgRef.current.zoomToFit(1000, 150);
-            }
-          }
+           // We now handle initial zoom in the useEffect timeout to bypass React rendering glitches
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {
