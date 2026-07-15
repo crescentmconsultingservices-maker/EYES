@@ -99,14 +99,6 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         linkDirectionalParticleSpeed={0.005}
         d3VelocityDecay={0.3}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onEngineTick={() => {
-            // Softened the repulsion force so it doesn't blast outwards and break the camera
-            if (fgRef.current) {
-               fgRef.current.d3Force('charge').strength(-150);
-               fgRef.current.d3Force('link').distance(60);
-            }
-        }}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {
           // Center camera gracefully on clicked node
           if (fgRef.current) {
