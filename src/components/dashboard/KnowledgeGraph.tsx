@@ -66,9 +66,14 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
     ctx.stroke();
 
     // Draw Text Label hovering below the node
+    let textColor = '#111827';
+    if (typeof window !== 'undefined') {
+       textColor = getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#111827';
+    }
+    
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#E2E8F0';
+    ctx.fillStyle = textColor;
     ctx.fillText(label, node.x, node.y + radius + (8 / globalScale));
   }, []);
 
@@ -93,15 +98,12 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         linkDirectionalParticles={(link: any) => link.label === 'commitment' ? 3 : 0}
         linkDirectionalParticleSpeed={0.005}
         d3VelocityDecay={0.3}
-        onEngineStop={() => {
-            if (fgRef.current) fgRef.current.zoomToFit(400, 50);
-        }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onEngineTick={() => {
-            // Increase the repulsion force to prevent text clumping
+            // Softened the repulsion force so it doesn't blast outwards and break the camera
             if (fgRef.current) {
-               fgRef.current.d3Force('charge').strength(-400);
-               fgRef.current.d3Force('link').distance(80);
+               fgRef.current.d3Force('charge').strength(-150);
+               fgRef.current.d3Force('link').distance(60);
             }
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
