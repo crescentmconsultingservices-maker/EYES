@@ -19,7 +19,7 @@ export async function GET(request: Request) {
       .select(`
         id, 
         relation_label, 
-        confidence_score, 
+        confidence, 
         evidence_text,
         head:head_node_id(id, name),
         tail:tail_node_id(id, name)
@@ -83,7 +83,7 @@ export async function GET(request: Request) {
         type: 'smoothstep',
         data: {
           evidence: edge.evidence_text,
-          confidence: edge.confidence_score
+          confidence: edge.confidence
         }
       });
     });
