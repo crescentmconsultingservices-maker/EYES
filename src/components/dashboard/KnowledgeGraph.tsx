@@ -132,7 +132,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
             const userNode = graphData.nodes.find((n: any) => n.id === 'User');
             if (userNode) {
               fgRef.current.centerAt(userNode.x, userNode.y, 1000);
-              fgRef.current.zoom(1.8, 1000); // Perfect, readable zoom scale
+              fgRef.current.zoom(4, 1000); // Increased zoom so it's readable like the second screenshot
             } else {
               fgRef.current.zoomToFit(1000, 150);
             }
