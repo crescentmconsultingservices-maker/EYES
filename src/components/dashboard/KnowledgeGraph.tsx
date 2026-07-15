@@ -30,7 +30,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
             color: e.label === 'commitment' ? '#34D399' : e.label === 'delayed_on' ? '#EF4444' : '#6B7280'
           }));
           
-          // Artificially link all floating nodes back to the User so the graph stays connected
+          // Artificially link all floating nodes back to the User so the graph stays connected (but invisible)
           const userNodeId = 'User';
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data.nodes.forEach((n: any) => {
@@ -46,7 +46,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
                    target: userNodeId,
                    label: 'belongs_to',
                    val: 0.5,
-                   color: 'rgba(107, 114, 128, 0.2)', // Faint gray so it doesn't clutter
+                   color: 'rgba(0, 0, 0, 0)', // Completely transparent so it doesn't clutter the UI
                    data: {
                      evidence: 'Implicit contextual ownership.',
                      confidence: 1.0
