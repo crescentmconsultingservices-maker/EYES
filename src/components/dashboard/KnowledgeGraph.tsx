@@ -45,7 +45,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
                    source: n.id,
                    target: userNodeId,
                    label: 'belongs_to',
-                   val: 0.5,
+                   val: 0.01,
                    color: 'rgba(0, 0, 0, 0)', // Completely transparent so it doesn't clutter the UI
                    data: {
                      evidence: 'Implicit contextual ownership.',
@@ -144,7 +144,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
             const userNode = graphData.nodes.find((n: any) => n.id === 'User');
             if (userNode) {
               fgRef.current.centerAt(userNode.x, userNode.y, 1000);
-              fgRef.current.zoom(4, 1000); // Increased zoom so it's readable like the second screenshot
+              fgRef.current.zoomToFit(1000, 100); 
             } else {
               fgRef.current.zoomToFit(1000, 150);
             }
