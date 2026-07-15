@@ -12,7 +12,6 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null);
-  const initialCenterRef = useRef(false);
 
   useEffect(() => {
     async function fetchGraph() {
@@ -75,25 +74,6 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
     fetchGraph();
   }, [userId]);
 
-  // Force the physics engine to spread the nodes apart physically
-  useEffect(() => {
-    if (fgRef.current && !loading && graphData.nodes.length > 0) {
-      // Strong repulsion to prevent text overlap
-      fgRef.current.d3Force('charge').strength(-300);
-      // Longer minimum distance for all links
-      fgRef.current.d3Force('link').distance(100);
-      fgRef.current.d3ReheatSimulation();
-      
-      // Delay the initial camera framing by 1 second to ensure the React container is fully sized
-      // and the physics engine has successfully pushed the nodes apart.
-      setTimeout(() => {
-        if (fgRef.current) {
-           fgRef.current.zoomToFit(1500, 100);
-        }
-      }, 1000);
-    }
-  }, [loading, graphData]);
-
   
   // Custom Canvas Rendering for Nodes (Beautiful Glassmorphic Circles + Text)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -144,9 +124,10 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         linkDirectionalParticles={(link: any) => link.label === 'commitment' ? 3 : 0}
         linkDirectionalParticleSpeed={0.005}
-        d3VelocityDecay={0.3}
+        cooldownTicks={0}
         onEngineStop={() => {
-           // We now handle initial zoom in the useEffect timeout to bypass React rendering glitches
+          // Physics is frozen immediately. Just fit the camera to the graph.
+          if (fgRef.current) fgRef.current.zoomToFit(400, 80);
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {
