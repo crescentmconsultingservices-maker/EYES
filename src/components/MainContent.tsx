@@ -347,7 +347,10 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   };
 
   return (
-    <main className={`${styles.main}${activeView === 'audit' ? ` ${styles.auditMain}` : ''}`}>
+    <main 
+      className={`${styles.main}${activeView === 'audit' ? ` ${styles.auditMain}` : ''}`}
+      style={activeView === 'mindmap' ? { padding: 0, margin: 0, maxWidth: 'none', height: '100vh', overflow: 'hidden' } : {}}
+    >
       {activeView === 'dashboard' && (
         <SynthesisView 
           query={query}

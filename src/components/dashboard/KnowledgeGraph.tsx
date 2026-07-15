@@ -81,7 +81,7 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
       <ForceGraph2D
         ref={fgRef}
         graphData={graphData}
-        backgroundColor="#050505"
+        backgroundColor="rgba(0,0,0,0)"
         nodeCanvasObject={nodeCanvasObject}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         linkColor={(link: any) => link.color}
