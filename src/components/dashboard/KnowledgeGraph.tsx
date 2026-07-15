@@ -92,10 +92,17 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         linkDirectionalParticles={(link: any) => link.label === 'commitment' ? 3 : 0}
         linkDirectionalParticleSpeed={0.005}
-        d3VelocityDecay={0.4}
+        d3VelocityDecay={0.3}
         onEngineStop={() => {
-            // Zoom to fit the graph organically once physics layout settles
             if (fgRef.current) fgRef.current.zoomToFit(400, 50);
+        }}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onEngineTick={() => {
+            // Increase the repulsion force to prevent text clumping
+            if (fgRef.current) {
+               fgRef.current.d3Force('charge').strength(-400);
+               fgRef.current.d3Force('link').distance(80);
+            }
         }}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onNodeClick={(node: any) => {

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import KnowledgeGraph from './KnowledgeGraph';
 import styles from '../MainContent.module.css';
 
 interface TimelineViewProps {
@@ -104,13 +103,6 @@ export function TimelineView({ onBack }: TimelineViewProps) {
         </div>
       )}
 
-      {/* The EYES Knowledge Graph Mind Map */}
-      <h3 className={styles.soloTitle} style={{ marginTop: '40px' }}>KNOWLEDGE GRAPH</h3>
-      <p style={{ color: '#888', marginBottom: '20px', fontSize: '14px' }}>
-        A structured, physics-based canvas of your extracted commitments, delays, and decisions. 
-        Hover over the connecting lines to view the exact receipt.
-      </p>
-      <KnowledgeGraph />
     </div>
   );
 }

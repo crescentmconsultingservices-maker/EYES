@@ -348,6 +348,25 @@ export default function Sidebar() {
           </div>
 
           <div
+            className={`${styles.item} ${activeView === 'mindmap' ? styles.itemActive : ''}`}
+            onClick={() => navigateToView('mindmap')}
+          >
+            <div className={styles.itemIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4C14.2091 4 16 5.79086 16 8C16 10.2091 14.2091 12 12 12C9.79086 12 8 10.2091 8 8C8 5.79086 9.79086 4 12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5.5 18C6.88071 18 8 16.8807 8 15.5C8 14.1193 6.88071 13 5.5 13C4.11929 13 3 14.1193 3 15.5C3 16.8807 4.11929 18 5.5 18Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18.5 18C19.8807 18 21 16.8807 21 15.5C21 14.1193 19.8807 13 18.5 13C17.1193 13 16 14.1193 16 15.5C16 16.8807 17.1193 18 18.5 18Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9.5 10.5L6.5 13.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14.5 10.5L17.5 13.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className={styles.itemMain}>
+              <span className={styles.itemLabel}>Mind Map</span>
+              <span className={styles.itemDesc}>Interactive neural orbit</span>
+            </div>
+          </div>
+
+          <div
             className={`${styles.item} ${activeView === 'audit' ? styles.itemActive : ''}`}
             onClick={() => navigateToView('audit')}
           >

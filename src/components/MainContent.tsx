@@ -14,8 +14,9 @@ import { AuditView } from './dashboard/AuditView';
 import { SynthesisView } from './dashboard/SynthesisView';
 import { ActionQueueView } from './dashboard/ActionQueueView';
 import { AIIntegrationView } from './dashboard/AIIntegrationView';
+import KnowledgeGraph from './dashboard/KnowledgeGraph';
 
-type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'action-queue' | 'integrations';
+type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'mindmap' | 'feed' | 'readiness' | 'connectors' | 'action-queue' | 'integrations';
 
 function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
   const searchParams = useSearchParams();
@@ -372,6 +373,12 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
 
       {activeView === 'timeline' && (
         <TimelineView onBack={() => setView('dashboard')} />
+      )}
+
+      {activeView === 'mindmap' && (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+           <KnowledgeGraph />
+        </div>
       )}
 
       {activeView === 'audit' && (
