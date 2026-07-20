@@ -1,0 +1,399 @@
+CONFIDENTIAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY · DO NOT
+DISTRIBUTE
+EYES
+EVERYTHING YOU EVER SAID
+Directive 02 —
+Closing the Gate,Opening the Organs
+The step-locked path from today's broken measurement to a live,
+trusted Chronic layer in the product — and the build order for
+everything that comes after. Every step has an end goal. No step
+begins until the previous end goal is met. Cumulatively, the whole
+goal is achieved.
+DOCUMENT
+Build Directive 02
+VERSION
+v1.0 · Operative Immediately
+DATE
+10 July 2026
+SUPERSEDES
+Build Notes 01 & 02 (absorbed
+here)
+PAIRS WITH
+Directive 01 · Pattern Library v0
+SCOPE
+Gate closure →  Un-mute →
+Organs
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 1 / 13
+00The Law of Steps — how this document works
+One rule governs everything below. Read it first, because it is the entire operating
+system of this directive.
+This directive is a sequence of locked steps. Each step ends in a gate — a concrete,
+checkable end goal with the evidence it requires. The law:
+You do not begin Step N+1 until the gate of Step N is met and its
+evidence is delivered. No parallel starts on future steps. No "we also
+began." The order is the strategy.
+This is not bureaucracy, and here is the arithmetic that proves it. The Phase 1 quality gate has now
+been attempted four times: first with no numbers, then with placeholder numbers, then with the word
+"perfectly" and no memo, and on July 10 with real numbers under an inverted verdict. Those four
+attempts consumed three weeks. The honest version of the same gate — a volunteer labeling fifty
+of their own emails and one measured run — takes two days. Skipping validation has not made us
+fast. It is the single largest source of our slowness. Honesty is the speed strategy, and this directive
+is built to prove it: followed exactly, the Chronic layer is live in the product for all alpha users in
+roughly ten working days, and organ construction begins in week three.
+THE ONE DISTINCTION, RESTATED ONCE, THEN NEVER AGAIN
+Wired means connected and running. Validated means what the system says about a person
+is true, and we measured it. On this product the distance between those words is the entire
+distance between a demo and a business. Every gate below exists to close that distance one
+step at a time.
+Nothing in this document questions the team's ability — the plumbing built these past three weeks
+(Modal deployment, live async batches, decay escalation, the candidate filter, the alias fix) is real
+and it stays. What changes today is sequence and proof. Build fast inside each step. Never across
+them.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 2 / 13
+01Two standing changes, effective today
+These are not steps. They are permanent changes to how we operate, and they precede
+everything.
+A · The founder's corpus is retired
+The founder's Gmail is disconnected from all test and development pipelines today. It is no longer
+the test corpus, the demo corpus, or the debugging corpus — for any purpose, by anyone. Cached
+copies, exports, and fixtures derived from it are deleted. Written confirmation of the disconnect and
+deletion is the first deliverable of this directive.
+Its replacement: one consenting volunteer inside Crescent Moon connects their own real inbox as
+the engineering corpus. Requirements: at least one year of history, roughly 2,000+ emails, a
+genuine mix of professional and personal mail, and — critically — real commitments, delays, and
+decisions in natural language. Someone who coordinates work is ideal.
+WHY THIS IS BETTER SCIENCE, NOT JUST BETTER PRIVACY
+The volunteer labels their own email. The person who lived the messages knows with
+certainty whether "I'll send it Friday" was a real commitment and whether it was kept —
+ground truth of a quality no outsider can produce. Privacy discipline rides along: only the
+volunteer reads their raw mail; only labels, spans, and aggregate metrics ever leave their
+session; no other team member browses the corpus.
+B · Verdict authority moves to the founder
+From today: the team produces numbers; the founder issues every GO / NO-GO, judged against
+thresholds agreed before the run (Section 02). Memos delivered under this directive contain
+measurements, breakdowns, and observations — and no verdict line. This is not a demotion; it is
+the same separation the product itself is built on: the estimator reports what is true, the decision-
+maker decides what to do. Four verdicts have now been issued on invalid data. The fifth verdict will
+be issued on valid data, by the founder, and it will hold.
+ALSO ABSORBED HERE — THE STANDING RULES THAT REMAIN IN FORCE
+Anchoring (every claim carries its receipt to source and span) — unchanged, eternal. Track
+One (the live product) remains priority one daily. The daily document (did / finished / doing
+tomorrow) continues. Any new always-on service, infrastructure, or per-record LLM cost
+requires a one-page cost note before code is written. And loop the founder in before new
+costs harden — never after.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 3 / 13
+02The math — thresholds agreed before any run
+These numbers are fixed now, in writing, so no future memo can bend a verdict around
+them.
+EYES's errors are not symmetric, and the thresholds encode that. A false "you committed
+to X" is product-killing — it teaches the user the system invents things about their life. A
+miss is merely invisible — the user never knows. Therefore: precision is sacred, recall
+can climb. We tune conservative, always.
+METRIC THRESHOLD TO PASS THE
+GATE WHY
+Precision —
+commitment
+≥  85% The accountability core. A wrong commitment claim
+is the worst output the product can produce.
+Precision —
+delayed_on
+≥  85% The moat relation. Accusing a user of slipping on
+something they never promised is fatal to trust.
+Precision —
+decided_against
+≥  80% Important but lower-stakes; a wrong one reads as
+odd, not accusatory.
+Recall — each moat
+relation
+≥  60% at gate; target
+75%+ over time
+Catching 6 of 10 real commitments is a shippable
+start; inventing 1 in 2 is not.
+Candidate-filter
+pass-rate
+Diagnostic band: 15–
+40% of records on a
+real inbox
+Below ~5% the filter is starving the LLM fallback —
+the prime suspect in the July 10 collapse (6
+extractions from a full run). Above ~60% it isn't
+filtering.
+Surfacing
+confidence
+≥  0.80 per relation to
+appear in chat
+Below-threshold relations remain stored as
+candidates — never shown.
+Rollout tolerance Zero wrong
+commitment-claims
+reported live
+One confirmed wrong claim during rollout = instant
+re-mute + root cause within 24h.
+AND THE DEFINITIONS THE LABELS ARE GRADED AGAINST — LOCKED
+commitment = the user's own first-person promise to do a thing ("I'll get it to you Friday,"
+"leave it with me"). delayed_on = the user's own commitment with elapsed time and no
+action — never a third-party blocker. "The vendor hasn't replied" is blocked_by, a separate
+relation, not delayed_on. decided_against = an active, stated rejection. Head
+normalization: heads normalize to User only when the subject is first-person in user-authored
+text (I / me / my / we-including-user). Named third parties keep their own entity as head —
+"Sarah committed to the deployment" is Sarah's commitment, never the user's. In received
+mail, the sender's "I" maps to the sender's entity.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 4 / 13
+03The steps
+Eight steps from today to a live, trusted Chronic layer — then the organs. Each gate is
+binary: met with evidence, or not met.
+0Hygiene & the corpus handover DAY 1
+THE WORK
+GATE 0 — YOU MAY PROCEED WHEN
+Written confirmation of founder-corpus disconnect + deletion · volunteer corpus
+connected · EU region pinning shown in config · the three answers delivered. All four, in
+one message.
+Disconnect the founder's Gmail from every test/dev pipeline; delete cached copies, exports,
+and fixtures derived from it.
+Recruit the volunteer (consent in writing); connect their inbox through the standard OAuth
+flow into an isolated test project.
+Pin all model inference to the EU. The Modal GLiNER deployment moves to an EU region
+(Modal supports region selection), or the model returns to our EU box. User content —
+anyone's — never processes outside the EU again. This closed once as a laptop tunnel and
+reopened in the cloud; it closes permanently today.
+Answer the three open items from the July 10 memo in writing: (1) did 50 records run or 500
+— what actually executed; (2) the exact current scope of head normalization in code; (3) the
+candidate filter's current pass-rate on the last run.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 5 / 13
+1Freeze the truth — definitions signed, fifty records
+labeled
+DAYS 1–
+2
+THE WORK
+EXPLICITLY FORBIDDEN IN THIS STEP
+Using any model's output as ground truth, in whole or in part. The July 10 memo graded the new
+engine against the old model's garbage — misses and hallucinations were uninterpretable even
+in principle. Ground truth is human, or it is not ground truth.
+GATE 1 — YOU MAY PROCEED WHEN
+Definitions confirmed in writing · frozen labeled file delivered with record count, per-type
+label counts, and ≥ 15 implicit cases shown.
+The team replies to Section 02's definitions with either "agreed" or specific objections.
+Silence is not agreement. Once agreed, the definitions are frozen.
+The volunteer selects 50 records of their own inbox — stratified, not just sequential: the set
+must contain at least 15 implicit commitment-class cases ("I'll get it to you Friday," "leave it
+with me," "count on me"), plus real delays and decisions. If a random pull lacks them, swap
+records in until it doesn't. An unrepresentative sample is a broken instrument.
+The volunteer hand-labels every true relation in those 50 records against the frozen
+definitions — head, tail, type, text span. Labels are saved as a frozen JSON ground-truth file,
+hash-stamped. After freezing, the file is never edited.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 6 / 13
+2Instrument the pipeline — make it explain itself DAY 2
+THE WORK
+GATE 2 — YOU MAY PROCEED WHEN
+One instrumented dry run on the frozen 50 produces the diagnostic table: pass-rate,
+attribution split, raw per-type counts. No scoring yet — this run proves the instrument
+works.
+3Gate Run A — the honest measurement DAY 3
+THE WORK
+WHAT THE JULY 10 SHAPE ALREADY PREDICTS
+Six total extractions from a full run points at a starved fallback — a filter passing near-zero
+records. Expect Gate Run A to expose exactly that, which is good: a located bug is a fixable bug.
+Precision 1/6 and recall 1/63 were never a GO; they were a diagnosis waiting to be read.
+GATE 3 — TWO EXITS
+Pass (all Section 02 thresholds met) →  skip to Step 5. Fail →  Step 4, carrying the memo's
+diagnosis. Both exits are legitimate. Only an unverdicted, fully-broken-out memo opens
+either one.
+Add logging so every run reports: filter pass-rate (records in →  records forwarded to the
+LLM), per-record extractor attribution (GLiNER vs fallback, per relation), and per-relation-type
+extraction counts.
+Publish the current candidate-filter pattern list in the daily doc. Reference set — commitment
+signals: "I'll," "I will," "let me," "count on me," "leave it to/with me," "we'll," "I can handle,"
+"consider it done," "by [day/time] ." Delay signals: "waiting on/for," "blocked," "stuck," "still
+hasn't," "taking longer," "holding up." Decision signals: "pass on," "drop," "kill," "scrap,"
+"opted not," "different direction," "not going to."
+Verify the fallback prompt contains: the frozen definitions, 3–5 few-shot implicit positive
+examples per relation type, negative examples (AI commands, plural business cases, third-
+party blockers), and a required output schema of head / tail / type / span / confidence. No
+span, no fact — anchoring applies to the LLM too.
+Run the full hybrid (GLiNER →  candidate filter →  LLM fallback) on the frozen 50. Score against
+the frozen labels.
+The memo reports, per relation type: precision, recall, true-positive counts — plus every miss
+with the text span that was missed, every hallucination with what was invented, the filter
+pass-rate, and the extractor attribution for each true positive (this split tells us where to tune).
+No verdict line in the memo. Numbers only. The founder reads it against Section 02 the same
+day and issues the call.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 7 / 13
+4The tuning loop — only if Gate Run A fails DAYS 3–5
+THE WORK — IN THIS ORDER, BECAUSE ERRORS CONCENTRATE
+THE THRASH GUARD
+Maximum three tuning iterations. If thresholds aren't met after three, stop and escalate to the
+founder with findings — the failure mode is then architectural, not parametric, and thrashing
+hides that. (The known escape hatch, pre-approved if it comes to it: route a larger share of
+candidates to the LLM and accept the bounded cost; the cost note rule applies.)
+GATE 4 — YOU MAY PROCEED WHEN
+All Section 02 thresholds met on the frozen 50, shown in a numbers-only memo, verdict
+issued by the founder.
+5Gate Run B — confirmation on fresh, unseen data DAYS 5–6
+WHY THIS STEP EXISTS
+Three tuning passes against one fixed set risks overfitting to those 50 records. Gate Run B is the
+guard: the volunteer labels a fresh 100–150 records the pipeline has never seen during tuning,
+same definitions, same stratification (implicit cases included). One run. No tuning after seeing the
+results. This is the exam, not the practice.
+PASS CONDITION
+Precision thresholds hold in full ( ≥ 85 / ≥ 85 / ≥ 80). Recall may sit up to 8 points below the Gate-A
+figure without failing — small honest degradation on fresh data is expected; collapse is not.
+GATE 5 — THE PHASE 1 GATE, FINALLY CLOSED
+Numbers-only memo on the fresh set →  founder issues the GO / NO-GO. A GO here is the
+Phase 1 quality gate passed — honestly, on the fifth attempt, on ground that will hold. A
+NO-GO returns to Step 4 findings with the founder deciding the architectural response.
+Either way: this memo is the one that finally counts.
+Filter first. If pass-rate < 15% on a real inbox, widen the pattern list (Step 2 reference set)
+until the band is reached. This is the prime suspect.
+Fallback prompt second. Misses concentrated in implicit cases →  strengthen the few-shot
+implicit examples. Hallucinations →  strengthen the negative examples.
+GLiNER threshold third. Tune the local confidence cut only after the two above.
+Head normalization — verify the Section 02 rule in code: first-person only, named third
+parties keep their heads.
+After each change: re-run against the same frozen 50. That is why the file is frozen — same
+test, honest comparison.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 8 / 13
+6Un-mute preparation — the surfacing rules DAY 6–7
+THE WORK — EVERY BOX CHECKED BEFORE THE SWITCH EXISTS
+GATE 6 — YOU MAY PROCEED WHEN
+All five boxes evidenced (screens/config/prompt templates) and the founder has reviewed
+the sensitive-insight templates.
+7Un-mute — staged, watched, reversible DAYS 7–10
+THE ROLLOUT
+GATE 7 — THE GATE IS CLOSED WHEN
+Chronic surfacing live for all 32 users, 7 consecutive days, zero confirmed wrong
+commitment-claims. This is the moment the product's chat becomes visibly smarter than
+any memory tool on the market — with a receipt behind every word. Ship-on-ready applies:
+the founder is told the day each stage flips.
+Ten working days separate today from a live, trusted Chronic layer.
+The four invalid memos cost three weeks. The honest path is the fast
+Confidence gate live: only relations ≥  0.80 surface; everything below stays stored as
+candidate, invisible.
+Receipts end-to-end: every surfaced claim renders its citation — source record + span — in
+the chat UI. If the receipt can't render, the claim doesn't surface.
+Sensitive framing enforced: stated-goal/actual-behavior insights (Pattern Library E1) and all
+Sensitive-badged patterns surface as questions with receipts inviting correction — "here's
+what I'm seeing, tell me if I've got it wrong" — never verdicts. The prompt templates for
+surfaced insights are reviewed by the founder before rollout.
+Kill switch: one feature flag (CHRONIC_SURFACING) that re-mutes everything instantly, tested by
+flipping it both ways.
+Staged account list prepared: volunteer + 2 internal accounts →  5 alpha users →  all 32.
+Stage 1 (48h): volunteer + internal accounts. Watch every surfaced claim against the people
+who can verify it instantly.
+Stage 2 (72h): 5 alpha users. Daily report: claims surfaced, receipts rendered, any accuracy
+flag.
+Stage 3: all 32 alpha users. Daily report continues for 7 days.
+The tolerance is zero: one confirmed wrong commitment-class claim at any stage →  flag off,
+root cause within 24h, fix, re-enter at Stage 1. No debate, no "it's just one."
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 9 / 13
+path — this schedule is the proof.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 10 / 13
+04Step 8 — the organs, in order, each behind its
+own small gate
+Begins only after Gate 7. Week three onward. The interpretation layer of Directive 01 §09
+— now with the discipline that was missing when it was built early.
+The organs already exist as code from the June sprint — built ahead of order, now
+runnable in the right one. They stay computing dark (running, logging, never surfacing)
+until each passes its own mini-gate. The mini-gate template, identical for every organ:
+THE ORGAN MINI-GATE — SAME SHAPE EVERY TIME
+Build/adapt →  run dark ≥  7 days on volunteer + internal accounts →  validation session: the
+volunteer reviews every signal the organ produced about their own life and marks true / false
+/ unclear — ≥  70% marked true to pass →  numbers to founder →  founder flips the flag for
+alphas →  next organ begins. Any organ that requires new per-record LLM calls needs its cost
+note approved before the build.
+ORDER ORGAN WHAT IT DOES & WHY THIS ORDER SURFACING RULE
+8A Drift (proper) Change-point detection on
+mention/behavior time series — upgrades
+the count-based primitive from Phase 4.
+First because it's cheapest: pure statistics on
+data the graph already produces.
+"This pattern has changed" +
+the numbers + receipts.
+Neutral tone; no cause
+attributed.
+8B Loops Sequence-pattern mining over ordered
+behavior — recurring structures the person
+runs without seeing them. Needs Drift's
+time-series plumbing, hence second.
+Named as a question: "this
+looks like a cycle — does it ring
+true?"
+8C Contradiction Reads the is_contradicted_by structural
+signatures already laid down in Phase 4
+decay work. Third because it consumes
+both prior organs' outputs.
+The most sensitive organ in the
+system: always a question with
+receipts, never a verdict. E1
+handling, no exceptions.
+8D Narrative Compression of event streams into the story
+they form. Last of the four — it reads
+everything beneath it.
+Draft narratives shown to the
+user for naming/correction —
+the user validates the story.
+STILL FORBIDDEN — RESTATED BECAUSE IT WAS VIOLATED ONCE
+Identity and Prediction do not surface, and receive no new build effort, under this directive.
+They are Directive 03 material, gated on the four organs above being live and validated. An
+identity verdict on an unproven interpretation layer is the "confident nonsense" failure — the
+one output this product cannot survive. The existing Phase-5 code for them may keep logging
+dark; nothing more.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 11 / 13
+05The reporting contract & the path at a glance
+What arrives, when, in what shape — and the whole road on one page.
+STEP NAME DAYS GATE — THE END GOAL
+0 Hygiene & corpus
+handover
+1 Founder corpus out + deleted · volunteer corpus in · EU
+pinned · 3 answers delivered
+1 Freeze the truth 1–2 Definitions agreed · frozen 50-record human ground truth,
+≥ 15 implicit cases
+2 Instrument the pipeline 2 Diagnostic run: pass-rate, attribution, per-type counts
+3 Gate Run A 3 Numbers-only memo vs frozen truth →  founder verdict
+4 Tuning loop (if
+needed)
+3–5 Thresholds met on frozen 50; ≤ 3 iterations, then escalate
+5 Gate Run B — fresh
+data
+5–6 Thresholds hold on unseen 100–150 →  Phase 1 gate closed
+6 Un-mute preparation 6–7 Confidence gate · receipts E2E · sensitive templates · kill
+switch · staged list
+7 Un-mute, staged 7–10 Live for all 32 · 7 days · zero wrong commitment-claims →
+GATE CLOSED
+8 The organs (A → D) Wk
+3+
+Per-organ: 7 days dark · ≥ 70% volunteer-validated · founder
+flips flag
+Every claim carries its receipt. Every step carries its gate. Every memo
+carries numbers, not verdicts. That is the whole system — and it is the
+fastest one available.
+The plumbing you have built is real, and the product it becomes on the other side of Gate 7 is the
+one nothing on the market can match: a chat that knows a person across time and can prove every
+word. Ten days of honest steps stand between here and there. Take them in order, and take them
+fast.
+Daily doc continues (did / finished / doing tomorrow), now with one added line whenever a step is
+active: "Current step: N · Gate evidence status: …"
+Gate memos are numbers-only. Precision/recall per relation type, pass-rate, attribution, misses and
+hallucinations itemized with spans. No verdict line, no adjectives doing a number's job. "Perfectly" is
+banned from memos; a percentage goes where it stood.
+Verdicts come back same-day from the founder against Section 02. Nobody waits long at a gate —
+that is the founder's obligation in this contract.
+Ship-on-ready stands: the day anything user-feelable flips live, it ships that day and the founder is
+told that day.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 12 / 13
+Abhi
+FOUNDER & CEO · EYES — EVERYTHING YOU EVER SAID
+CONFIDENTIAL · DIRECTIVE 02 · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 13 / 13

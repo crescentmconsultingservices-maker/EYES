@@ -1,0 +1,54 @@
+CONFIDENTIAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY · DO NOT
+DISTRIBUTE
+EYES
+EVERYTHING YOU EVER SAID
+Directive 02 —
+Closing the Gate,Opening the Organs
+The step-locked path from today's broken measurement to a live,
+trusted Chronic layer in the product — and the build order for
+everything that comes after. Every step has an end goal. No step
+begins until the previous end goal is met. Cumulatively, the whole
+goal is achieved.
+DOCUMENT
+Build Directive 02
+VERSION
+v1.0 · Operative Immediately
+DATE
+10 July 2026
+SUPERSEDES
+Build Notes 01 & 02 (absorbed
+here)
+PAIRS WITH
+Directive 01 · Pattern Library v0
+SCOPE
+Gate closure →  Un-mute →
+Organs
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 1 / 13
+00The Law of Steps — how this document works
+One rule governs everything below. Read it first, because it is the entire operating
+system of this directive.
+This directive is a sequence of locked steps. Each step ends in a gate — a concrete,
+checkable end goal with the evidence it requires. The law:
+You do not begin Step N+1 until the gate of Step N is met and its
+evidence is delivered. No parallel starts on future steps. No "we also
+began." The order is the strategy.
+This is not bureaucracy, and here is the arithmetic that proves it. The Phase 1 quality gate has now
+been attempted four times: first with no numbers, then with placeholder numbers, then with the word
+"perfectly" and no memo, and on July 10 with real numbers under an inverted verdict. Those four
+attempts consumed three weeks. The honest version of the same gate — a volunteer labeling fifty
+of their own emails and one measured run — takes two days. Skipping validation has not made us
+fast. It is the single largest source of our slowness. Honesty is the speed strategy, and this directive
+is built to prove it: followed exactly, the Chronic layer is live in the product for all alpha users in
+roughly ten working days, and organ construction begins in week three.
+THE ONE DISTINCTION, RESTATED ONCE, THEN NEVER AGAIN
+Wired means connected and running. Validated means what the system says about a person
+is true, and we measured it. On this product the distance between those words is the entire
+distance between a demo and a business. Every gate below exists to close that distance one
+step at a time.
+Nothing in this document questions the team's ability — the plumbing built these past three weeks
+(Modal deployment, live async batches, decay escalation, the candidate filter, the alias fix) is real
+and it stays. What changes today is sequence and proof. Build fast inside each step. Never across
+them.
+EYES — BUILD DIRECTIVE 02 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 10 JULY 2026 · FOUNDER OFFICE PAGE 2 / 13

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<!-- ============================================================
+  EYES — REVENUE LEAK SCAN · FULL REPORT TEMPLATE (€250 tier)
+  All client data below is FICTIONAL sample data for demo/testing.
+  Replace: client name, window, fee, leak cards, receipts.
+  Render → PDF via headless Chrome (A4). House style: EYES doctrine.
+============================================================ -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EYES · Revenue Leak Scan — Full Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF7F0;
+    --cream-deep:#F4EDE2;
+    --ink:#29241E;
+    --ink-soft:#5C554B;
+    --terracotta:#C05B32;
+    --terracotta-deep:#A64A26;
+    --slate:#3E5C55;
+    --line:#E2D8C8;
+    --alert:#A63D2F;
+    --mono:'IBM Plex Mono',monospace;
+    --sans:'Instrument Sans',sans-serif;
+    --serif:'Fraunces',serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.62;}
+  .page{max-width:860px;margin:0 auto;padding:0 56px 72px;}
+
+  /* ---------- header band ---------- */
+  .band{display:flex;justify-content:space-between;align-items:center;padding:26px 0 18px;border-bottom:2px solid var(--ink);}
+  .band .l{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--ink-soft);text-transform:uppercase;}
+  .band .r{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--terracotta);text-transform:uppercase;font-weight:600;}
+
+  /* ---------- title ---------- */
+  .titleblock{padding:58px 0 40px;}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--terracotta);font-weight:600;margin-bottom:18px;}
+  h1{font-family:var(--serif);font-weight:500;font-size:44px;line-height:1.08;letter-spacing:-0.01em;}
+  .clientline{margin-top:22px;font-family:var(--mono);font-size:13px;color:var(--ink-soft);line-height:2;}
+  .clientline b{color:var(--ink);font-weight:600;}
+
+  /* ---------- summary strip ---------- */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--ink);border-bottom:1px solid var(--line);margin:8px 0 0;}
+  .summary .cell{padding:26px 18px 24px;border-right:1px solid var(--line);}
+  .summary .cell:last-child{border-right:none;}
+  .summary .num{font-family:var(--serif);font-size:40px;font-weight:600;line-height:1;color:var(--ink);}
+  .summary .num.hot{color:var(--terracotta);}
+  .summary .lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);margin-top:10px;line-height:1.7;}
+
+  /* ---------- prose & sections ---------- */
+  section{margin-top:64px;}
+  h2{font-family:var(--serif);font-weight:500;font-size:26px;margin-bottom:18px;letter-spacing:-0.005em;}
+  .rule-h2{display:flex;align-items:baseline;gap:16px;margin-bottom:22px;}
+  .rule-h2 .n{font-family:var(--mono);font-size:13px;color:var(--terracotta);font-weight:600;}
+  p{margin-bottom:14px;max-width:68ch;}
+  .soft{color:var(--ink-soft);}
+
+  /* ---------- method callout (slate left bar, like directive docs) ---------- */
+  .callout{background:#F2EFE7;border-left:4px solid var(--slate);padding:22px 26px;margin:26px 0;}
+  .callout .ct{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);font-weight:600;margin-bottom:10px;}
+  .callout p{font-size:14px;margin-bottom:8px;}
+  .callout p:last-child{margin-bottom:0;}
+
+  /* ---------- leak table ---------- */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px;}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);text-align:left;padding:10px 12px;border-bottom:2px solid var(--ink);font-weight:500;}
+  tbody td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:nth-child(odd){background:rgba(244,237,226,.5);}
+  td.rank{font-family:var(--mono);font-weight:600;color:var(--terracotta);}
+  td.val{font-family:var(--mono);font-weight:600;white-space:nowrap;}
+  td.days{font-family:var(--mono);color:var(--alert);font-weight:600;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;padding:3px 8px;border:1px solid var(--line);background:var(--cream);white-space:nowrap;}
+  .tag.op{border-color:#C9A24B;color:#8A6A1F;}
+  .tag.gc{border-color:var(--terracotta);color:var(--terracotta-deep);}
+  .tag.dc{border-color:var(--alert);color:var(--alert);}
+  .tag.ui{border-color:var(--slate);color:var(--slate);}
+  .rcpt-ref{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);}
+
+  /* ---------- leak detail cards ---------- */
+  .leak{border:1px solid var(--line);background:#FDFAF4;margin:26px 0;page-break-inside:avoid;}
+  .leak-head{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid var(--line);background:var(--cream-deep);}
+  .leak-head .id{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--terracotta);letter-spacing:.08em;}
+  .leak-head .worth{font-family:var(--mono);font-size:13px;font-weight:600;}
+  .leak-body{padding:22px 24px;}
+  .leak-body h3{font-family:var(--serif);font-size:18.5px;font-weight:500;margin-bottom:8px;}
+  .leak-body .why{font-size:14px;max-width:66ch;}
+
+  /* receipt block — monospace, terracotta left rule (evidence doctrine) */
+  .receipt{font-family:var(--mono);font-size:12px;line-height:1.85;background:#F5EFE4;border-left:3px solid var(--terracotta);padding:16px 20px;margin:16px 0;color:#3B342B;overflow-x:auto;}
+  .receipt .rl{color:var(--ink-soft);}
+  .receipt .rq{color:var(--ink);font-weight:500;}
+  .receipt .rmeta{color:var(--terracotta-deep);font-size:11px;letter-spacing:.06em;}
+
+  /* recovery email draft — dashed box (done-looks-like language) */
+  .recovery{border:1px dashed #C9BBA4;padding:18px 22px;margin-top:14px;background:var(--cream);}
+  .recovery .rt{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);font-weight:600;margin-bottom:10px;}
+  .recovery p{font-size:13.5px;margin-bottom:8px;}
+
+  /* ---------- legend ---------- */
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin-top:10px;}
+  .legend .li{font-size:13.5px;}
+  .legend .li .tag{margin-right:8px;}
+
+  /* ---------- monitor pitch ---------- */
+  .monitor{border:2px solid var(--ink);padding:30px 34px;margin-top:26px;background:#FDFAF4;}
+  .monitor h3{font-family:var(--serif);font-size:22px;font-weight:500;margin-bottom:10px;}
+  .monitor .price{font-family:var(--mono);font-weight:600;color:var(--terracotta);}
+
+  /* ---------- footer ---------- */
+  .gdpr{margin-top:70px;border-top:2px solid var(--ink);padding-top:22px;}
+  .gdpr .gt{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--slate);font-weight:600;margin-bottom:12px;}
+  .gdpr p{font-size:12.5px;color:var(--ink-soft);max-width:none;}
+  .docfoot{display:flex;justify-content:space-between;margin-top:44px;font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);}
+
+  @media print{
+    body{background:#FBF7F0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .page{padding:0 34px 40px;max-width:none;}
+    section{margin-top:44px;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="band">
+    <div class="l">EYES — Revenue Leak Scan</div>
+    <div class="r">Confidential · Prepared for client</div>
+  </div>
+
+  <div class="titleblock">
+    <div class="kicker">Full Report · Paid Tier</div>
+    <h1>What your inbox has been<br>quietly losing.</h1>
+    <div class="clientline">
+      PREPARED FOR &nbsp;<b>Meridian Talent Partners</b><br>
+      MAILBOX &nbsp;<b>contact@meridiantalent.example</b> &nbsp;·&nbsp; WINDOW &nbsp;<b>15 Jan – 15 Jul 2026 (182 days)</b><br>
+      AVG PLACEMENT FEE (client-stated) &nbsp;<b>€7,000</b> &nbsp;·&nbsp; DELIVERED &nbsp;<b>17 Jul 2026</b>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="cell"><div class="num hot">23</div><div class="lab">Threads flagged as leaking revenue</div></div>
+    <div class="cell"><div class="num hot">€61k</div><div class="lab">Estimated pipeline value at risk</div></div>
+    <div class="cell"><div class="num">4,218</div><div class="lab">Threads scanned across 182 days</div></div>
+    <div class="cell"><div class="num">67d</div><div class="lab">Oldest leak — days of silence</div></div>
+  </div>
+
+  <section>
+    <div class="rule-h2"><span class="n">§1</span><h2>How to read this report</h2></div>
+    <p>Every claim in this document carries its receipt. Nothing here is generated, estimated from patterns, or inferred from industry averages — each flagged thread cites the exact email it came from, with sender, date, and the line that mattered. If a receipt doesn't convince you, discard the claim. The estimated values use your stated average placement fee of €7,000 and are marked per-thread; they are directional, the threads are not.</p>
+    <div class="callout">
+      <div class="ct">Method — one paragraph</div>
+      <p>EYES connected to the mailbox read-only, reconstructed every conversation thread from the last 182 days, and classified each against four leak patterns: proposals sent and never chased, clients gone quiet after activity, commitments made and not closed, and inbound requests never answered. A thread is flagged only when the evidence clears a 0.80 confidence threshold. 23 of 4,218 threads cleared it.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="rule-h2"><span class="n">§2</span><h2>The prioritized recovery list</h2></div>
+    <p class="soft">Ranked by estimated value × recoverability. Work from the top. Receipts and drafted recovery emails for the top items follow in §3; the complete set continues in the appendix.</p>
+    <table>
+      <thead><tr><th>#</th><th>Type</th><th>Counterparty</th><th>Last activity</th><th>Silent</th><th>Est. value</th><th>Receipt</th></tr></thead>
+      <tbody>
+        <tr><td class="rank">01</td><td><span class="tag gc">GHOSTED_CLIENT</span></td><td>Nordwind Logistics GmbH — 2 candidates submitted</td><td>12 May 2026</td><td class="days">66d</td><td class="val">€14,000</td><td class="rcpt-ref">R-01</td></tr>
+        <tr><td class="rank">02</td><td><span class="tag op">OPEN_PROPOSAL</span></td><td>Calvet &amp; Fils — retained search proposal</td><td>03 Jun 2026</td><td class="days">44d</td><td class="val">€9,500</td><td class="rcpt-ref">R-02</td></tr>
+        <tr><td class="rank">03</td><td><span class="tag dc">DROPPED_COMMITMENT</span></td><td>Aisha Okafor (candidate) — promised shortlist</td><td>21 Jun 2026</td><td class="days">26d</td><td class="val">€7,000</td><td class="rcpt-ref">R-03</td></tr>
+        <tr><td class="rank">04</td><td><span class="tag ui">UNANSWERED_INBOUND</span></td><td>Bretagne Médical — inbound role request</td><td>28 Jun 2026</td><td class="days">19d</td><td class="val">€7,000</td><td class="rcpt-ref">R-04</td></tr>
+        <tr><td class="rank">05</td><td><span class="tag gc">GHOSTED_CLIENT</span></td><td>Verlaine Studio — "revisit in Q3"</td><td>02 Apr 2026</td><td class="days">106d*</td><td class="val">€6,500</td><td class="rcpt-ref">R-05</td></tr>
+        <tr><td class="rank">06</td><td><span class="tag op">OPEN_PROPOSAL</span></td><td>HelioTech SAS — contract terms sent</td><td>09 Jun 2026</td><td class="days">38d</td><td class="val">€6,000</td><td class="rcpt-ref">R-06</td></tr>
+        <tr><td class="rank">07</td><td><span class="tag ui">UNANSWERED_INBOUND</span></td><td>Referral via K. Diallo — warm intro unanswered</td><td>30 Jun 2026</td><td class="days">17d</td><td class="val">€5,500</td><td class="rcpt-ref">R-07</td></tr>
+        <tr><td class="rank">08</td><td><span class="tag dc">DROPPED_COMMITMENT</span></td><td>Institut Roux — "will send references Monday"</td><td>15 Jun 2026</td><td class="days">32d</td><td class="val">€5,500</td><td class="rcpt-ref">R-08</td></tr>
+      </tbody>
+    </table>
+    <p class="soft" style="margin-top:12px;font-size:12.5px;">* Q3 arrived on 1 July. The clock in this row counts from the original conversation; the re-entry window is open <em>now</em>. &nbsp;·&nbsp; Rows 09–23 continue in the appendix with identical structure.</p>
+  </section>
+
+  <section>
+    <div class="rule-h2"><span class="n">§3</span><h2>Receipts &amp; recovery drafts — top of the list</h2></div>
+
+    <div class="leak">
+      <div class="leak-head"><span class="id">LEAK 01 · R-01 · GHOSTED_CLIENT</span><span class="worth">est. €14,000</span></div>
+      <div class="leak-body">
+        <h3>Nordwind Logistics — two candidates submitted, then silence.</h3>
+        <p class="why">You submitted two profiles on 12 May. Their hiring manager opened the thread twice (reply on 12 May confirms receipt) and the conversation stopped. Two live placements at your stated fee makes this the single largest recoverable item in the mailbox. Silence ≠ rejection: no rejection exists anywhere in the thread.</p>
+        <div class="receipt">
+          <span class="rmeta">RECEIPT R-01 · gmail://thread/18f3a2…c41 · msg 4 of 4</span><br>
+          <span class="rl">From:</span> j.brandt@nordwind-logistics.example<br>
+          <span class="rl">Date:</span> 12 May 2026, 16:42<br>
+          <span class="rl">Subject:</span> RE: Two profiles — Senior Ops Manager<br>
+          <span class="rq">"Both look strong, especially the second CV. Let me sync with Petra and come back to you this week."</span><br>
+          <span class="rl">— No message exists in the thread after this date.</span>
+        </div>
+        <div class="recovery">
+          <div class="rt">Drafted recovery email — send as-is or edit</div>
+          <p><b>Subject:</b> Both candidates still available — Senior Ops Manager</p>
+          <p>Hi Jonas — following up on the two profiles from May. Quick update from my side: both are still on the market, but the second candidate (the one you flagged as strong) has entered another process this month. If the role is still open, I can hold him for a conversation this week. If priorities moved, tell me and I'll close the file — no chasing after that. Which is it?</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="leak">
+      <div class="leak-head"><span class="id">LEAK 02 · R-02 · OPEN_PROPOSAL</span><span class="worth">est. €9,500</span></div>
+      <div class="leak-body">
+        <h3>Calvet &amp; Fils — retained search proposal sent, never chased.</h3>
+        <p class="why">A full retained-search proposal went out on 3 June after a positive discovery call (thread shows their MD requested it). No follow-up was ever sent. Proposals older than 30 days convert at a fraction of fresh ones — this one is at 44 days and falling.</p>
+        <div class="receipt">
+          <span class="rmeta">RECEIPT R-02 · gmail://thread/17ee09…8b2 · msg 6 of 6</span><br>
+          <span class="rl">From:</span> contact@meridiantalent.example (you)<br>
+          <span class="rl">Date:</span> 03 Jun 2026, 10:17<br>
+          <span class="rl">Subject:</span> Proposal — Retained search, Head of Atelier<br>
+          <span class="rq">"Attached is the proposal we discussed, including the fee structure and 6-week timeline. Happy to walk through it whenever suits."</span><br>
+          <span class="rl">— No reply received; no follow-up sent.</span>
+        </div>
+        <div class="recovery">
+          <div class="rt">Drafted recovery email — send as-is or edit</div>
+          <p><b>Subject:</b> Head of Atelier — closing the file?</p>
+          <p>Bonjour M. Calvet — I sent the retained-search proposal on 3 June and never properly followed up, which is on me. Two possibilities: the search is still live and we should book the walkthrough this week, or plans changed and I should close the file. Either answer is useful — which one is it?</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="leak">
+      <div class="leak-head"><span class="id">LEAK 03 · R-03 · DROPPED_COMMITMENT</span><span class="worth">est. €7,000</span></div>
+      <div class="leak-body">
+        <h3>Aisha Okafor — you promised a shortlist "by Friday." Friday was 26 days ago.</h3>
+        <p class="why">A placeable senior candidate, actively engaged, was promised next steps in writing. The commitment was never met and she has gone quiet since. Candidates talk — dropped promises cost placements you never see. This one is still recoverable with an honest reopen.</p>
+        <div class="receipt">
+          <span class="rmeta">RECEIPT R-03 · gmail://thread/1901bc…e77 · msg 9 of 9</span><br>
+          <span class="rl">From:</span> contact@meridiantalent.example (you)<br>
+          <span class="rl">Date:</span> 21 Jun 2026, 18:03<br>
+          <span class="rl">Subject:</span> RE: Next steps<br>
+          <span class="rq">"Leave it with me — I'll have a shortlist of three roles for you by Friday."</span><br>
+          <span class="rl">— No shortlist was sent. Candidate's last message remains unanswered.</span>
+        </div>
+        <div class="recovery">
+          <div class="rt">Drafted recovery email — send as-is or edit</div>
+          <p><b>Subject:</b> I owe you a shortlist — and an apology</p>
+          <p>Aisha — I said Friday and then went silent; that's not how I work and I'm sorry. Here's the honest position: two of the three roles I had in mind are still open, and one new one appeared last week that fits you better than all of them. Fifteen minutes this week to walk through them?</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="soft" style="margin-top:6px;">Leaks 04–23 follow the same structure — receipt, reasoning, drafted recovery — in the appendix pages of this document.</p>
+  </section>
+
+  <section>
+    <div class="rule-h2"><span class="n">§4</span><h2>What the four patterns mean</h2></div>
+    <div class="legend">
+      <div class="li"><span class="tag op">OPEN_PROPOSAL</span> A quote, proposal, or terms you sent that received no decision and no follow-up from your side.</div>
+      <div class="li"><span class="tag gc">GHOSTED_CLIENT</span> An active client conversation that stopped without a rejection — silence, not a no.</div>
+      <div class="li"><span class="tag dc">DROPPED_COMMITMENT</span> Something your side promised in writing, with no evidence it was delivered.</div>
+      <div class="li"><span class="tag ui">UNANSWERED_INBOUND</span> Money that knocked — an inbound request or warm referral that never got a reply.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="rule-h2"><span class="n">§5</span><h2>Stopping the next leak before it ages</h2></div>
+    <div class="monitor">
+      <h3>This report is a photograph. Leaks are a movie.</h3>
+      <p>In the 182 days scanned, a thread went quiet roughly every 8 days. The scan finds them after the fact; <b>EYES Continuous Monitoring</b> watches the same mailbox live and alerts you <em>before</em> a thread crosses the silence threshold — while the follow-up still lands warm. <span class="price">€149/month</span>, cancel anytime, same read-only access, same receipts on every alert.</p>
+    </div>
+  </section>
+
+  <div class="gdpr">
+    <div class="gt">Data handling — plain language</div>
+    <p>Access was read-only via OAuth, revocable by you at any moment from your Google Account settings. All processing ran on EU infrastructure (Frankfurt). Mailbox data used for this scan is deleted within 7 days of report delivery unless you activate Continuous Monitoring. Nothing is used to train models; your data is never mined, aggregated, or shared. A signed data-processing summary is available on request. Operated by EYES SAS, Rennes, France — GDPR-native by design.</p>
+  </div>
+
+  <div class="docfoot">
+    <span>Revenue Leak Scan · V1.0</span>
+    <span>EYES — Everything You Ever Said</span>
+    <span>Page 1</span>
+  </div>
+
+</div>
+</body>
+</html>

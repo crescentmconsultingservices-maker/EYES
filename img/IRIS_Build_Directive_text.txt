@@ -1,0 +1,421 @@
+CONFIDENTIAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY · DO NOT
+DISTRIBUTE
+IRIS
+THE PRODUCT · POWERED BY EYES
+IRIS Build Directive —
+The Parallel Product Track
+The second track. While the understanding foundation is finished in
+sequence, the product on top of it is built in parallel — API, voice, chat,
+surfaces, adaptive interface, cloud runtime. One contract holds the two
+tracks together. This directive defines that contract, the build order that
+isn't an order, and the gates that keep speed honest.
+DOCUMENT
+IRIS Build Directive
+VERSION
+v1.0 · Held Until Gate 7
+DATE
+13 July 2026
+COMPANION TO
+Directive 02 (Track 1) · Directive
+03 (Organs)
+GOVERNS
+Track 2 — the IRIS product
+STARTS
+The day Gate 7 closes
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 1 / 14
+00Two tracks, two speeds, one contract
+Read this first. It resolves the one apparent contradiction in how we build — sequential
+foundation, parallel product — and explains why both are true at once.
+Directive 02 is strict and sequential: gate, then un-mute, one dependency-locked step at a
+time. This directive is the opposite in spirit — build many things at once, fast, in parallel.
+Those are not in conflict. They are two different tracks moving at two different speeds,
+and the difference is dependency, not discipline.
+                        THE GATE (Directive 02)
+                     the one sequential bottleneck
+                   ┌───────────────────────────────┐
+   reality ──────►  │  Raw Truth →  Perception →  Acute │
+                   │   →  Chronic →  Understanding     │   ◄──  must be TRUE
+                   └───────────────┬───────────────┘       before anything
+                                   │                        renders it
+                    ┌──────────────┴──────────────┐
+                    ▼  GATE 7 CLOSES · tracks split ▼
+          ┌───────────────────┐         ┌────────────────────────┐
+          │   TRACK 1            │         │   TRACK 2                 │
+          │   Crescent Moon    │         │   The IRIS product      │
+          │   the organs       │         │   API · voice · chat    │
+          │   SEQUENTIAL       │         │   · surfaces · runtime  │
+          │   (dependencies)   │         │   PARALLEL (this doc)   │
+          │   Directive 03     │         │                         │
+          └─────────┬─────────┘         └───────────┬────────────┘
+                    │       both feed Customer Zero  │
+                    └───────────────┬───────────────┘
+                                    ▼
+                         you live inside IRIS while
+                         the organs light up beneath it
+THE GATE IS THE ONLY SEQUENTIAL BOTTLENECK. AFTER IT, TWO TRACKS RUN AT ONCE.
+Track 1 — the understanding foundation. Cannot be parallelized. Not a caution — a fact.
+Contradiction detection cannot exist before Drift's time-series plumbing; no organ can run before the
+graph produces trustworthy extractions. Each layer reads from the one beneath it. Directive 02
+governs it through the gate; Directive 03 continues it through the organs. It moves in sequence
+because the dependencies are real.
+Track 2 — the IRIS product (this directive). Can and should be built in parallel. Voice, chat, the
+surfaces, the adaptive interface — none of them depend on the organs existing. They depend on
+exactly one thing: the Understanding API being defined. Once the API contract is locked, every
+surface is built at once, against that contract, while Crescent Moon builds organs underneath. This is
+the "everything simultaneously, don't be slow" that the founder has asked for — and it is only safe
+because of the seam below.
+THE SEAM THAT LETS SEQUENTIAL AND PARALLEL COEXIST — THE ONE RULE OF THIS DIRECTIVE
+Every Track 2 component builds to the Understanding API contract, and only to it. No
+surface reads Chronic directly. No surface knows how understanding is stored, or whether an
+organ exists yet. They ask the API a natural-language question; they get understanding with
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 2 / 14
+receipts back. This is what lets voice, chat, and surfaces move at full parallel speed without
+waiting for the organs — and lets the organs evolve underneath without breaking a single
+surface. The API is the blueprint every track shares. Freeze it early; honor it absolutely.
+The foundation is finished in sequence because reality has
+dependencies. The product is built in parallel because the API
+removes them. One contract holds both.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 3 / 14
+01When this track starts — and what must be
+true first
+This directive is held, not sent, until one condition is met. Restated so no one starts early.
+Track 2 begins the day Gate 7 of Directive 02 closes — Chronic surfacing live for all users,
+seven clean days, zero wrong commitment-claims. Not before. The reason is the same
+reason the whole company is ordered this way:
+WHY NOT START THE PRODUCT NOW, IN PARALLEL WITH THE GATE?
+Because every surface in this directive renders understanding. A voice that speaks from a
+graph that hallucinates commitments doesn't fail slower — it fails louder, in the founder's ear,
+in a design partner's demo. Building beautiful surfaces on an unproven foundation is how you
+ship confident nonsense at conversational speed. The gate is ~10 working days and nearly
+done. Hold the product track until the thing it renders is true. Then move at full speed — the
+wait buys the right to.
+One exception, and it is the bridge between the tracks: Track 2, Step A (the Understanding API v0)
+may begin the moment the gate's un-mute preparation starts (Directive 02, Step 6) — because
+defining the read contract does not require the organs, only the foundation, which by Step 6 is
+proven. The API is the first thing built and the thing everything else waits on, so it starts at the
+earliest safe moment. Everything after it waits for Gate 7.
+A NOTE ON FUNDING, WRITTEN PLAINLY
+By the time this track opens, investment may be flowing and the team may be growing. That
+changes capacity, not order. More hands mean more Track 2 surfaces built in parallel at once
+— not Track 1 organs built out of sequence, and not the gate skipped. Scale widens the
+parallel track. It never breaks the sequential one.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 4 / 14
+02The build — one contract, then everything at
+once
+Step A is sequential (the API must exist first). Steps B through F run in parallel against it.
+Each carries its own gate.
+The shape is deliberate: one thing built first and alone (the contract), then five things built
+together (the product). Below is the whole track at a glance; the pages after specify each.
+STEP A ──  Understanding API v0 ────────  built FIRST, alone
+              (the contract everything else obeys)
+                          │
+        ┌─────────────┬───┴───┬─────────────┬────────────┐
+        ▼              ▼        ▼              ▼             ▼
+STEP B STEP C STEP D STEP E STEP F
+      Voice         Chat +   The render    Cloud        MCP
+      runtime       adaptive surfaces      runtime +    bidirectional
+                    UI (the  (brief ·      phone        (be a server ·
+                    room)    signals ·     (laptop-     host agents)
+                             timeline ·    shut = still
+                             investigate)  running)
+        └─────────────┴───────┴─────────────┴────────────┘
+                    all built in PARALLEL, against the API,
+                    each shipping to Customer Zero when TRULY done
+ONE CONTRACT FIRST. THEN THE PRODUCT, IN PARALLEL, SHIP-ON-TRULY-READY.
+STEP WHAT IT IS DEPENDS ON GATE
+A Understanding API v0 — the read
+contract + observation door
+Foundation proven
+(D02 Step 6)
+Contract frozen, receipts on every
+response, swap-test passes
+B Voice runtime — Kyutai on EU
+GPU, duplex, presence
+API v0 Live spoken answer with receipt,
+<target latency, EU-pinned
+C Chat + adaptive UI — the room you
+live in
+API v0 Adaptive cards render from real
+understanding, with receipts
+D Surfaces — brief, signals, timeline,
+investigate
+API v0 Each surface true against the graph,
+receipts throughout
+E Cloud runtime + phone — laptop-
+shut continuity
+API v0 Task survives closed laptop,
+resumes on phone, approve
+remotely
+F MCP bidirectional — be a server,
+host agents
+API v0 stable External client reads context via
+MCP; a coding agent runs inside
+THE SHIP-ON-TRULY-READY RULE — GOVERNS EVERY STEP
+Every component ships to production — where the founder lives as Customer Zero — the
+instant it is truly finished. Not before (a half-true surface shown to a design partner burns trust
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 5 / 14
+that cannot be rebuilt), and not batched for later (the founder must feel each piece to steer it).
+Truly done, then immediately live. The founder is told the day each ships.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 6 / 14
+03Step A — the Understanding API v0
+Built first, built alone. The constitutional boundary between the foundation and everything
+above it. Get this wrong and every surface inherits the mistake; get it right and the
+surfaces are cheap.
+AThe contract every surface obeys SEQUENTIAL · FIRST
+WHAT IT EXPOSES
+Understanding — not the database. Not Chronic, not the graph, not embeddings. A consumer
+asks a natural-language question about the user's reality and receives understanding back, with
+proof. The internal representation is invisible and swappable.
+THE READ PATH
+THE ONE WRITE PATH — THE OBSERVATION DOOR
+Consumers may not set beliefs. They may only report observations: observation: "user said —
+I'll send it Friday", which enters Raw Truth →  Perception like any email and becomes belief
+only if the foundation confirms it. This is how voice, chat, and every surface feed understanding
+without corrupting it — and it is the same door IRIS's own completed actions return through (the
+confirmation email, the booking record), never a back-channel write.
+GATE A — THE SWAP TEST
+Contract frozen and versioned. Every response carries receipts + confidence + temporal
+validity. And the test that proves the boundary holds: swap the internal implementation —
+graph store, extraction model, embedding — and no consumer breaks. If a consumer must
+change when the implementation changes, the API leaked implementation and the gate is
+not met.
+WHY THIS IS FIRST AND ALONE
+Voice, chat, and surfaces are all "different renderers of the same understanding." If they
+render against a shifting contract, every one of them re-breaks every time the API moves —
+five parallel teams thrashing on one moving target. Freeze the contract first, and the five
+surfaces become genuinely independent: each team builds against a blueprint that will not
+move under them. One week of discipline here buys the entire parallel build its speed.
+Natural-language query in: "what has Abhi committed to this week?" — not GET
+/entity/238/edges. Consumers think in questions, not schemas.
+Understanding out, always carrying: the answer, a confidence, a temporal validity ("believed
+since / still current"), and receipts — the exact source records and spans. No receipt, no
+claim. The anchoring rule, enforced at the boundary.
+Read-only. No consumer writes belief. Ever.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 7 / 14
+04Step B — Voice
+The primary surface and the one we may have solved something genuinely new in. Built in
+parallel with C–F, against the API.
+BThe runtime you think out loud to PARALLEL · AGAINST API
+THE STACK (LOCKED)
+Self-hosted Kyutai Unmute on EU GPUs. We own the experience and rent the larynx — the
+speech model is swappable the day a better open one ships; the presence around it is ours. No
+per-minute third-party voice API. EU inference, no exception.
+WHAT MAKES IT IRIS AND NOT "VOICE MODE"
+WHERE THE ACCOUNTABILITY MOAT LIVES
+The interruption policy is the moat — "you said this, and it hasn't moved" — a judgment about
+when to speak. It could never live in EYES (understanding has no objectives); it lives here, in
+IRIS's voice, calibrated on the founder first before any user hears it.
+GATE B
+A live spoken answer to a real question about the founder's own reality, carrying a receipt,
+under the latency target, fully EU-pinned. The founder hears it, taps the receipt, and it
+lands on the right source.
+Zero cognitive latency. No "let me check your calendar" pause — understanding is pre-
+computed, so the first word of the answer is already informed. This is the wedge, made
+audible. Physical latency (speech) is a solved commodity; cognitive latency is the thing we
+remove.
+Duplex presence. It listens while speaking; the user interrupts it; it interrupts the user — but
+only on the three understanding-triggers: about to act on outdated information, repeating a
+known past mistake, or contradicting a standing commitment. The trigger is understanding,
+never sound.
+Silence intelligence. Brainstorming earns silence; a decision earns input. Knowing when not
+to speak is the feature.
+Voice as observation. Everything said aloud is the richest evidence stream we have — it
+carries emotion, hesitation, confidence. It enters through the observation door with
+confidence weights; it never writes belief directly.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 8 / 14
+05Step C — Chat + the adaptive UI
+The room the founder and, later, the organization live inside for hours. Not a chat log —
+a space where understanding renders itself while you talk.
+CThe room you never leave PARALLEL · AGAINST API
+WHAT IT IS
+A calm conversation surface where understanding renders as cards as the conversation moves
+— the restaurant appears when the user is hungry, the dependency graph appears on
+"investigate this," the priority list appears on "what matters today." Voice lives inside it; the
+adaptive canvas lives inside it. Multi-layered and customizable: adaptive where it should adapt,
+fixed where the user relies on it staying put.
+THE ADAPTIVE CARDS — THE DISCIPLINE
+APPS INSIDE THE ROOM — VERSION 1
+The room can open a tab inside itself — a browser view, a rendered document, a data view, a
+canvas — the way a reference renders inline, so the user never leaves. This is the buildable-
+now half of "apps inside IRIS." (Version 2 — external agentic tools — is Step F.)
+GATE C
+The founder holds a real conversation; adaptive cards render from real understanding via
+the API, each with a working receipt; at least one embedded tab opens inside the room. It
+feels like one space, not a set of pages.
+Each card renders meaning, not text, and each carries receipts. A card is a rendering of an
+API response — nothing more, nothing invented.
+Cards arrive (fade up), they don't pop. The interface participates in thinking; it doesn't
+interrupt it.
+The founder's accountability interrupt renders here too — rare, earned, always a question
+with a receipt, never a verdict.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 9 / 14
+06Step D — the surfaces
+Four renderers of the same understanding: Morning Brief, Signals, Timeline, Investigate.
+Each built in parallel, each true against the graph, each shipping when truly done.
+DOne understanding, four windows PARALLEL · AGAINST API
+MORNING BRIEF
+Understanding rendered through time, and read with the user, not to them — as it speaks, the
+relevant surfaces render; the user interrupts, redirects, acts. What changed overnight, today's
+priorities, open commitments, risks. Every claim with a receipt.
+SIGNALS — THE LIVING COMPANY FEED
+Not a list — a feed with life: the company's nervous system. Every item earns its place (a signal
+changes a decision, prevents a mistake, or reveals an opportunity, or it does not exist — boom-
+scrolling, not doom-scrolling). Meaning is rendered — a competitor freezing hiring shows as a
+chart, a table, a timeline, with a "what it means for you" line — never merely stated. And it is
+social: the founder posts to it, the organization reads, comments, shares outward. LinkedIn ×
+Slack × Facebook, for one company.
+TIMELINE — WHERE UNDERSTANDING BECOMES VISIBLE
+Belief-events along a time axis: formed, superseded (struck through but never deleted — the bi-
+temporal soul made visible), committed, contradicted. Tappable to evidence. A time-scrubber to
+see understanding as it was on a past date. This is the surface that makes "understanding
+evolves" seeable — the demo that closes rooms.
+INVESTIGATE — THE UNIVERSAL AUDIT ENGINE
+Type the investigation, choose the lens, run it: SOC2, security threats, leaked credentials,
+compliance, competitive intel, reputation audit — any investigation, internal or external, for/to/by
+the company. Multi-step evidence gathering with receipts on every finding. This one surface
+contains the €39 consumer Reputation Audit (single lens) and the recurring enterprise Exec
+Shield (recurring lens) — the same engine, priced by depth.
+GATE D — PER SURFACE, NOT BATCHED
+Each surface passes independently: it renders true understanding via the API, receipts
+throughout, and ships to Customer Zero the day it is true. A surface that isn't true yet stays
+dark — it does not ship "mostly working."
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 10 / 14
+07Step E — cloud runtime & the phone
+The architecture decision that makes "laptop shut, still running" true. Build it alongside
+the surfaces, not after — it is not a feature, it is where IRIS lives.
+EIRIS lives in the cloud, not on the devicePARALLEL · AGAINST API
+THE DECISION, IN ONE SENTENCE
+The IRIS runtime is a cloud service on EU infrastructure; every surface is a stateless window into
+it. The cognitive loop already runs in the cloud (the graph updates nightly whether the laptop is
+open or not). The operational loop must run the same way.
+WHAT THIS BUYS
+THE BOUNDARY
+Only genuinely device-local capabilities (acting on the user's local browser session, local files)
+need the device awake. Those are an optional device-agent later; the core never depends on
+them.
+GATE E
+A task dispatched, the laptop closed, the task still completing in the cloud, the founder
+approving it from their phone, the result re-entering as a new observation with a receipt.
+The full loop, laptop shut.
+Laptop shut, task continues. "Investigate the churn and draft three emails" runs as a cloud
+job (worker queue on EU infra), state in the database, progress streaming to whatever
+surface is awake. Close the laptop mid-task — nothing dies.
+Phone picks up the same running mind. Open the phone: same task, same progress, same
+pending approval. Not a different app — another window into the same runtime. Approve an
+action from the lock screen; it executes in the cloud; the confirmation re-enters through the
+observation door.
+Surface handoff. Start at the desk, continue in the car, finish on the phone — one continuous
+thread, because neither the understanding nor the task state ever lived on any device.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 11 / 14
+08Step F — MCP, both directions
+The step that turns IRIS from an app into a layer other things depend on — and lets the
+founder run external tools without leaving the room. Begins once the API is stable.
+FBe the context others call — and host the
+tools
+PARALLEL · AFTER API
+STABLE
+DIRECTION 1 — EYES AS AN MCP SERVER (THE PLATFORM PLAY)
+Expose the Understanding API as an MCP server, so Claude, ChatGPT, Cursor — any MCP client
+— can call your context when they need it. This is the move that makes the frontier labs
+channels rather than competitors: they reach for the context layer none of them have. Small
+revenue at first; it is the story that makes the company infrastructure rather than an app.
+DIRECTION 2 — IRIS HOSTS EXTERNAL AGENTS (THE GAME-CHANGER SURFACE)
+IRIS drives external agentic tools as sub-agents inside the room. "IRIS, investigate this
+architecture" spins up a coding agent (Claude Code / Codex via MCP) with the user's
+understanding as context — terminal running, dependency graph on the canvas, all inside IRIS.
+The founder never opens a separate tool; IRIS orchestrates it and shows the outcome. You don't
+rebuild Cursor. You become the context it runs on, and the room it runs inside.
+THE HONEST BOUNDARY
+Driving a coding agent and exchanging context via MCP is available now. Literally
+embedding a third-party desktop app whole is a UX-integration question that depends on
+what that vendor exposes. Build to the capability (orchestrate + exchange context), not to
+the embedding.
+GATE F
+An external MCP client reads the user's context through EYES and uses it in an answer;
+and a coding agent runs inside IRIS with understanding as its context, its result returning
+through the observation door.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 12 / 14
+09The constitution — the laws no step may break
+These are not step goals. They are the permanent architectural laws every Track 2
+component obeys, forever. Any pull request that violates one is rejected regardless of
+what it ships.
+The whole reason the two tracks can move at different speeds without colliding is that
+every surface obeys the same small set of laws. They are the codebase's constitution —
+enforce them as review law, not prose.
+THE LAWS
+THE TEAM-VISIBILITY RULE, HONORED — AND ITS ONE EXCEPTION
+Each track builds its component without needing the whole cathedral — focus, and no leaks.
+That holds. The one thing every track must see is the Understanding API contract, because it
+is the shared seam. Keep the vision compartmentalized; make the interface public-to-the-
+team and non-negotiable. That is how blind parallel tracks still meet perfectly.
+Agents read understanding. Agents never write it. No surface, no sub-agent, no runtime
+writes belief. Ever.
+Execution writes to reality, never to belief. When IRIS acts, understanding does not record
+"done because I did it." It observes the confirmation — the email, the receipt, the record —
+through Perception, like any other evidence. This is the cure for agent self-delusion, and it is
+absolute.
+Every observation enters through the front door. Nothing bypasses Perception — not voice,
+not a completed action, not an external agent's result.
+Nothing bypasses the API. No surface reads Chronic or the graph directly. The API is the only
+door. Bypassing it is an architecture violation, not a style choice.
+Every claim carries its receipt, from the graph through the API to the surface to the spoken
+word. No receipt, no claim — in code, in chat, in voice.
+No personality in EYES; all judgment in IRIS. Understanding stays objective. Tone, timing,
+interruption, silence — the personality — lives only here.
+EU inference, end to end. No user content processes outside the EU, on any surface, in any
+runtime, ever. The moat is the law.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 13 / 14
+10The track at a glance & the reporting contract
+The whole product build on one page, and what arrives when.
+STEP COMPONENT MODE GATE — THE END GOAL
+A Understanding API v0 first · alone Contract frozen · receipts + confidence + time
+on every response · swap test passes
+B Voice runtime parallel Live spoken answer + receipt · under latency
+target · EU-pinned
+C Chat + adaptive UI parallel Adaptive cards from real understanding ·
+receipts · embedded tab opens
+D Surfaces (brief · signals ·
+timeline · investigate)
+parallel · per-
+surface
+Each true against the graph · receipts · ships
+when truly done
+E Cloud runtime + phone parallel Laptop-shut task completes · phone approval ·
+result re-observed
+F MCP bidirectional parallel · after
+API stable
+External client reads context · coding agent
+runs inside IRIS
+One contract, frozen first. Then the whole product, in parallel, each
+piece proven and shipped the day it is true. Speed, made honest by the
+seam that holds it together.
+This is the track that turns the finished foundation into the thing people actually hold. It runs beside
+the organs, not instead of them; it obeys the gate, not around it. Build the contract first. Then build
+everything at once — and let the founder feel each piece the day it becomes real.
+Abhi
+Founder & CEO · EYES — Everything You Ever Said
+CONFIDENTIAL · IRIS BUILD DIRECTIVE · HELD UNTIL GATE 7 · CRESCENT MOON ENGINEERING & FOUNDER
+OFFICE ONLY
+The daily document continues (did / finished / doing tomorrow), now with a per-step line: "Track 2 ·
+Step X · gate status …"
+Ship-on-truly-ready governs: the day any component is truly done, it ships to Customer Zero and
+the founder is told that day.
+Gates are demonstrated, not asserted. "Voice works" is not a gate; a spoken answer with a tapped
+receipt under latency, shown, is. Same discipline as Track 1 — show, don't tell.
+The API contract is the one shared artifact across all parallel work; changes to it are announced to
+every track the same day.
+IRIS BUILD DIRECTIVE — TRACK 2 CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · HELD UNTIL GATE 7 PAGE 14 / 14
