@@ -1,0 +1,36 @@
+{
+  "name": "leakscan",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LeakScan — evidence-graded revenue leak detection over business email. The EYES perception module, shipped first as a product.",
+  "scripts": {
+    "scan": "tsx cli/scan.ts",
+    "demo": "tsx cli/scan.ts --mbox fixtures/demo.mbox --industry staffing --avg-deal 12000",
+    "make-fixture": "tsx cli/makeFixture.ts",
+    "typecheck": "tsc --noEmit",
+    "check:boundaries": "tsx cli/checkBoundaries.ts",
+    "test": "node --test --import tsx test/*.test.ts",
+    "web": "tsx watch apps/web/server.ts",
+    "purge": "tsx cli/purge.ts",
+    "outcome": "tsx cli/outcome.ts",
+    "calibrate": "tsx cli/calibrate.ts",
+    "export-site": "tsx cli/exportSite.ts",
+    "preflight": "tsx cli/preflight.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.57.0",
+    "@types/express": "^5.0.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "mailparser": "^3.7.2",
+    "pdfkit": "^0.15.2"
+  },
+  "devDependencies": {
+    "@types/mailparser": "^3.4.5",
+    "@types/node": "^22.10.5",
+    "@types/pdfkit": "^0.13.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

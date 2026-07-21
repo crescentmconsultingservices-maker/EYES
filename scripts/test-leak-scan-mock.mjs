@@ -105,7 +105,8 @@ async function runMockTest() {
 
     console.log(`✅ [Phase 4] Success!`);
     console.log('\n================ REPORT SUMMARY ================');
-    console.log(`Total Pipeline Value at Risk: €${reportData.report.summary.total_value_eur}`);
+    console.log(`Total Gross Value at Risk: €${reportData.report.summary.total_gross_value_eur}`);
+    console.log(`Total Recoverable Value (Bayesian): €${reportData.report.summary.total_recoverable_value_eur}`);
     console.log(`Total Flagged Leaks: ${reportData.report.summary.threads_flagged}`);
     console.log('Breakdown:', reportData.report.summary.counts);
     console.log('================================================\n');

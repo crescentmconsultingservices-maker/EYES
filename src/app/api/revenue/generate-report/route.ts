@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
+import { calculateValuation } from '@/core/valuation/calculator';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -73,14 +74,23 @@ export async function POST(req: Request) {
       const domain = leak.counterparty_domain || 'unknown_domain';
       const existing = dedupedMap.get(domain);
       
-      // Calculate a rough recency factor (newer is better)
       const daysSilent = leak.days_silent || 0;
-      const recencyScore = 180 - daysSilent; // higher is newer
-      const value = defaultFee; // Could be dynamic if parsed from text
-      const rankScore = value * recencyScore;
+      
+      // Calculate using pure core function
+      const valuation = calculateValuation({
+        leakType: leak.leak_type,
+        daysSilent,
+        valueTier: leak.value_tier,
+        estValueEur: leak.est_value_eur,
+        quantity: leak.quantity,
+        unitPrice: leak.unit_price,
+        defaultFee
+      });
 
-      leak.est_value_eur = value;
-      leak._rank_score = rankScore;
+      leak.value_tier = valuation.finalTier;
+      leak.est_value_eur = valuation.grossValue;
+      leak.recoverable_value_eur = valuation.recoverableValue;
+      leak._rank_score = valuation.rankScore;
 
       // Keep highest value/rank if duplicate domain
       if (!existing || leak._rank_score > existing._rank_score) {
@@ -92,7 +102,8 @@ export async function POST(req: Request) {
 
     // 4. Compute Summary Stats
     const totalThreadsFlagged = finalLeaks.length;
-    const totalValue = finalLeaks.reduce((sum, l) => sum + (l.est_value_eur || 0), 0);
+    const totalGrossValue = finalLeaks.reduce((sum, l) => sum + (l.est_value_eur || 0), 0);
+    const totalRecoverableValue = finalLeaks.reduce((sum, l) => sum + (l.recoverable_value_eur || 0), 0);
     
     let oldestLeakAge = 0;
     const countsPerType = {
@@ -103,7 +114,9 @@ export async function POST(req: Request) {
     };
 
     finalLeaks.forEach(l => {
-      countsPerType[l.leak_type as keyof typeof countsPerType] = (countsPerType[l.leak_type as keyof typeof countsPerType] || 0) + 1;
+      if (countsPerType[l.leak_type as keyof typeof countsPerType] !== undefined) {
+        countsPerType[l.leak_type as keyof typeof countsPerType]++;
+      }
       if (l.days_silent > oldestLeakAge) oldestLeakAge = l.days_silent;
     });
 
@@ -113,7 +126,8 @@ export async function POST(req: Request) {
       summary: {
         total_threads_scanned: totalThreadsScanned || 0,
         threads_flagged: totalThreadsFlagged,
-        total_value_eur: totalValue,
+        total_gross_value_eur: totalGrossValue,
+        total_recoverable_value_eur: totalRecoverableValue,
         oldest_leak_age_days: oldestLeakAge,
         counts: countsPerType
       },

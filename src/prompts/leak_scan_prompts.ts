@@ -25,8 +25,18 @@ Rules:
     "quoted_line": "<exact verbatim substring of the message text proving the leak. MUST NOT BE INVENTED>"
   },
   "commitment_due_date": "<date if applicable, else null>",
-  "recovery_angle": "<One honest sentence to reopen the conversation without groveling>"
+  "recovery_angle": "<One honest sentence to reopen the conversation without groveling>",
+  "value_tier": "<T1 | T2 | T4>",
+  "stated_value_eur": <number or null>,
+  "quantity": <number or null>,
+  "unit_price": <number or null>,
+  "unit_hint": "<string or null>"
 }
+
+Rules on money:
+- T1 (Total): If a total price, invoice total, or overall contract value is explicitly stated, set value_tier to "T1", stated_value_eur to the total in EUR, and leave quantity/unit_price null. Totals ALWAYS beat unit prices.
+- T2 (Unit x Quantity): Only if no total is stated, but a count and unit price are stated (e.g., "25 placements at 2400 per placement"), set value_tier to "T2", quantity to the count, unit_price to the unit price, and unit_hint to the unit.
+- T4 (Unknown): If no amount appears anywhere, set value_tier to "T4" and all money fields to null. DO NOT guess or infer from industry averages.
 
 CRITICAL: The "quoted_line" MUST be a direct, verbatim copy of the text from the source message. If it is invented or summarized, the record will fail the integrity gate.
 `;
