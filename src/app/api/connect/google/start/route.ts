@@ -42,14 +42,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/connect/gmail?oauth=error&reason=invalid_platform', baseUrl));
   }
 
-  const mockState = `${platform}:mock_nonce`;
 
-  if (process.env.MOCK_MODE === 'true') {
-    const callbackUrl = new URL('/api/connect/google/callback', baseUrl);
-    callbackUrl.searchParams.set('code', 'mock_google_code');
-    callbackUrl.searchParams.set('state', mockState);
-    return NextResponse.redirect(callbackUrl);
-  }
 
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   if (!clientId) {

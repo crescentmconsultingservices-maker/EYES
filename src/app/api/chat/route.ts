@@ -210,48 +210,7 @@ async function retrieveEvidence(
   plan: PlannerResult,
   userTurn: string,
 ): Promise<{ evidence: string; citations: EyesCitation[]; insightsText: string; graphText: string }> {
-  if (process.env.MOCK_MODE === 'true') {
-    const mockCitations: EyesCitation[] = [
-      {
-        sourceId: 1,
-        recordId: 'gmail_8842',
-        memoryId: 'gmail_8842_mock',
-        platform: 'gmail',
-        title: 'Re: Investor Network Introduction & One-Pager',
-        timestamp: '2026-03-14T10:00:00Z',
-        snippet: 'Hi, thank you for the introduction. Can you please send over your team\'s one-pager by the end of the month? Looking forward to review.',
-        sourceUrl: 'https://mail.google.com/mail/u/0/#inbox/gmail_8842',
-      },
-      {
-        sourceId: 2,
-        recordId: 'cal_9120',
-        memoryId: 'cal_9120_mock',
-        platform: 'google-calendar',
-        title: 'Investor Network Meeting',
-        timestamp: '2026-04-02T15:00:00Z',
-        snippet: 'Follow-up meeting to discuss the one-pager and investor network introduction.',
-        sourceUrl: 'https://calendar.google.com/calendar/r/eventedit/cal_9120',
-      },
-      {
-        sourceId: 3,
-        recordId: 'gh_1122',
-        memoryId: 'gh_1122_mock',
-        platform: 'github',
-        title: 'Update one-pager draft',
-        timestamp: '2026-03-20T14:30:00Z',
-        snippet: 'Fixed typos and updated team bios in the project one-pager document.',
-        sourceUrl: 'https://github.com/company/repo/pull/1',
-      }
-    ];
 
-    const evidence = mockCitations.map(c => `[${c.recordId}] [${c.platform.toUpperCase()}] [${new Date(c.timestamp!).toLocaleDateString()}]\n${c.snippet}`).join('\n\n---\n\n');
-    return {
-      evidence,
-      citations: mockCitations,
-      insightsText: '[INSIGHT:REPUTATION] Commitment inconsistency detected: requested one-pager has no matching email attachment or delivery record prior to follow-up.',
-      graphText: ''
-    };
-  }
 
   const citations: EyesCitation[] = [];
   const evidenceParts: string[] = [];
