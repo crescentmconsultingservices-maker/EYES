@@ -7,7 +7,7 @@ import styles from './KnowledgeGraph.module.css';
 // ForceGraph3D requires canvas/window so it must be dynamically imported in Next.js
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
-export default function KnowledgeGraph({ userId }: { userId?: string }) {
+export default function KnowledgeGraph({ userId, width, height }: { userId?: string, width?: number, height?: number }) {
   const [graphData, setGraphData] = useState<{ nodes: any[]; links: any[] }>({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
   const [hoverNode, setHoverNode] = useState<any>(null);
@@ -82,15 +82,17 @@ export default function KnowledgeGraph({ userId }: { userId?: string }) {
 
 
   if (loading) {
-    return <div className={styles.loadingContainer}>Booting Neural Orbit...</div>;
+    return <div className={styles.loadingContainer} style={{ height: height || '100vh' }}>Booting Neural Orbit...</div>;
   }
 
   return (
-    <div className={styles.graphWrapper}>
+    <div className={styles.graphWrapper} style={height ? { height: `${height}px` } : {}}>
       <ForceGraph3D
         ref={fgRef}
         graphData={graphData}
         nodeLabel="name"
+        width={width}
+        height={height}
       />
     </div>
   );

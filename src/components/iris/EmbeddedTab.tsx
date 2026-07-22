@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import KnowledgeGraph from '@/components/dashboard/KnowledgeGraph';
 
 interface EmbeddedTabProps {
   appType: 'knowledge-graph' | 'data-grid' | 'document-viewer';
@@ -16,8 +17,8 @@ export default function EmbeddedTab({ appType, data }: EmbeddedTabProps) {
           <h4 style={{ margin: 0, color: '#e2e8f0', fontSize: '14px' }}>Network Visualization</h4>
           <span style={{ color: '#38bdf8', fontSize: '12px', background: 'rgba(56, 189, 248, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>Interactive</span>
         </div>
-        <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #334155', borderRadius: '8px' }}>
-          <p style={{ color: '#64748b', fontSize: '14px' }}>[ Interactive WebGL Graph Canvas: {data.nodes} nodes, {data.edges} edges ]</p>
+        <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', overflow: 'hidden', border: '1px solid #1e293b' }}>
+          <KnowledgeGraph height={300} />
         </div>
       </div>
     );
