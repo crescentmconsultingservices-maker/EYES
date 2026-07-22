@@ -14,7 +14,20 @@ export default function MorningBrief() {
         if (res.ok) {
           const data = await res.json();
           setStats(data.stats);
-          setSynthesis(data.synthesis);
+        }
+
+        // Fetch synthesis dynamically from the strict Understanding API v0
+        const synthRes = await fetch('/api/iris/v0', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: "Generate a morning brief synthesis of my recent activity." })
+        });
+        
+        if (synthRes.ok) {
+          const synthData = await synthRes.json();
+          if (synthData.understanding?.answer) {
+            setSynthesis(synthData.understanding.answer);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch morning brief", err);

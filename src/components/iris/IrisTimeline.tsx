@@ -6,6 +6,8 @@ export default function IrisTimeline() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [summary, setSummary] = useState("Analyzing chronological events...");
+
   useEffect(() => {
     async function loadTimeline() {
       try {
@@ -13,6 +15,18 @@ export default function IrisTimeline() {
         if (res.ok) {
           const data = await res.json();
           setEvents(data.events || []);
+        }
+
+        const sumRes = await fetch('/api/iris/v0', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: "Provide a 1-sentence summary of the chronological timeline of my recent memories." })
+        });
+        if (sumRes.ok) {
+          const sumData = await sumRes.json();
+          if (sumData.understanding?.answer) {
+            setSummary(sumData.understanding.answer);
+          }
         }
       } catch (err) {
         console.error("Failed to load timeline", err);
@@ -36,7 +50,12 @@ export default function IrisTimeline() {
       `}</style>
       <div style={{ marginBottom: '40px' }}>
         <h2 style={{ fontSize: 'clamp(28px, 5vw, 36px)', color: '#e06a3b', marginBottom: '8px', lineHeight: 1.2, fontWeight: 700, letterSpacing: '-0.02em' }}>Chronological Timeline</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '16px' }}>A reverse-chronological mapping of extracted facts and memories.</p>
+        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '16px', marginBottom: '16px' }}>A reverse-chronological mapping of extracted facts and memories.</p>
+        <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.2)', padding: '16px', borderRadius: '12px' }}>
+          <p style={{ margin: 0, color: '#38bdf8', fontSize: '14px', fontStyle: 'italic' }}>
+            {summary}
+          </p>
+        </div>
       </div>
 
       {events.length === 0 ? (

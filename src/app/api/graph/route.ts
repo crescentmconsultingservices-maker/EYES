@@ -16,25 +16,41 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId') || '4d2f3e3c-b834-43fc-852a-c3cdbb535b68'; // Default to Thomas Shelby if none provided
 
-    const { data: edges, error } = await supabase
-      .from('chronic_edges')
-      .select(`
-        id, 
-        relation_label, 
-        confidence,
-        head:head_node_id(id, name),
-        tail:tail_node_id(id, name)
-      `)
-      .eq('user_id', userId)
-      .is('valid_to', null)
-      .limit(100);
+    const [edgesRes, corrRes] = await Promise.all([
+      supabase
+        .from('chronic_edges')
+        .select(`
+          id, 
+          relation_label, 
+          confidence,
+          head:head_node_id(id, name),
+          tail:tail_node_id(id, name)
+        `)
+        .eq('user_id', userId)
+        .is('valid_to', null)
+        .limit(100),
+      supabase
+        .from('entity_correlations')
+        .select('entity_id, entity_name')
+        .eq('user_id', userId)
+    ]);
 
-    if (error) {
-      console.error('Supabase error fetching graph:', error);
+    if (edgesRes.error) {
+      console.error('Supabase error fetching graph:', edgesRes.error);
       return NextResponse.json({ error: 'Failed to fetch graph data' }, { status: 500 });
     }
 
+    const edges = edgesRes.data;
+    const correlations = corrRes.data;
+
     // Process into React Flow format
+    const entityMap = new Map<string, string>();
+    if (correlations) {
+      correlations.forEach(c => {
+        entityMap.set(c.entity_id, c.entity_name);
+      });
+    }
+
     const nodesMap = new Map<string, any>();
     const flowEdges: any[] = [];
 
@@ -49,11 +65,18 @@ export async function GET(request: Request) {
     }
 
     edges?.forEach((edge: any) => {
-      // Normalize heads/tails
-      const sourceId = edge.head?.id || 'User';
-      const sourceLabel = edge.head?.name || 'You (The User)';
-      const targetId = edge.tail?.id || 'Unknown';
-      const targetLabel = edge.tail?.name || 'Unknown';
+      // Normalize heads/tails with deduplication map
+      const rawSourceId = edge.head?.id || 'User';
+      const rawSourceLabel = edge.head?.name || 'You (The User)';
+      
+      const sourceId = entityMap.get(rawSourceId) || rawSourceId;
+      const sourceLabel = entityMap.get(rawSourceId) || rawSourceLabel;
+      
+      const rawTargetId = edge.tail?.id || 'Unknown';
+      const rawTargetLabel = edge.tail?.name || 'Unknown';
+      
+      const targetId = entityMap.get(rawTargetId) || rawTargetId;
+      const targetLabel = entityMap.get(rawTargetId) || rawTargetLabel;
 
       // Add Source Node if not exists
       if (!nodesMap.has(sourceId)) {

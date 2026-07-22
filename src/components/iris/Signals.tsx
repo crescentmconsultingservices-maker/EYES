@@ -4,12 +4,48 @@ import { useState } from 'react';
 
 export default function Signals() {
   const [hoverId, setHoverId] = useState<number | null>(null);
+  const [signals, setSignals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockSignals = [
-    { id: 1, type: 'ALERT', priority: 'HIGH', title: 'Unusual Login Attempt', time: '10 mins ago', desc: 'A login was detected from a new IP address outside your normal geographical pattern.', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' },
-    { id: 2, type: 'INSIGHT', priority: 'MEDIUM', title: 'Knowledge Graph Optimization', time: '2 hours ago', desc: 'EYES automatically merged 4 duplicate nodes regarding your upcoming project deadlines.', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
-    { id: 3, type: 'SYSTEM', priority: 'LOW', title: 'Data Sync Complete', time: '5 hours ago', desc: 'Successfully ingested 120 new messages from Telegram and indexed them into vector storage.', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)' }
-  ];
+  useEffect(() => {
+    async function loadSignals() {
+      try {
+        const res = await fetch('/api/iris/v0', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: "Analyze my recent activity and generate a high-priority system signal or insight based on the evidence." })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.understanding?.answer) {
+            setSignals([
+              { 
+                id: 1, 
+                type: 'INSIGHT', 
+                priority: data.understanding.confidence > 0.8 ? 'HIGH' : 'MEDIUM', 
+                title: 'IRIS Synthesis', 
+                time: 'Just now', 
+                desc: data.understanding.answer, 
+                color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' 
+              }
+            ]);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+      
+      // Fallback if no real evidence is found
+      setSignals([
+        { id: 1, type: 'SYSTEM', priority: 'LOW', title: 'No New Signals', time: 'Just now', desc: 'No recent anomalous behavior or critical insights detected by IRIS.', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)' }
+      ]);
+    }
+    loadSignals();
+  }, []);
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px', paddingBottom: '100px', animation: 'fadeIn 0.5s ease-out' }}>
@@ -23,7 +59,7 @@ export default function Signals() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {mockSignals.map(sig => (
+        {signals.map((sig: any) => (
           <div 
             key={sig.id} 
             onMouseEnter={() => setHoverId(sig.id)}

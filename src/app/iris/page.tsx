@@ -10,6 +10,9 @@ import IrisHeader from '@/components/iris/IrisHeader';
 import { useAuth } from '@/context/AuthContext';
 import styles from '../chat/ChatPage.module.css';
 import { AdaptiveCard } from '@/components/iris/AdaptiveCard';
+import ActiveTasksDrawer from '@/components/iris/ActiveTasksDrawer';
+import AgentTerminal from '@/components/iris/AgentTerminal';
+import EmbeddedTab from '@/components/iris/EmbeddedTab';
 
 import VoiceOrb from '@/components/iris/VoiceOrb';
 
@@ -19,6 +22,8 @@ interface IrisResponse {
     confidence: number;
     temporal_validity: any;
     receipts: any[];
+    intent?: string;
+    app_data?: any;
   }
 }
 
@@ -26,6 +31,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content?: string;
   understanding?: IrisResponse['understanding'];
+  isAgent?: boolean;
 }
 
 function IrisDashboardInner() {
@@ -38,6 +44,7 @@ function IrisDashboardInner() {
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
+  const [isTasksDrawerOpen, setIsTasksDrawerOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Redirect to login if not authenticated
@@ -59,6 +66,33 @@ function IrisDashboardInner() {
     const userMessage = { role: 'user' as const, content: query.trim() };
     setMessages(prev => [...prev, userMessage]);
     setQuery('');
+    
+    if (query.trim().startsWith('/agent ')) {
+      const task = query.trim().replace('/agent ', '').trim();
+      setMessages(prev => [...prev, { role: 'assistant', content: task, isAgent: true }]);
+      return;
+    }
+
+    if (query.trim().startsWith('/app ')) {
+      const type = query.trim().replace('/app ', '').trim();
+      const appData = type === 'graph' 
+        ? { type: 'knowledge-graph', data: { nodes: 42, edges: 112 } }
+        : { type: 'data-grid', data: { rows: [{date: '2023-10-01', metric: 'MRR', value: '$12,000'}, {date: '2023-10-02', metric: 'MRR', value: '$12,400'}] } };
+
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        understanding: { 
+          answer: `Here is the embedded interactive ${type} application you requested.`, 
+          confidence: 0.99, 
+          temporal_validity: null,
+          receipts: [],
+          intent: 'render_app',
+          app_data: appData
+        } 
+      }]);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -134,15 +168,22 @@ function IrisDashboardInner() {
                   </div>
                 ) : (
                   <div style={{ width: '100%' }}>
-                    {m.content ? (
+                    {m.isAgent ? (
+                      <AgentTerminal task={m.content || 'Default Agent Task'} />
+                    ) : m.content ? (
                        <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '12px', borderRadius: '8px' }}>{m.content}</div>
                     ) : m.understanding ? (
-                      <AdaptiveCard 
-                        answer={m.understanding.answer}
-                        confidence={m.understanding.confidence}
-                        receipts={m.understanding.receipts}
-                        onReceiptClick={(receipt) => setActiveReceipt(receipt)}
-                      />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <AdaptiveCard 
+                          answer={m.understanding.answer}
+                          confidence={m.understanding.confidence}
+                          receipts={m.understanding.receipts}
+                          onReceiptClick={(receipt) => setActiveReceipt(receipt)}
+                        />
+                        {m.understanding.intent === 'render_app' && m.understanding.app_data && (
+                          <EmbeddedTab appType={m.understanding.app_data.type} data={m.understanding.app_data.data} />
+                        )}
+                      </div>
                     ) : null}
                   </div>
                 )}
@@ -169,7 +210,7 @@ function IrisDashboardInner() {
                     }
                   }
                 }}
-                placeholder="Message IRIS or tap the orb to speak..."
+                placeholder="Message IRIS or type /agent <task> to summon orchestrator..."
                 style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '16px', outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '8px 0', fontFamily: 'inherit' }}
                 rows={query.split('\n').length > 1 ? Math.min(query.split('\n').length, 8) : 1}
                 disabled={loading}
@@ -182,6 +223,14 @@ function IrisDashboardInner() {
                   style={{ background: query.trim() ? '#e06a3b' : 'var(--border)', color: 'white', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading || !query.trim() ? 0.7 : 1, transition: 'all 0.2s ease' }}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsTasksDrawerOpen(true)}
+                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid var(--border)', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  title="Cloud Tasks"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>
               </div>
             </div>
@@ -258,6 +307,8 @@ function IrisDashboardInner() {
           )}
             </>
           )}
+
+          <ActiveTasksDrawer isOpen={isTasksDrawerOpen} onClose={() => setIsTasksDrawerOpen(false)} />
 
         </div>
       </div>

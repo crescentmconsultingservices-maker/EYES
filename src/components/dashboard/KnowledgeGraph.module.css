@@ -3,6 +3,14 @@
   height: 100vh;
   position: relative;
   overflow: hidden;
+  /* Ambient gradient background */
+  background: radial-gradient(circle at 50% 50%, #151025 0%, #050505 100%);
+  animation: bgPulse 10s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+  0% { background: radial-gradient(circle at 50% 50%, #151025 0%, #050505 100%); }
+  100% { background: radial-gradient(circle at 50% 50%, #1a103c 0%, #050505 100%); }
 }
 
 .reactFlow {
