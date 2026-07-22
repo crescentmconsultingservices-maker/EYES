@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Signals() {
   const [hoverId, setHoverId] = useState<number | null>(null);
