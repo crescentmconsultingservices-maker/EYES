@@ -11,17 +11,21 @@ export async function GET() {
 
   // Feature Flag: ENABLE_FOUNDER_DUPLEX (Customer Zero tuning)
   const isDuplexEnabled = process.env.ENABLE_FOUNDER_DUPLEX === 'true' || true;
+  const kyutaiWsUrl = process.env.KYUTAI_DUPLEX_WS_URL || 'wss://duplex.eyes.internal/v1/stream';
 
   return NextResponse.json({
     enabled: isDuplexEnabled,
     engine: 'kyutai-speech-duplex-v1',
+    model: 'Kyutai Moshi Full-Duplex Speech AI',
+    wsEndpoint: kyutaiWsUrl,
     config: {
       interruptionPolicy: 'balanced', // aggressive | balanced | patient
       silenceThresholdMs: 500,        // 300 | 500 | 800
       truthToComfortRatio: 0.85,       // 0.0 to 1.0 judgment tuning
-      sampleRate: 24000
+      sampleRate: 24000,
+      duplexCodec: 'opus-24k'
     },
-    sessionToken: `duplex_sess_${user.id.substring(0, 8)}_${Date.now()}`
+    sessionToken: `kyutai_sess_${user.id.substring(0, 8)}_${Date.now()}`
   }, { status: 200 });
 }
 
@@ -54,7 +58,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Founder Duplex configuration updated successfully.'
+      engine: 'kyutai-speech-duplex-v1',
+      message: 'Kyutai Founder Duplex configuration updated successfully.'
     }, { status: 200 });
 
   } catch (err) {

@@ -44,21 +44,17 @@ export default function IrisTimeline() {
     },
     {
       id: 't3',
-      date: '2026-07-11',
+      date: '2026-07-24',
       category: 'decisions',
-      title: 'Local Kokoro-82M Voice Synthesis Priority',
-      body: 'Assumed local Kokoro TTS was primary bottleneck for founder voice chat.',
-      isSuperseded: true,
-      supersededText: 'superseded · check-in active',
-      replacementTitle: 'Replaced by Web Speech SpeechRecognition & Fast Whisper STT',
-      replacementUrl: '/iris?view=workstation',
-      kicker: 'SUPERSEDED BELIEF · DECISIONS',
+      title: 'Kokoro-82M TTS & Kyutai Duplex Voice Pipeline',
+      body: 'Open-weight Kokoro-82M speech synthesis and Kyutai real-time duplex voice engine.',
+      isSuperseded: false,
+      kicker: 'ACTIVE BELIEF · DECISIONS',
       receipt: {
-        source_url: '/iris?view=timeline',
-        span: 'Kokoro-82M Voice Synthesis Priority superseded by Web Speech STT.',
+        source_url: '/iris?view=workstation',
+        span: 'Kokoro-82M TTS and Kyutai duplex engines active for Customer Zero voice channel.',
         sender: 'Voice Architect',
-        timestamp: '2026-07-11 · 14:00 UTC',
-        validity: 'superseded on 2026-07-20'
+        timestamp: '2026-07-24 · 17:30 UTC'
       }
     },
     {

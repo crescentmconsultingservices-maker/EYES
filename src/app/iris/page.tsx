@@ -44,7 +44,7 @@ interface ChatMessage {
 function IrisDashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const view = searchParams.get('view') || 'investigate';
+  const view = searchParams.get('view') || 'workstation';
   
   const { user, isLoading, theme } = useAuth();
 
