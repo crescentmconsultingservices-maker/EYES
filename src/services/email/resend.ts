@@ -1,4 +1,4 @@
-﻿import { Resend } from 'resend';
+import { Resend } from 'resend';
 
 // Using Resend shared domain until the-eyes.app is purchased.
 // Switch to 'EYES <hello@the-eyes.app>' after buying the domain + adding DNS records.
@@ -213,4 +213,69 @@ export async function sendDraftApprovalEmail(params: {
   }
 }
 
+export async function sendFeedbackEmail(params: {
+  userName: string;
+  userEmail: string;
+  module: string;
+  message: string;
+  systemContext?: string;
+}) {
+  const devEmail = process.env.DEVELOPER_EMAIL || 'crescentmconsultingservices@gmail.com';
+  console.log(`[Email] Dispatching feedback email from ${params.userEmail} to ${devEmail}`);
+  
+  if (!process.env.RESEND_API_KEY) {
+    console.log(`[Email Mock/Fallback] Feedback from ${params.userName} (${params.userEmail}) via ${params.module}: "${params.message}"`);
+    return;
+  }
 
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body { font-family: -apple-system, sans-serif; background: #09090b; color: #f4f4f5; margin: 0; padding: 0; }
+  .container { max-width: 600px; margin: 40px auto; padding: 32px; background: #18181b; border: 1px solid #27272a; border-radius: 16px; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #27272a; }
+  .badge { display: inline-block; padding: 4px 12px; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.3); color: #38bdf8; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  h2 { font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 16px; }
+  .msg-box { background: rgba(255,255,255,0.04); border-left: 4px solid #38bdf8; padding: 18px; margin: 20px 0; border-radius: 6px; font-size: 15px; line-height: 1.6; color: #f4f4f5; white-space: pre-wrap; }
+  .meta { font-size: 13px; color: #a1a1aa; line-height: 1.8; margin-top: 20px; }
+  .meta strong { color: #ffffff; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #27272a; font-size: 12px; color: #71717a; text-align: center; }
+</style></head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>🚀 New User Feedback Received</h2>
+      <span class="badge">Module: ${params.module}</span>
+    </div>
+    
+    <p style="color:#a1a1aa; font-size:14px;">A user has submitted feedback directly via the <strong>${params.module}</strong> Settings Chat:</p>
+    
+    <div class="msg-box">${params.message}</div>
+    
+    <div class="meta">
+      <div><strong>Submitted By:</strong> ${params.userName} (&lt;${params.userEmail}&gt;)</div>
+      <div><strong>Platform:</strong> ${params.module} Engine</div>
+      <div><strong>Timestamp:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })} IST</div>
+      ${params.systemContext ? `<div><strong>System Context:</strong> ${params.systemContext}</div>` : ''}
+    </div>
+
+    <div class="footer">
+      EYES & IRIS Developer Operations Desk · Real-time Feedback Dispatch
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    await getResendClient().emails.send({
+      from: FROM,
+      to: [devEmail],
+      replyTo: params.userEmail,
+      subject: `[${params.module} Feedback] New message from ${params.userName}`,
+      html: htmlContent,
+    });
+    console.log(`[Email] Feedback successfully delivered to ${devEmail}`);
+  } catch (err) {
+    console.error('[Email] Failed to dispatch feedback email:', err);
+  }
+}

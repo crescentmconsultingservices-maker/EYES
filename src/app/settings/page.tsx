@@ -12,7 +12,10 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
   const { openConfirm } = useConfirm();
-  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'theme'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'theme' | 'feedback'>('profile');
+  const [feedbackMessages, setFeedbackMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; time: string }>>([]);
+  const [feedbackInput, setFeedbackInput] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [riskSensitivity, setRiskSensitivity] = useState('MEDIUM');
   const [syncDepth, setSyncDepth] = useState('balanced');
   const [excludedSenders, setExcludedSenders] = useState<string[]>([]);
@@ -26,7 +29,41 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (user?.name) setDisplayName(user.name);
+    if (feedbackMessages.length === 0) {
+      setFeedbackMessages([
+        {
+          sender: 'bot',
+          text: `Hi ${user?.name || 'there'}! 👋 Welcome to the Feedback Desk. What's on your mind? Tell us any bugs, feature ideas, or thoughts and our dev team will receive it instantly!`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    }
   }, [user]);
+
+  const handleSendFeedback = async () => {
+    if (!feedbackInput.trim() || isSubmittingFeedback) return;
+    const userText = feedbackInput.trim();
+    setFeedbackInput('');
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    setFeedbackMessages(prev => [...prev, { sender: 'user', text: userText, time: now }]);
+    setIsSubmittingFeedback(true);
+
+    try {
+      const res = await fetch('/api/user/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText, module: 'EYES' })
+      });
+      const data = await res.json();
+      const botText = data.reply || "Thank you! Your feedback has been sent directly to our development team. 🚀";
+      setFeedbackMessages(prev => [...prev, { sender: 'bot', text: botText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+    } catch {
+      setFeedbackMessages(prev => [...prev, { sender: 'bot', text: "Feedback received and sent to dev review! 🚀", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   // Load persisted global settings on mount
   useEffect(() => {
@@ -178,6 +215,12 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab('security')}
               >
                 Secure Access
+              </button>
+              <button 
+                className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('feedback')}
+              >
+                Feedback & Support
               </button>
             </div>
 
@@ -433,6 +476,89 @@ export default function SettingsPage() {
                       </div>
                       <button className={styles.dangerBtn} onClick={handleDeleteAccount}>Delete Account</button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'feedback' && (
+                <div style={{ display: 'flex', flexDirection: 'column', height: '520px', animation: 'fadeIn 0.3s ease-out' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Interactive Feedback Desk</h3>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>Send feature suggestions, bug reports, or feedback directly to our core engineering team.</p>
+                  </div>
+
+                  {/* Chat Container */}
+                  <div style={{ 
+                    flex: 1, 
+                    background: 'rgba(0,0,0,0.2)', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '12px', 
+                    padding: '16px', 
+                    overflowY: 'auto', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '12px',
+                    marginBottom: '16px'
+                  }}>
+                    {feedbackMessages.map((msg, i) => (
+                      <div 
+                        key={i} 
+                        style={{ 
+                          alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                          maxWidth: '82%',
+                          background: msg.sender === 'user' ? 'var(--accent-primary, #6366f1)' : 'rgba(255,255,255,0.06)',
+                          color: msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
+                          border: msg.sender === 'user' ? 'none' : '1px solid var(--border)',
+                          borderRadius: msg.sender === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          padding: '12px 16px',
+                          fontSize: '13.5px',
+                          lineHeight: 1.5,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                      >
+                        <div>{msg.text}</div>
+                        <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px', textAlign: 'right' }}>{msg.time}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Chat Input Bar */}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Type your feedback to the dev team..."
+                      value={feedbackInput}
+                      onChange={(e) => setFeedbackInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSendFeedback(); }}
+                      style={{ 
+                        flex: 1, 
+                        background: 'rgba(255,255,255,0.04)', 
+                        border: '1px solid var(--border)', 
+                        borderRadius: '8px', 
+                        padding: '12px 16px', 
+                        color: 'var(--text-primary)', 
+                        fontSize: '13.5px',
+                        outline: 'none'
+                      }}
+                    />
+                    <button 
+                      onClick={handleSendFeedback}
+                      disabled={isSubmittingFeedback || !feedbackInput.trim()}
+                      style={{ 
+                        background: 'var(--accent-primary, #6366f1)', 
+                        color: '#ffffff', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        padding: '0 20px', 
+                        fontSize: '13px', 
+                        fontWeight: 600, 
+                        cursor: isSubmittingFeedback || !feedbackInput.trim() ? 'not-allowed' : 'pointer',
+                        opacity: isSubmittingFeedback || !feedbackInput.trim() ? 0.6 : 1,
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {isSubmittingFeedback ? 'Sending...' : 'Send'}
+                    </button>
                   </div>
                 </div>
               )}

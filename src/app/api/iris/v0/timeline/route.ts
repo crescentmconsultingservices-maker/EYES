@@ -10,11 +10,16 @@ export async function GET() {
   }
 
   try {
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const ninetyDaysAgoIso = ninetyDaysAgo.toISOString();
+
     const { data, error } = await supabase
-      .from('memories')
-      .select('id, platform, timestamp, title, content, event_type')
+      .from('chronic_edges')
+      .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
       .eq('user_id', user.id)
-      .order('timestamp', { ascending: false })
+      .gte('valid_from', ninetyDaysAgoIso)
+      .order('valid_from', { ascending: false })
       .limit(50);
 
     if (error) {
@@ -22,7 +27,35 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch timeline' }, { status: 500 });
     }
 
-    return NextResponse.json({ events: data || [] }, { status: 200 });
+    const events = data || [];
+    
+    if (events.length > 0) {
+      const memoryIds = events.map(e => e.source_record_id).filter(Boolean);
+      if (memoryIds.length > 0) {
+        const { data: memories } = await supabase
+          .from('memories')
+          .select('id, content, metadata')
+          .in('id', memoryIds);
+        
+        if (memories) {
+          const memoryMap = memories.reduce((acc, m) => {
+            acc[m.id] = m;
+            return acc;
+          }, {} as Record<string, any>);
+          
+          events.forEach(e => {
+            if (e.source_record_id && memoryMap[e.source_record_id]) {
+              e.memory_content = memoryMap[e.source_record_id].content;
+              if (!e.source_url && memoryMap[e.source_record_id].metadata) {
+                e.source_url = memoryMap[e.source_record_id].metadata.url || memoryMap[e.source_record_id].metadata.html_url || memoryMap[e.source_record_id].metadata.htmlLink || null;
+              }
+            }
+          });
+        }
+      }
+    }
+
+    return NextResponse.json({ events }, { status: 200 });
   } catch (err) {
     console.error('Timeline API error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

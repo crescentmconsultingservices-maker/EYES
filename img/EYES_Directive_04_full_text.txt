@@ -1,0 +1,323 @@
+CONFIDENTIAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY · DO NOT
+DISTRIBUTE
+EYES
+EVERYTHING YOU EVER SAID
+Directive 04 —
+Surfacing:
+IRIS v0
+Track 2 opens. The understanding is proven; now it becomes visible. Six small
+steps turn the engine you already built into a product a person can walk through
+— a rail, a brief, intent cards, a timeline, a signal feed, a voice. Every one of them
+is a view over data that already exists. This document contains no dates and no
+estimates. The only clock in it: the moment a step is true, it ships.
+DOCUMENT
+Directive 04 · SurfacingVERSION
+v1.0 · Operative on Gate 7
+ConfirmationSCOPE
+Track 2 · v0 surfaces only
+CONTINUES
+Directive 02 (closed) · Directive
+03 (frame)CLOCK
+None. True →  Live.DATA
+Founder's real account. No mock.
+Ever.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 1 / 1200The clock is ship-on-true
+Read this page first. It is the operating system of this directive, and it deliberately replaces
+every schedule with a single rule.
+This directive contains no dates, no day counts, no estimates. Sequencing is governed by
+exactly one rule:
+The moment a step is true, it ships to production — that hour, not that
+sprint. Finished and unshipped is a state that does not exist in this
+company.
+Why every step here is small. Nothing in this document asks you to build an engine. The engines
+exist — you built them, and they passed the gate: the extraction pipeline at 91.7% measured
+precision, the bi-temporal graph, the nightly synthesis, the receipts plumbing, the chat with cited
+sources, the Mind Map live on production. Every step below is a view: a page that reads what the
+graph already knows and renders it honestly. A brief is a query plus a layout. A timeline is a query
+plus a layout. Intent cards are three queries plus three components. Organized well, each of these is
+ordinary front-end work over an extraordinary substrate — and the substrate is done. That is why
+this document is confident: the hard part already happened.
+THE LAW OF STEPS — CARRIED OVER, WITH ONE NEW RULE
+Steps close with a gate: demonstrated on production, verified by the founder, evidence in the
+daily doc. No verdict lines from the team — evidence up, verdict back, same day. New for this
+directive — the Fan-Out Rule: Steps 0 and 1 are strictly sequential (they establish the shell and
+prove the pattern every other surface copies). Once Gate 1 closes, Steps 2, 3, and 4 may run
+in parallel across engineers — they are independent views over the same API and share no
+code path — provided each still ships individually the moment it is true. Step 5 begins only
+after Gates 1–4 are all closed. Sequential where dependencies exist; simultaneous where they
+don't. That is how this goes fast without going wrong.
+THE WATCH CONTINUES
+The zero-tolerance observation from Directive 02 does not pause for this work. Every new
+surface renders through the same API and inherits the same rule: one confirmed wrong
+commitment-claim anywhere →  flag off, root cause, re-enter staged. New pixels never loosen
+the truth standard.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 2 / 1201What already exists — the inventory this builds
+on
+The architecture snapshot, so every engineer sees that v0 is assembly, not invention.
+  Gmail · Reddit · GitHub · Calendar
+        │
+        ▼
+PERCEPTION  — GLiNER (EU-pinned Modal) + LLM fallback · 91.7% precision, gated
+        │
+        ▼
+GRAPH       — bi-temporal · superseded-never-deleted · decay →  delayed_on
+        │
+        ▼
+SYNTHESIS   — nightly understanding pass
+        │
+        ▼
+UNDERSTANDING API  — the only door · receipts + confidence + validity on every answer
+        │
+   ┌────┴────────┬───────────┬───────────┬───────────┬───────────┐
+   ▼             ▼            ▼            ▼            ▼            ▼
+Chat ✓Mind Map ✓BriefTimelineSignalsVoice
+live, receiptslive, receiptsStep 1Step 3Step 4Step 5
+TWO SURFACES ALREADY LIVE. FOUR TO GO. ALL SIX READ THE SAME DOOR.
+EXISTS TODAY, ON PRODUCTION WHAT IT GIVES THE NEW SURFACES
+IRIS chat with cited sources The response pipeline, receipt rendering, and the component patterns
+every card reuses
+Knowledge Graph Mind Map (D3,
+receipts in tooltips)Proof the receipt-panel pattern works end-to-end on live data; D3
+already in the stack
+CHRONIC engine, gated & un-
+mutedThe relations the cards render: commitment, delayed_on,
+decided_against, drift counts
+Bi-temporal graph The Timeline's entire dataset — belief formed / superseded /
+contradicted events already stored with timestamps
+Nightly synthesis The Morning Brief's content, already computed every night; the Brief
+only lays it out
+Acute detection on live sourcesThe Signals feed's items — detected events with receipts, already
+flowing
+Vercel production + daily-push
+disciplineThe ship-on-true rail: merge →  live →  founder sees it in France within
+minutes
+Read the table twice and the shape of this directive becomes obvious: every data source for every
+new surface already runs in production. What remains is the honest rendering of it.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 3 / 1202The iron rules — every step obeys all six
+The constitution, scoped to this build. A pull request that violates one is rejected regardless of
+what it ships.
+THE SIX
+THE ONE EXPERIENCE RULE THAT MAKES V0 FEEL LIKE ONE PRODUCT
+Every surface renders the same receipt panel — one shared component: source icon,
+timestamp, the exact quoted span highlighted, confidence, validity ("believed since · still
+current"). Build it once in Step 0, reuse it everywhere. The receipt-tap is the signature
+interaction of the entire company; it must feel identical in the brief, the cards, the timeline, the
+feed, and the Mind Map.The API is the only door. No surface queries the graph, the database, or an internal service
+directly. If a surface needs something the API can't answer, the API grows first — the surface
+never reaches around it.
+No receipt, no claim. Every fact on every surface carries its tappable receipt to source + span. A
+card that can't cite doesn't render.
+Real data only. Every surface builds against and demos on the founder's real account. No mock
+data, no seeded fixtures, no placeholder numbers — anywhere, at any stage. If a section is empty
+on real data, the empty state renders honestly ("nothing surfaced today") — an honest empty
+beats a fabricated full.
+Ship-on-true. Merged, deployed, visible on the production URL the hour it passes its gate. The
+founder is told the same hour.
+Calm over clever. House visual language: warm, quiet, generous whitespace, evidence in
+monospace. Cards fade up; nothing pops, nothing spins. No new design systems, no
+experiments — consistency with the existing chat and Mind Map.
+The deferred list is untouchable. Not in this build, not even a little: the social layer of Signals,
+adaptive canvas/tabs, duplex voice, phone runtime, MCP, organs beyond what's live. One hour
+spent on any of these is an hour stolen from shipping.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 4 / 1203Step 0 — The Rail: one shell, one product
+The smallest step with the largest perceptual effect: the moment a left rail binds the existing
+pages, IRIS stops being scattered links and becomes a room.
+0The shell & the shared receipt panelSEQUENTIAL · FIRST
+THE WORK
+WHY THIS IS EASY
+It is a navigation component and a refactor of rendering that already works. No new data, no new
+API calls. It is also the highest-leverage hour in this directive: everything after it inherits the shell and
+the panel.
+GATE 0 — YOU MAY PROCEED WHEN
+The founder opens the production URL and moves between all five rail items; Chat and Mind
+Map work as before inside the shell; the shared receipt panel renders chat citations identically
+to before. Screenshot in the daily doc.
+A rail is an hour of work. A product identity is what it buys.A persistent left rail on the production app: Brief · Chat · Signals · Timeline · Mind Map, in that
+order. Active item marked with the terracotta edge. Chat and Mind Map link to the pages that
+already exist; Brief, Signals, Timeline route to clean placeholder shells with the honest empty state
+("surfacing soon").
+The shared receipt panel component (§02) — extracted from the chat's existing citation rendering
+into one reusable component, so every later step imports rather than rebuilds.
+One header strip: surface name + the small mono line EYES knows · IRIS decides.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 5 / 1204Step 1 — The Morning Brief
+The nightly synthesis already computes this every night. The Brief is its honest layout — the
+first page the founder reads, and the pattern every other surface copies.
+1Understanding, rendered through todaySEQUENTIAL · PROVES THE PATTERN
+THE SECTIONS, IN ORDER — EVERY CLAIM WITH ITS RECEIPT CHIP
+LAYOUT & BEHAVIOR
+One calm column, house style. A Fraunces greeting keyed to the time of day. Sections as cards that
+fade up in sequence. Every fact ends in a mono receipt chip →  the shared panel. Sections with no
+data render the honest empty state. No narration audio, no play button — v0 is read, not spoken.
+WHY THIS IS EASY
+The synthesis output exists nightly; the relations are one API query each; the receipt panel is already
+built (Step 0). This page is queries + layout — and once it exists, Timeline and Signals are the same
+recipe with different queries.
+GATE 1 — YOU MAY PROCEED WHEN
+The founder opens Brief on production in the morning and reads his actual day — real
+overnight changes, real commitments, real slippage — and taps any receipt through to the
+exact source. One inaccurate item = gate not met, item traced, fixed, re-shown. On close: the
+Fan-Out Rule activates — Steps 2, 3, 4 may now run in parallel.What changed overnight — 2–5 items from the latest synthesis pass (new entities, updated
+beliefs, notable events), each one line + receipt.
+Open commitments — live commitment relations: what, to whom, since when. Receipt on each.
+Slipping — delayed_on relations, rendered as the accountability voice requires: factual, dated,
+receipted, framed as a check-in never a verdict ("this hasn't moved since [date] — still current?").
+On the horizon — upcoming dated items the graph holds (calendar-derived, deadline-carrying
+beliefs).EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 6 / 1205Step 2 — Intent cards in Chat
+The chat already answers with citations. This step makes it answer with structure — the first
+taste of the adaptive room, scoped to the three intents the real data supports.
+2Three intents, three cards, receipts on allPARALLEL-ELIGIBLE AFTER GATE 1
+THE THREE INTENTS (AND ONLY THESE THREE IN V0)
+MECHANICS
+Intent detection stays simple and honest: match on the query's shape (the API's natural-language
+interface already routes these); when an intent matches, the response renders as cards above the
+prose answer; when none matches, chat behaves exactly as today. Cards fade up (a standard
+motion library is fine — see §09), stagger ~60ms, each ends in the receipt chip →  shared panel. No
+canvas, no tabs, no layout re-arrangement — that is the deferred adaptive system; v0 is cards in the
+stream.
+WHY THIS IS EASY
+The queries are the same ones the Brief runs; the cards are the Brief's components reused inside the
+chat stream. Step 1 already built most of Step 2.
+GATE 2
+On production, the founder asks each of the three questions about his real life; the correct
+cards render with correct data; every receipt lands on the right source span. A wrong card =
+not met, traced, fixed, re-shown."what did I commit to…" → Commitment cards: one card per live commitment — what, to
+whom, since when, status chip, receipt.
+"what's slipping / what am I avoiding" → Slippage cards: delayed_on items, dated, check-in
+framing, receipt.
+"what changed about [X] / recently" → Change card: the relevant belief's before →  after,
+when it superseded, receipt on both states.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 7 / 1206Step 3 — Timeline v0
+The single most differentiating visual the company owns, and its entire dataset already sits in
+the graph: bi-temporal belief-events, timestamps included. Nobody else can render this
+page, because nobody else stores what it shows.
+3Understanding, rendered as historyPARALLEL-ELIGIBLE AFTER GATE 1
+THE WORK
+WHY THIS IS EASY
+The events are rows the graph already stores — this is one API query ordered by time, rendered as
+a list with a line down the side. A maintained open-source timeline component can carry the layout
+(§09), or the team's existing D3 fluency covers it in plain components. The strikethrough-but-visible
+superseded belief is a CSS treatment on data that already exists — and it is the moment a viewer
+sees that this system remembers how a life changed rather than merely what it last said.
+GATE 3
+The founder scrolls his real last-90-days on production: beliefs forming, at least one real
+superseded belief struck-through with its replacement linked, commitments and escalations
+placed correctly in time, every node's receipt landing true.A vertical time axis, newest at top, rendering the graph's belief-events: belief formed (dot + one
+line + receipt), belief superseded — the old belief struck through but visible, tagged superseded
+· not deleted, linked to its replacement — commitment made, commitment escalated
+(delayed_on), contradiction signature (rendered as a neutral question with both receipts).
+Each node taps open to the shared receipt panel with the evidence and a confidence indicator.
+v0 filter: last ~90 days, most-significant events (confidence-ranked) — a readable page, not a
+firehose. No scrubber in v0; the scrubber is the deferred upgrade.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 8 / 1207Step 4 — Signals v0
+The Acute layer already detects events on live sources. Signals v0 renders them as a calm,
+receipted feed. The social company-feed vision stays deferred; this step is the honest seed
+of it.
+4Detected events, rendered with meaningPARALLEL-ELIGIBLE AFTER GATE 1
+THE WORK
+WHY THIS IS EASY
+Detection already runs; this is the Brief's "what changed" section, promoted to its own continuously-
+updating page. Same query family, same card component, same receipt panel.
+GATE 4
+The founder opens Signals on production and sees only genuinely decision-relevant items from
+his real sources, each with a meaning line and a working receipt. One noise item = threshold
+tightened, re-shown.A single centered feed of detected events from the founder's live sources — each item: what was
+detected, one "what it means" line (from the synthesis context), timestamp, receipt chip.
+The decision-relevance rule enforced at render: an item appears only if it changes a decision,
+prevents a mistake, or reveals an opportunity. The API call requests only above-threshold events.
+Five real items beat fifty; an empty day renders the honest empty state.
+No reactions, no comments, no posting, no charts in v0 — those are the deferred
+social/rendered-meaning layers. v0 is the feed's truthful skeleton.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 9 / 1208Step 5 — Voice v0: push-to-talk
+Begins only after Gates 1–4 are closed. Scoped ruthlessly: not the duplex presence — the
+honest first sentence of it. And the open-source stack makes this assembly, not research.
+5Ask aloud, hear it back, tap the receiptONLY AFTER GATES 1–4
+THE SCOPE — EXACTLY THIS, NOTHING MORE
+WHY THIS IS EASY — WITH RECEIPTS
+Kokoro-82M is an 82-million-parameter Apache 2.0 model with weights around 327MB that runs fast
+even on CPU, with response latency under 2 seconds on a mid-range GPU — reviewers note it beats
+models a hundred times its size in blind listening tests. Whisper remains the standard open ASR
+pairing for exactly this stack. Nothing here requires a new GPU commitment: CPU-viable TTS +
+existing infra + the pipeline you already run. This step is wiring, and the wiring is short. EU
+processing rules apply to the audio path exactly as to everything else.
+GATE 5
+On production: the founder asks one of the three intents aloud, hears the answer spoken,
+watches the correct cards render, and taps a receipt. The full loop — voice to proof — in one
+breath.A push-to-talk control in the chat: hold →  speak →  release. Speech-to-text via Whisper (the
+standard open ASR; a faster-whisper deployment on the existing EU infra, or the browser's
+capture streamed to it).
+The transcript enters the existing chat pipeline unchanged — same API, same intent cards, same
+receipts.
+The text answer is spoken back via Kokoro-82M TTS. Cards still render on screen; receipts still
+tap. Voice in, voice out, room unchanged.
+Not in v0: wake word, duplex, interruption, silence intelligence — the Kyutai presence stack
+remains the real voice build, unchanged, on its own track.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 10 / 1209Tools & open source — verified, licensed,
+ready
+Live-researched. Everything below is free, permissively licensed, and either already in the
+stack or a small addition. Nothing in this directive requires buying anything.
+NEED TOOL LICENSE / STATUS NOTE
+TTS (Step 5)Kokoro-82M Apache 2.0 · ~327MB
+weights · CPU-viableThe 2026 consensus lightweight TTS; sub-
+2s latency mid-GPU; commercial use
+permitted
+STT (Step 5)Whisper / faster-
+whisperMIT-family · self-
+hostedThe standard open ASR pairing; deploy on
+existing EU infra
+Graph viz D3 ISC · already in stackMind Map already runs it; Timeline can
+reuse the fluency
+Timeline
+layout (Step 3)react-chrono or
+vis-timelineMIT · maintained Optional accelerators; plain components +
+CSS also fully sufficient
+Card motion
+(Steps 1–4)framer-motion (or
+CSS transitions)MIT Fade-up 8px, 200–300ms ease — one
+shared variant, used everywhere
+Everything
+elseExisting stack — Next.js, the Understanding API, Supabase,
+Vercel CI — no new services, no new
+vendors, no new costs
+THE COST NOTE, PRE-EMPTED
+This entire directive introduces zero new recurring costs. Kokoro runs on infrastructure
+already paid for; every library is free; every data source already flows. The standing rule (cost
+note before any new always-on spend) is satisfied by construction.
+IF YOU FIND A BETTER TOOL
+Fine — propose it in the daily doc with license + one-line rationale before adopting. The bar:
+permissive license, maintained, no new vendor lock, no data leaving EU processing. The tools
+above are defaults, not dogma; the iron rules are dogma.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 11 / 1210The whole build at a glance & the reporting
+contract
+One page to pin above the desk.
+STEPSURFACE MODE GATE — TRUE MEANS
+0The Rail + shared
+receipt panelsequential · first Five-item rail live; existing pages inside the shell;
+panel unified
+1Morning Brief sequential · proves the
+patternFounder reads his real morning; every receipt
+lands; then fan-out unlocks
+2Intent cards in Chatparallel after Gate 1Three intents →  correct cards →  correct receipts,
+on real life
+3Timeline v0 parallel after Gate 1Real 90-day history; superseded belief struck-
+through, linked, receipted
+4Signals v0 parallel after Gate 1Only decision-relevant real events, meaning line
++ receipt each
+5Voice v0 (push-to-
+talk)only after Gates 1–4Ask aloud →  spoken answer →  cards →  receipt
+tap, one loop
+The engine is proven. The room gets built by rendering what it already
+knows — one true surface at a time, live the hour it's true. This is not a big
+build. It is a short series of honest pages over the hardest work, which is
+already done.
+Close Gate 0, then Gate 1, then fan out. The founder is watching the production URL from France —
+make it change under him, step by step, until the rail is full and the room is real.
+Abhi
+Founder & CEO · EYES — Everything You Ever Said
+CONFIDENTIAL · DIRECTIVE 04 · SURFACING · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLYDaily doc continues, tagged: "D04 · Step N · gate status · [production link]". Every entry that claims a
+gate includes the URL and the screenshot.
+Founder verdicts return same-day. Nobody idles at a gate — that is the founder's side of the contract.
+Ship-on-true is the only schedule. No step waits for another unless this document says it must; no
+finished step waits for anything at all.
+Blockers surface the hour they appear — in the channel, not saved for the doc.EYES — DIRECTIVE 04 · SURFACING CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · 13 JULY 2026 · OPERATIVE ON GATE 7 PAGE 12 / 12

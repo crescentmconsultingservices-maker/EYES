@@ -8,7 +8,7 @@ import EyesLogo from '../common/EyesLogo';
 
 export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, theme } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -26,6 +26,8 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
+
   return (
     <header className={styles.header}>
       <div className={styles.left}>
@@ -37,9 +39,10 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
           <MenuIcon />
         </button>
         {/* Keep the user inside IRIS by routing to /iris instead of / */}
-        <div className={styles.mobileLogo} onClick={() => router.push('/iris')} style={{ cursor: 'pointer' }}>
+        <div className={styles.mobileLogo} onClick={() => router.push('/iris')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
           <EyesLogo width={82} height={20} />
-          <span style={{ marginLeft: '8px', fontSize: '10px', color: '#e06a3b', border: '1px solid #e06a3b', padding: '2px 4px', borderRadius: '4px' }}>IRIS</span>
+          <span style={{ marginLeft: '8px', fontSize: '10px', color: brandAccent, border: `1px solid ${brandAccent}`, padding: '2px 4px', borderRadius: '4px', transition: 'all 0.3s ease' }}>IRIS</span>
+          <span style={{ marginLeft: '12px', fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace', letterSpacing: '0.05em' }}>EYES knows · IRIS decides</span>
         </div>
       </div>
 
@@ -69,8 +72,7 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
               
               <div className={styles.divider} />
               
-              {/* Keep the user inside IRIS */}
-              <button className={styles.menuItem} onClick={() => { setIsMenuOpen(false); router.push('/iris?view=investigate'); }}>
+              <button className={styles.menuItem} onClick={() => { setIsMenuOpen(false); router.push('/iris?view=settings'); }}>
                 <SettingsIcon /> Settings
               </button>
               

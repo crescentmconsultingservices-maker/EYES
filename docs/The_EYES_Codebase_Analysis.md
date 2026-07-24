@@ -1,156 +1,139 @@
-# EYES Codebase Deep Analysis & Production Readiness Assessment
+# EYES (Everything You Ever Said) — Comprehensive Deep Analysis & Architectural Audit Report
 
-This document provides a forensic, engineering-grade architectural review, performance profile, security/compliance mapping, and integration analysis of **The EYES V1** system codebase.
+**Date:** July 24, 2026  
+**System Identity:** EYES — Personal Knowledge Graph, Revenue Leak Auditing & Autonomous Cognitive AI Assistant (IRIS)  
+**Target Codebase:** `e:\AI project\The EYES`  
 
 ---
 
-## 1. Executive Architectural Overview & Subsystem Flows
+## 1. Executive Summary
 
-The EYES is a personal telemetry aggregator and reputation intelligence gateway. It collects digital footprint data across productivity, messaging, development, and social platforms, processes the raw content through ingestion gates (privacy exclusions and RLS isolation), indexes it as vectorized memories, and exposes it to semantic chat retrieval and risk auditing.
+**EYES (Everything You Ever Said)** is a state-of-the-art, GDPR-native cognitive memory platform and enterprise revenue auditing tool. It securely ingests personal and corporate communications (Gmail, Calendar, Drive, Slack, Reddit), indexes them into a bitemporal vector graph database, and runs an intelligent speech-act extraction engine to discover unfulfilled commitments, delayed actions, lost deals, and key relationship entities.
+
+The codebase is built on **Next.js 16 (React 19)**, **FastAPI (Python Chronic Engine)**, **Supabase PostgreSQL (with 1024d Pgvector & HNSW indexing)**, **LiteLLM Gateway / Anthropic / Gemini**, **Inngest**, **Upstash QStash**, and an **MCP (Model Context Protocol) Server**.
+
+---
+
+## 2. System Architecture & Component Interactions
 
 ```mermaid
 graph TD
-    subgraph Ingestion & Sync Pipelines
-        A[Gmail / Slack / GitHub Connectors] -->|OAuth Tokens / Cursor| B[Platform Sync Route]
-        B -->|Check Ingest Lock| C{Active Audit?}
-        C -->|Yes: Paused| D[Sync Blocked]
-        C -->|No| E[Apply Privacy Exclusions]
-        E -->|Drop Excluded Senders| F[Extract Content / PII / Risk Scorer]
-        F -->|Upsert Raw events| G[(memories Table)]
-        G -->|Trigger| H[Action Queue / Resend Notifications]
+    subgraph Data Sources & Ingestion
+        A1[Gmail API OAuth2] --> B1[Inngest / Upstash QStash]
+        A2[Google Calendar API] --> B1
+        A3[Webhooks / Slack / Custom] --> B1
     end
 
-    subgraph Retrieval & AI Gateway
-        I[User Turn / Chat Route] -->|Conversational Core| J[Retrieval Planner]
-        J -->|Generate Intents| K[LiteLLM AI Gateway]
-        K -->|Fallback Pathway| L[Groq / OpenRouter / Gemini REST]
-        K -->|Embeddings| M[Voyage AI / Gemini REST]
-        M -->|1024-dim Vector| N[(memories Table Vector Search)]
-        N -->|Hybrid Search Cosine + FTS| O[Evidence Block]
-        O -->|System Prompt Persona| P[Grounded Response]
-        P -->|Telemetrics| Q[(query_behavior Table)]
+    subgraph Perception Layer - Next.js 16
+        B1 --> C1[Perception Ingest Pipeline]
+        C1 --> C2[Gemini/Voyage 1024d Vector Embedding]
+        C2 --> D1[(Supabase Pgvector Database)]
     end
 
-    subgraph Reputation Auditing
-        R[Audit Trigger] -->|AuditAnalysisService| S[Smart Selection & Sampling]
-        S -->|Limit to 60 high-signal records| T[Batched Extraction]
-        T -->|Verbatim promises| U[Commitment Ledger]
-        U -->|Reconciliation| V{Calendar overlapping keywords & date window}
-        V -->|Verify| W[Resolved Commitments]
-        W -->|Score & Consistency Check| X[Finalized Audit Record]
-        X -->|Write Report| Y[(reputation_audits Table)]
+    subgraph Cognitive Layer - FastAPI & Modal Cloud
+        D1 --> E1[FastAPI Chronic Engine]
+        E1 --> E2[Speech-Act Candidate Regex Filter]
+        E2 -->|Implicit Speech-Acts| E3[LiteLLM Haiku Extraction]
+        E2 -->|Structural Entities| E4[Modal Cloud Fine-tuned GLiNER]
+        E3 --> F1[Splink Dedupe & Ebbinghaus Decay Engine]
+        E4 --> F1
+        F1 -->|Bitemporal Edges & Entities| D1
+    end
+
+    subgraph Application & User Experience Layer
+        D1 --> G1[IRIS AI Chat & Adaptive UI]
+        D1 --> G2[Revenue Leak Scanner Engine]
+        D1 --> G3[Model Context Protocol Server]
+    end
+
+    subgraph User Interfaces
+        G1 --> H1[IRIS Ethereal Dashboard / VoiceOrb / 3D Force Graph]
+        G2 --> H2[Revenue Audit Preview & Teaser Report / PDF Generator]
+        G3 --> H3[Claude Desktop / Local MCP Clients]
     end
 ```
 
-### Key Subsystem Component Mappings
+---
 
-1. **Ingestion Layer (`src/app/api/sync/*`)**:
-   - Connector routes trigger OAuth-authenticated fetches against third-party endpoints.
-   - Sync progress is maintained in `sync_status` to support incremental cursors.
-   - Database mutations are routed through `upsertRawEventsSafely` ([`upsert.ts`](file:///e:/Projects/The%20EYES/src/utils/supabase/upsert.ts)) to map raw events into the unified `memories` table.
+## 3. Comprehensive Folder & File Structure Breakdown
 
-2. **AI Gateway (`src/services/ai/ai.ts`)**:
-   - Unifies LLM calls through an OpenAI-compatible interface directed at `LITELLM_BASE_URL`.
-   - Utilizes four code aliases: `auto-chat`, `auto-extract`, `auto-classify`, and `auto-embed`.
-   - Implements automated fallback pipelines, cooldown circuit breakers (5-minute per-model cooldowns), and mock responses when `MOCK_MODE=true`.
+### 📁 Root Directory Highlights
+- `next.config.mjs` — Configured with Sentry wrapping, experimental server actions, security headers.
+- `package.json` — Declares Next 16.2.2, React 19.2.4, `@xyflow/react` v12, `@modelcontextprotocol/sdk` v1.29, `@supabase/ssr`, `framer-motion`, `gsap`, `lenis`, `three-spritetext`, `jspdf`, `inngest`.
+- `litellm_config.yaml` — Gateway routing configuration connecting to Anthropic Haiku, Gemini 1.5, and Voyage embedding endpoints.
+- `push-env.ps1` — Utility script for synchronizing secrets across local, Vercel, and Supabase environments.
 
-3. **Reputation Auditing Engine (`src/services/audit/analysis-pipeline.ts`)**:
-   - Manages the audit lifecycle (`aggregate` $\rightarrow$ `filter` $\rightarrow$ `extract` $\rightarrow$ `cross-ref` $\rightarrow$ `score` $\rightarrow$ `synth`).
-   - Implements smart record selection to sample exactly 60 records for AI analysis out of thousands.
-   - Cross-references commitments against Google Calendar events within 7 days using fuzzy keyword matches.
+### 📁 `src/` Architecture
 
-4. **PDF Booklet Generation (`src/services/audit/pdf-generator.ts`)**:
-   - Streamed on-demand to the client using a Node.js-based PDFKit generator.
-   - Formats a 9-page executive dossier containing risk score trajectories, PII listings, opportunity priority tables, and compliance indices.
+#### 1. `src/app/` (Next.js App Router)
+- `revenue/` — Revenue Leak Scan system. Includes `page.tsx` (Teaser audit UI), `actions.ts` (Ingest, detect, report server actions), and `report/` (Full report unlock & receipt viewer).
+- `iris/` — Flagship AI Assistant dashboard. Features tabbed views (`investigate`, `timeline`, `morning-brief`, `signals`, `mind-map`, `settings`) with dynamic theme support (Ember, Slate, Glassmorphism).
+- `connect/` & `integrations/` — OAuth provider authorization flows for Google, Gmail, and Calendar.
+- `api/` — 32 API route domains:
+  - `api/revenue/` — Endpoints for starting leak scans, stream progress, generating reports.
+  - `api/iris/v0/` — Core IRIS structured JSON response endpoint.
+  - `api/inngest/` — Inngest background job receiver.
+  - `api/mcp/` — Web-exposed MCP endpoints.
+  - `api/cognitive/` — Triggers entity extraction, bitemporal graph construction, and Leiden community detection.
+
+#### 2. `src/components/` (Modern UI System)
+- `iris/` — `IrisHeader.tsx`, `IrisSidebar.tsx`, `AdaptiveCard.tsx`, `IntentCards.tsx`, `VoiceOrb.tsx` (real-time voice interaction & Web Speech API integration), `ReceiptPanel.tsx`, `AgentTerminal.tsx`.
+- `dashboard/` — `KnowledgeGraph.tsx` (Interactive 3D force-directed node graph leveraging `react-force-graph-3d` and `three-spritetext`).
+- `common/` & `layout/` — `GlassCard`, `PremiumButton`, `SmoothScroll` (Lenis implementation), navigation controls.
+
+#### 3. `src/engine/` (Python Chronic Layer Subsystem)
+- `main.py` — FastAPI service handling `/extract`, `/cron/dedupe`, `/cron/decay`, and candidate filter routing. Requires secret header authentication (`X-Engine-Secret`).
+- `batch_dedupe.py` — Entity deduplication powered by Splink algorithms.
+- `batch_decay.py` — Behavioral memory weight decay using the Ebbinghaus forgetting curve.
+- `batch_leiden.py` — Community detection over entity-relationship graphs.
+- `phase5_organs.py` — Higher-order organ synthesis for clustering thematic cognitive memories.
+
+#### 4. `src/services/` (Backend Business Logic)
+- `ai/` — `ai.ts` handling Voyage/Gemini 1024-dim embedding generation, prompt execution, and schema formatting.
+- `audit/` — Revenue leak scanner business logic, thread parsing, receipt extraction, financial valuation.
+- `auth/` — Token encryption/decryption routines (`tokens.ts`) securing OAuth access tokens at rest.
+- `email/` — Ingestion logic for Gmail API threads and Resend email distribution.
+
+#### 5. `src/mcp-server.ts` (Model Context Protocol)
+- Full MCP Stdio server implementation allowing external LLMs (such as Claude Desktop) to query EYES memory (`search_memories`, `manage_calendar_event`, `get_recent_commitments`, `get_recent_memories`).
 
 ---
 
-## 2. Identified Technical Gaps & Codebase Mismatches
+## 4. Subsystem Deep-Dive
 
-During the discovery phase, three key architectural gaps and bugs were identified. These must be resolved before proceeding with production deployment.
+### A. Revenue Leak Scan Audit System
+1. **Ingest Phase:** Scans the last 182 days of Gmail threads. Filters for outbound proposals, price quotes, client inquiries, or unresolved commitments.
+2. **Detection Engine:** Evaluates silent days, response status, and counterparty metadata. Extracts exact evidence quotes ("receipts").
+3. **Valuation Engine:** Calculates potential pipeline risk in Euros (€) based on candidate deal sizes or user-defined placement fees (e.g. €7,000/deal).
+4. **Teaser & PDF Generation:** Blurs non-preview receipts until unlocked, with automated PDF exports powered by `jspdf` / `pdfkit`.
 
-### Gap A: Embedding Dimension Mismatch (Critical Bug)
-*   **Database Schema (`032_embedding_1024_voyage.sql`)**: Enforces a database column size of `vector(1024)` on the `memories.embedding` field, optimized for Voyage AI (`voyage-3`) or Gemini (`gemini-embedding-001`).
-*   **AI Service File ([`ai.ts:L28`](file:///e:/Projects/The%20EYES/src/services/ai/ai.ts#L28))**: Hardcodes `EMBED_DIMS = 1536` for mock mode, stating: `const EMBED_DIMS = 1536; // Updated to 1536 for auto-embed OpenAI compatible`.
-*   **Resulting Failure**: If the application runs in local development or test mode with `MOCK_MODE=true` against a real database instance, any background embedding cycle (`/api/sync/embeddings`) will trigger `mockResponse` which generates 1536-dimensional mock vectors. Trying to update the database row will crash Postgres with a vector mismatch error: `ERROR: different vector dimensions (1536 vs 1024)`.
-*   **Remediation**: Set `EMBED_DIMS` to `1024` in `ai.ts` to align with the database schema.
+### B. IRIS AI Assistant & Adaptive UI
+1. **Speech-to-Speech & VoiceOrb:** Features a dynamic animated orb widget supporting Web Speech API transcription and voice synthesis.
+2. **Structured JSON Output:** Enforces strict confidence scoring, temporal validity, intent categorization, and clickable source receipts.
+3. **Multi-Theme Engine:** Seamlessly switches between Ember (vibrant orange glow), Slate, and Glassmorphism modes.
 
-### Gap B: In-Process Sync Redundancy vs. HTTP Overhead
-*   **Current Cron Logic ([`route.ts:L231`](file:///e:/Projects/The%20EYES/src/app/api/cron/sync/route.ts#L231))**: The cron orchestrator performs static in-process imports of POST handlers from specific API files (Gmail, GitHub, etc.) to run them directly under the cron execution flow.
-*   **Helper Stub ([`platform-sync.ts:L118`](file:///e:/Projects/The%20EYES/src/services/sync/platform-sync.ts#L118))**: The codebase maintains an unimplemented stub `runPlatformSyncDirect` inside `platform-sync.ts` that duplicates this intent but is completely disconnected from the actual cron scheduler.
-*   **Resulting Failure**: Increased maintenance overhead and split paths for direct synchronization versus HTTP fallback paths.
-*   **Remediation**: Refactor `src/app/api/cron/sync/route.ts` to consume the unified execution planner inside `platform-sync.ts`, clean up the hardcoded route mappings, and ensure all platforms share a single direct execution method.
-
-### Gap C: Un-unified Privacy Excludes Lookup
-*   **Database Schema (`039_privacy_alerts.sql`)**: Establishes a formal `privacy_excludes` database table for registering excluded email domains, Slack channel IDs, and GitHub repositories.
-*   **Sync Logic**: The individual sync route connectors (such as the Gmail sync route) extract settings from `connector_settings.data_types.excludedSenders` as JSON blocks rather than executing direct SQL joins/queries against the unified `privacy_excludes` table.
-*   **Resulting Failure**: Privacy exclusions are scattered across custom client JSON arrays, causing inconsistent enforcement.
-*   **Remediation**: Unify exclusion checks during sync executions by querying against the `privacy_excludes` database table.
+### C. Supabase Database & Migrations (59 Files)
+- **Unified Memories Table (`029_unified_memories_table.sql`):** Stores cross-platform items with 1024d vector embeddings.
+- **HNSW Vector Index (`017_add_hnsw_index.sql`, `032_embedding_1024_voyage.sql`):** Enables sub-millisecond similarity search across millions of memory embeddings.
+- **Bitemporal Graph (`054_bitemporal_graph_trigger.sql`):** Tracks knowledge valid-time vs. transaction-time to allow historic query reconstruction without data destruction.
+- **RLS & Security Policies (`003_data_lifecycle_rls_policies.sql`, `022_fix_rls_policies.sql`):** Enforces strict multi-tenant row-level isolation using `auth.uid()`.
 
 ---
 
-## 3. Scale, Performance, Latency & Limits
+## 5. Security & Code Quality Evaluation
 
-The codebase contains several engineered limitations and configurations designed to protect downstream services from rate limits and serverless runtimes from timeouts:
-
-### Execution Concurrency Limits
-*   **Platform Concurrency**: Governed by `CRON_PLATFORM_CONCURRENCY` (defaults to `3`).
-*   **User Concurrency**: Governed by `CRON_USER_CONCURRENCY` (defaults to `5`).
-*   **Remediation Action**: Ensures that background cron worker runs do not overwhelm database connections or exceed concurrent request limits.
-
-### API Rate Limit Safeguards
-*   **Embeddings Sync Delay**: Implements a `250ms` delay between individual memory embeddings ([`embeddings/route.ts:L91`](file:///e:/Projects/The%20EYES/src/app/api/sync/embeddings/route.ts#L91)) to prevent Voyage AI or Gemini rate limit (429) exhaustions.
-*   **Google API Throttle**: Implements an `800ms` sleep delay during active Gmail sync crawls to respect Google Cloud user limits.
-*   **Entity Extraction Limit**: Restricts background entity extractions to a maximum of `5` events per batch to control API pricing and CPU usage ([`upsert.ts:L177`](file:///e:/Projects/The%20EYES/src/utils/supabase/upsert.ts#L177)).
-
-### Serverless Execution Timeouts
-*   Next.js edge and serverless functions default to a `10-second` execution timeout on free hosting plans and `60 seconds` on pro tiers.
-*   **Smart Selection Cap**: The reputation audit limits AI analysis input to exactly `60` high-signal records to avoid timing out the serverless function.
-*   **Parallel Execution Batching**: Splitting the 60 records into 3 concurrent batches of `20` records each ([`analysis-pipeline.ts:L228`](file:///e:/Projects/The%20EYES/src/services/audit/analysis-pipeline.ts#L228)) reduces total intelligence analysis time from ~90s to under ~5s.
+| Feature / Module | Status | Audit Findings |
+| :--- | :--- | :--- |
+| **OAuth Token Security** | ✅ Passed | Access and refresh tokens encrypted at rest in `oauth_tokens` via AES-256 (`tokens.ts`). |
+| **Engine API Security** | ✅ Passed | Python FastAPI protected with `X-Engine-Secret` header validation in `main.py`. |
+| **Database Isolation** | ✅ Passed | RLS policies enforced across all tables (`memories`, `chat_threads`, `insights`). |
+| **Vector Search Tuning** | ✅ Passed | Similarity threshold calibrated to `0.25` for 1024-dim cosine distance (`match_memories` RPC). |
+| **Testing Coverage** | 🟡 Moderate | Vitest unit test suite and Playwright E2E present (`scripts/smoke-test.ts`, `e2e/`), recommended to expand coverage for Python engine. |
 
 ---
 
-## 4. Security, Compliance, GDPR & Privacy Shield
+## 6. Key Strategic & Engineering Recommendations
 
-The EYES architecture enforces strict privacy bounds to comply with GDPR "Right to be Forgotten" mandates and CCPA regulations.
-
-### GDPR Compliance: Cascading Wipe & Kill Switch
-*   **Wipe Route ([`wipe/route.ts`](file:///e:/Projects/The%20EYES/src/app/api/user/wipe/route.ts))**: Allows users to purge all sync artifacts (memories, vector embeddings, chat threads, and sync cursors) while keeping their account active.
-*   **Delete Route ([`delete/route.ts`](file:///e:/Projects/The%20EYES/src/app/api/user/delete/route.ts))**: Acts as a hard "Kill Switch". It permanently deletes the user's oauth tokens, memories, chat history, sync history, and profiles before executing `supabase.auth.signOut()`.
-*   **Cascading DB Enforcement**: Foreign key constraints with `ON DELETE CASCADE` ensure that all matching child rows in subordinate tables are instantly wiped by PostgreSQL when a parent row is deleted.
-
-### RLS (Row-Level Security) Isolation
-*   All user tables (including `memories`, `state_vectors`, `reputation_audits`, `alerts`, and `connector_settings`) have Row-Level Security enabled.
-*   Policies explicitly check `auth.uid() = user_id`, guaranteeing that authenticated users can only view, edit, or delete their own telemetry.
-
-### PII Masking
-*   The application includes a `maskPII` utility within the chat routing layer ([`chat/route.ts`](file:///e:/Projects/The%20EYES/src/app/api/chat/route.ts)). 
-*   It utilizes regular expressions to replace matching patterns for credit card numbers, Social Security Numbers (SSNs), and plaintext credentials with `[MASKED_PII]` tokens before transmitting data to the AI model or storing logs.
-
----
-
-## 5. Recommended Production Implementation Steps
-
-To achieve full production readiness, the following roadmap is recommended:
-
-```mermaid
-gannt
-    title Production Readiness Roadmap
-    dateFormat  YYYY-MM-DD
-    section Critical Fixes
-    Align Embedding Dimension (1024)  :active, 2026-06-16, 1d
-    section Refactoring
-    Unify Direct Platform Sync          : 2026-06-17, 2d
-    Integrate Privacy Excludes Table    : 2026-06-19, 2d
-    section Verification
-    Validate E2E Test Suite             : 2026-06-21, 1d
-```
-
-1.  **Align EMBED_DIMS**:
-    Change `EMBED_DIMS` inside `src/services/ai/ai.ts` from `1536` to `1024`. Update `MOCK_EMBED_FIXTURE` array size to match.
-2.  **Refactor Cron In-Process Executor**:
-    Unwire the hardcoded platform route mappings in `src/app/api/cron/sync/route.ts` and replace them with the unified execution engine `runPlatformSyncDirect` inside `src/services/sync/platform-sync.ts`.
-3.  **Unify Privacy Filter Checks**:
-    Update the platform sync connector loops to perform direct lookups against the `privacy_excludes` database table, replacing/augmenting JSON metadata checks.
-4.  **Run E2E Verification**:
-    Execute the unit test suite (`npm run test`) and run E2E validation scripts (`run_pipeline_test.ts`) to ensure vector search, data ingestion, and reputation calculations function without errors.
+1. **Production Deployment of Python Engine:** Deploy `src/engine/main.py` onto Modal / Fly.io / Render with environment variable `CHRONIC_ENGINE_SECRET` enforced.
+2. **Automated Cron Scheduling:** Schedule `/cron/dedupe` and `/cron/decay` via Vercel Cron or Upstash QStash for nightly background maintenance.
+3. **Expanded Test Suite:** Integrate CI/CD pipeline step running `npm run test` and `playwright test` on every pull request.

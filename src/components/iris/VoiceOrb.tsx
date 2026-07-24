@@ -1,99 +1,93 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
-export default function VoiceOrb({ onTranscribe }: { onTranscribe?: (text: string) => void }) {
-  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
-  const [hasMicPermission, setHasMicPermission] = useState(false);
+export interface VoiceOrbRef {
+  speak: (text: string) => void;
+}
+
+interface VoiceOrbProps {
+  onTranscribe?: (text: string) => void;
+}
+
+const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) => {
+  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'speaking'>('idle');
   const [audioLevel, setAudioLevel] = useState(0);
   
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animationRef = useRef<number>(0);
+  const recognitionRef = useRef<any>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
 
   useEffect(() => {
-    return () => {
-      stopRecording();
-    };
-  }, []);
+    // Initialize Speech Synthesis
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      synthRef.current = window.speechSynthesis;
+    }
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setHasMicPermission(true);
-      setVoiceState('listening');
-      streamRef.current = stream;
+    // Initialize Speech Recognition
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
 
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioContext;
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (onTranscribe) onTranscribe(transcript);
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          // Gracefully ignore benign browser timeouts (silence/aborted)
+          if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            console.warn('Speech recognition status:', event.error);
+          }
+          setVoiceState('idle');
+        };
+
+        recognitionRef.current.onend = () => {
+          setVoiceState('idle');
+        };
+      }
+    }
+  }, [onTranscribe]);
+
+  useImperativeHandle(ref, () => ({
+    speak: (text: string) => {
+      if (!synthRef.current) return;
       
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      analyserRef.current = analyser;
+      // Stop any ongoing speech
+      synthRef.current.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onstart = () => setVoiceState('speaking');
+      utterance.onend = () => setVoiceState('idle');
+      utterance.onerror = () => setVoiceState('idle');
       
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      const updateAudioLevel = () => {
-        if (!analyserRef.current) return;
-        analyserRef.current.getByteFrequencyData(dataArray);
-        
-        // Calculate average volume
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
-        const avg = sum / dataArray.length;
-        
-        // Normalize 0 to 1
-        setAudioLevel(Math.min(avg / 128, 1));
-        animationRef.current = requestAnimationFrame(updateAudioLevel);
-      };
-
-      updateAudioLevel();
-
-      // MOCK: Simulate Kyutai response after 5 seconds
-      setTimeout(() => {
-        if (voiceState === 'listening' || streamRef.current) {
-          setVoiceState('processing');
-          setTimeout(() => {
-            setVoiceState('speaking');
-            if (onTranscribe) onTranscribe("Mock Kyutai Unmute response: I heard you! This is the prototype in action.");
-            setTimeout(() => {
-              stopRecording();
-            }, 3000);
-          }, 1500);
-        }
-      }, 5000);
-
-    } catch (err) {
-      console.error("Microphone permission denied:", err);
-      alert("Microphone permission is required for Voice Mode.");
+      synthRef.current.speak(utterance);
     }
-  };
-
-  const stopRecording = () => {
-    setVoiceState('idle');
-    setAudioLevel(0);
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-  };
+  }));
 
   const toggleVoice = () => {
     if (voiceState === 'idle') {
-      startRecording();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setVoiceState('listening');
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        alert("Speech Recognition API not supported in this browser.");
+      }
     } else {
-      stopRecording();
+      if (voiceState === 'listening' && recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      if (voiceState === 'speaking' && synthRef.current) {
+        synthRef.current.cancel();
+        setVoiceState('idle');
+      }
     }
   };
 
@@ -104,13 +98,12 @@ export default function VoiceOrb({ onTranscribe }: { onTranscribe?: (text: strin
 
   if (voiceState === 'listening') {
     orbColor = '#ef4444'; // red for listening
-    glowSize = 20 + audioLevel * 40;
-  } else if (voiceState === 'processing') {
-    orbColor = '#38bdf8'; // blue for thinking
+    glowSize = 40;
     pulseAnimation = 'pulse 1s infinite';
   } else if (voiceState === 'speaking') {
     orbColor = '#10b981'; // green for speaking
-    glowSize = 15 + Math.random() * 20; // fake speaking modulation
+    glowSize = 30; 
+    pulseAnimation = 'pulse 0.5s infinite';
   }
 
   return (
@@ -141,7 +134,7 @@ export default function VoiceOrb({ onTranscribe }: { onTranscribe?: (text: strin
           justifyContent: 'center',
           position: 'relative'
         }}
-        title={voiceState === 'idle' ? 'Voice Mode' : 'Stop Voice Mode'}
+        title={voiceState === 'idle' ? 'Start Voice Mode' : 'Stop Voice Mode'}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           {voiceState === 'idle' ? (
@@ -157,4 +150,6 @@ export default function VoiceOrb({ onTranscribe }: { onTranscribe?: (text: strin
       </button>
     </div>
   );
-}
+});
+
+export default VoiceOrb;

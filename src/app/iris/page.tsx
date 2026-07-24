@@ -7,14 +7,18 @@ import IrisTimeline from '@/components/iris/IrisTimeline';
 import MorningBrief from '@/components/iris/MorningBrief';
 import Signals from '@/components/iris/Signals';
 import IrisHeader from '@/components/iris/IrisHeader';
+import IrisSettings from '@/components/iris/IrisSettings';
 import { useAuth } from '@/context/AuthContext';
 import styles from '../chat/ChatPage.module.css';
 import { AdaptiveCard } from '@/components/iris/AdaptiveCard';
 import ActiveTasksDrawer from '@/components/iris/ActiveTasksDrawer';
 import AgentTerminal from '@/components/iris/AgentTerminal';
 import EmbeddedTab from '@/components/iris/EmbeddedTab';
+import ReceiptPanel from '@/components/iris/ReceiptPanel';
+import IntentCards from '@/components/iris/IntentCards';
+import KnowledgeGraph from '@/components/dashboard/KnowledgeGraph';
 
-import VoiceOrb from '@/components/iris/VoiceOrb';
+import VoiceOrb, { VoiceOrbRef } from '@/components/iris/VoiceOrb';
 
 interface IrisResponse {
   understanding: {
@@ -23,6 +27,7 @@ interface IrisResponse {
     temporal_validity: any;
     receipts: any[];
     intent?: string;
+    intent_data?: any[];
     app_data?: any;
   }
 }
@@ -39,13 +44,39 @@ function IrisDashboardInner() {
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'investigate';
   
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, theme } = useAuth();
+
+  const titleGradient = theme === 'ember'
+    ? 'linear-gradient(135deg, #ff8a00, #e52e71)'
+    : theme === 'light'
+      ? 'linear-gradient(135deg, #0f172a, #475569)'
+      : 'linear-gradient(135deg, #ffffff, #94a3b8)';
+
+  const userBubbleBg = theme === 'ember'
+    ? 'linear-gradient(135deg, #e06a3b, #d94a1c)'
+    : theme === 'light'
+      ? 'linear-gradient(135deg, #0f172a, #334155)'
+      : 'linear-gradient(135deg, #1e293b, #0f172a)';
+
+  const pillBorder = theme === 'ember'
+    ? 'rgba(224, 106, 59, 0.25)'
+    : theme === 'light'
+      ? 'rgba(15, 23, 42, 0.25)'
+      : 'rgba(255, 255, 255, 0.25)';
+
+  const glowColor = theme === 'ember'
+    ? 'rgba(224, 106, 59, 0.4)'
+    : theme === 'light'
+      ? 'rgba(15, 23, 42, 0.15)'
+      : 'rgba(255, 255, 255, 0.25)';
+
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
   const [isTasksDrawerOpen, setIsTasksDrawerOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const voiceOrbRef = useRef<VoiceOrbRef>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -59,22 +90,22 @@ function IrisDashboardInner() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+  const processQuery = async (userText: string) => {
+    const trimmed = userText.trim();
+    if (!trimmed || loading) return;
     
-    const userMessage = { role: 'user' as const, content: query.trim() };
+    const userMessage = { role: 'user' as const, content: trimmed };
     setMessages(prev => [...prev, userMessage]);
     setQuery('');
     
-    if (query.trim().startsWith('/agent ')) {
-      const task = query.trim().replace('/agent ', '').trim();
+    if (trimmed.startsWith('/agent ')) {
+      const task = trimmed.replace('/agent ', '').trim();
       setMessages(prev => [...prev, { role: 'assistant', content: task, isAgent: true }]);
       return;
     }
 
-    if (query.trim().startsWith('/app ')) {
-      const type = query.trim().replace('/app ', '').trim();
+    if (trimmed.startsWith('/app ')) {
+      const type = trimmed.replace('/app ', '').trim();
       const appData = type === 'graph' 
         ? { type: 'knowledge-graph', data: { nodes: 42, edges: 112 } }
         : { type: 'data-grid', data: { rows: [{date: '2023-10-01', metric: 'MRR', value: '$12,000'}, {date: '2023-10-02', metric: 'MRR', value: '$12,400'}] } };
@@ -99,11 +130,16 @@ function IrisDashboardInner() {
       const res = await fetch('/api/iris/v0', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userMessage.content })
+        body: JSON.stringify({ query: trimmed })
       });
       
       const data = await res.json();
       setMessages(prev => [...prev, { role: 'assistant', understanding: data.understanding }]);
+      
+      // Trigger TTS to speak the answer
+      if (data.understanding?.answer && voiceOrbRef.current) {
+        voiceOrbRef.current.speak(data.understanding.answer);
+      }
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Error connecting to IRIS API.' }]);
@@ -112,13 +148,15 @@ function IrisDashboardInner() {
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    processQuery(query);
+  };
+
   const handleVoiceTranscribe = (text: string) => {
-    const userMessage = { role: 'user' as const, content: "(Voice) " + text };
-    setMessages(prev => [...prev, userMessage]);
-    // Simulate AI text response to the voice
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Voice input recognized and processed. (Kyutai Mock)' }]);
-    }, 1000);
+    if (!text.trim()) return;
+    processQuery(text);
   };
 
   if (isLoading || !user) {
@@ -147,23 +185,55 @@ function IrisDashboardInner() {
              <MorningBrief />
           ) : view === 'signals' ? (
              <Signals />
+          ) : view === 'mind-map' ? (
+             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px', overflow: 'hidden', borderRadius: '16px', border: '1px solid var(--border)' }}>
+               <KnowledgeGraph />
+             </div>
+          ) : view === 'settings' ? (
+             <IrisSettings />
           ) : (
             <>
+              <style>{`
+                @keyframes slideUpFade {
+                  from { opacity: 0; transform: translateY(20px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes pulseGlow {
+                  0% { text-shadow: 0 0 20px ${glowColor}; }
+                  50% { text-shadow: 0 0 40px ${glowColor}; }
+                  100% { text-shadow: 0 0 20px ${glowColor}; }
+                }
+                .iris-message-enter {
+                  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .iris-glass-pill {
+                  background: rgba(15, 15, 20, 0.65);
+                  backdrop-filter: blur(16px);
+                  border: 1px solid ${pillBorder};
+                  border-radius: 32px;
+                  box-shadow: 0 10px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+                  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+                }
+                .iris-glass-pill:focus-within {
+                  border-color: ${pillBorder};
+                  box-shadow: 0 10px 40px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.05);
+                }
+              `}</style>
               {messages.length === 0 && (
-            <div style={{ marginBottom: '40px', marginTop: '10vh', textAlign: 'center' }}>
-              <h1 className={styles.brandTitle} style={{ fontSize: 'clamp(24px, 5vw, 32px)', lineHeight: 1.2, color: '#e06a3b' }}>
+            <div style={{ marginBottom: '40px', marginTop: '10vh', textAlign: 'center', animation: 'slideUpFade 0.6s ease-out' }}>
+              <h1 style={{ fontSize: 'clamp(28px, 6vw, 42px)', lineHeight: 1.2, fontWeight: 800, background: titleGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'pulseGlow 4s infinite alternate', margin: '0 0 12px 0', letterSpacing: '-0.02em' }}>
                 IRIS Analysis Engine
               </h1>
-              <p className={styles.brandSubtitle}>Strict JSON contract. Receipt anchored.</p>
+              <p style={{ color: '#94a3b8', fontSize: '15px', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>Strict JSON Contract • Receipt Anchored</p>
             </div>
           )}
 
           {/* Chat History */}
           <div style={{ maxWidth: '700px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, paddingBottom: '40px' }}>
             {messages.map((m, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div key={i} className="iris-message-enter" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 {m.role === 'user' ? (
-                  <div style={{ background: '#e06a3b', color: 'white', padding: '12px 16px', borderRadius: '12px 12px 0 12px', maxWidth: '80%', fontSize: '15px', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                  <div style={{ background: userBubbleBg, color: 'white', padding: '14px 20px', borderRadius: '18px 18px 4px 18px', maxWidth: '80%', fontSize: '15px', lineHeight: '1.6', whiteSpace: 'pre-wrap', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     {m.content}
                   </div>
                 ) : (
@@ -174,6 +244,13 @@ function IrisDashboardInner() {
                        <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '12px', borderRadius: '8px' }}>{m.content}</div>
                     ) : m.understanding ? (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {m.understanding.intent && m.understanding.intent !== 'none' && m.understanding.intent_data && (
+                          <IntentCards 
+                            intent={m.understanding.intent} 
+                            intentData={m.understanding.intent_data} 
+                            onReceiptClick={(receipt) => setActiveReceipt(receipt)} 
+                          />
+                        )}
                         <AdaptiveCard 
                           answer={m.understanding.answer}
                           confidence={m.understanding.confidence}
@@ -197,8 +274,8 @@ function IrisDashboardInner() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: 'auto auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '20px', background: 'var(--bg-primary)' }}>
-            <div style={{ display: 'flex', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '24px', padding: '8px 12px 8px 24px', boxShadow: '0 -10px 40px rgba(0,0,0,0.05)', alignItems: 'center' }}>
+          <form id="chat-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: 'auto auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '40px', background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)' }}>
+            <div className="iris-glass-pill" style={{ display: 'flex', padding: '10px 16px 10px 24px', alignItems: 'center' }}>
               <textarea 
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -210,101 +287,54 @@ function IrisDashboardInner() {
                     }
                   }
                 }}
-                placeholder="Message IRIS or type /agent <task> to summon orchestrator..."
-                style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '16px', outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '8px 0', fontFamily: 'inherit' }}
+                placeholder="Message IRIS or type /agent <task>..."
+                style={{ flex: 1, background: 'transparent', border: 'none', color: '#f8fafc', fontSize: '15px', outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '10px 0', fontFamily: 'inherit', lineHeight: '1.5' }}
                 rows={query.split('\n').length > 1 ? Math.min(query.split('\n').length, 8) : 1}
                 disabled={loading}
               />
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', paddingBottom: '2px' }}>
-                <VoiceOrb onTranscribe={handleVoiceTranscribe} />
+                <VoiceOrb ref={voiceOrbRef} onTranscribe={handleVoiceTranscribe} />
                 <button 
                   type="submit" 
                   disabled={loading || !query.trim()}
-                  style={{ background: query.trim() ? '#e06a3b' : 'var(--border)', color: 'white', border: 'none', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading || !query.trim() ? 0.7 : 1, transition: 'all 0.2s ease' }}
+                  style={{ 
+                    background: query.trim() 
+                      ? (theme === 'ember' ? 'linear-gradient(135deg, #e06a3b, #d94a1c)' : theme === 'light' ? '#0f172a' : '#ffffff') 
+                      : 'rgba(255,255,255,0.05)', 
+                    color: query.trim() 
+                      ? (theme === 'dark' ? '#000000' : '#ffffff') 
+                      : '#64748b', 
+                    border: query.trim() ? 'none' : '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '50%', 
+                    width: '40px', 
+                    height: '40px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    cursor: loading ? 'not-allowed' : 'pointer', 
+                    opacity: loading || !query.trim() ? 0.7 : 1, 
+                    transition: 'all 0.2s ease', 
+                    boxShadow: query.trim() ? `0 4px 15px ${glowColor}` : 'none' 
+                  }}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsTasksDrawerOpen(true)}
-                  style={{ background: 'transparent', color: '#94a3b8', border: '1px solid var(--border)', borderRadius: '50%', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  style={{ background: 'rgba(255,255,255,0.03)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
                   title="Cloud Tasks"
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#94a3b8'; }}
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>
               </div>
             </div>
           </form>
 
           {/* Investigation Panel (Right Side Drawer) */}
-          {activeReceipt && (
-            <>
-              {/* Invisible Backdrop for click-away to close */}
-              <div 
-                onClick={() => setActiveReceipt(null)}
-                style={{
-                  position: 'fixed',
-                  top: 0, left: 0, right: 0, bottom: 0,
-                  zIndex: 99,
-                  background: 'transparent'
-                }}
-              />
-              <div style={{
-                position: 'fixed',
-                top: 0, right: 0, bottom: 0,
-                width: '400px',
-                background: 'rgba(15, 15, 20, 0.95)',
-                backdropFilter: 'blur(20px)',
-                borderLeft: '1px solid rgba(255,255,255,0.1)',
-                padding: '24px',
-                zIndex: 100,
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
-                animation: 'slideIn 0.3s ease-out forwards'
-              }}>
-                <style>{`
-                  @keyframes slideIn {
-                    from { transform: translateX(100%); }
-                    to { transform: translateX(0); }
-                  }
-                `}</style>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <h2 style={{ fontSize: '16px', color: '#e2e8f0', margin: 0, fontWeight: 600 }}>Investigation Panel</h2>
-                  <button 
-                    onClick={() => setActiveReceipt(null)}
-                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '20px', cursor: 'pointer' }}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div style={{ flex: 1, overflowY: 'auto', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
-                  <p style={{ marginBottom: '8px' }}><strong>Source URL:</strong></p>
-                  {activeReceipt.source_url.startsWith('/') ? (
-                    <button 
-                      onClick={() => router.push(activeReceipt.source_url)}
-                      style={{ background: 'transparent', border: 'none', color: '#38bdf8', wordBreak: 'break-all', display: 'block', marginBottom: '24px', textAlign: 'left', cursor: 'pointer', padding: 0 }}
-                    >
-                      {activeReceipt.source_url} →
-                    </button>
-                  ) : (
-                    <a href={activeReceipt.source_url} style={{ color: '#38bdf8', wordBreak: 'break-all', display: 'block', marginBottom: '24px' }}>
-                      {activeReceipt.source_url} →
-                    </a>
-                  )}
-                  
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', marginBottom: '12px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                      Extracted Context
-                    </p>
-                    <p style={{ margin: 0, fontStyle: 'italic', color: '#f8fafc' }}>
-                      "{activeReceipt.span || 'No specific text span extracted for this source.'}"
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+          <ReceiptPanel receipt={activeReceipt} onClose={() => setActiveReceipt(null)} />
             </>
           )}
 

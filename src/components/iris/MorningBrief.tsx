@@ -1,147 +1,177 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ReceiptPanel from './ReceiptPanel';
+import { useAuth } from '@/context/AuthContext';
 
 export default function MorningBrief() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, notes: 0, chats: 0 });
-  const [synthesis, setSynthesis] = useState("Loading synthesis...");
+  const [data, setData] = useState({
+    overnightChanges: [],
+    openCommitments: [],
+    slipping: [],
+    horizon: []
+  });
+  const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadBrief() {
       try {
         const res = await fetch('/api/iris/v0/morning-brief');
         if (res.ok) {
-          const data = await res.json();
-          setStats(data.stats);
-        }
-
-        // Fetch synthesis dynamically from the strict Understanding API v0
-        const synthRes = await fetch('/api/iris/v0', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: "Generate a morning brief synthesis of my recent activity." })
-        });
-        
-        if (synthRes.ok) {
-          const synthData = await synthRes.json();
-          if (synthData.understanding?.answer) {
-            setSynthesis(synthData.understanding.answer);
-          }
+          const json = await res.json();
+          setData(json);
         }
       } catch (err) {
         console.error("Failed to fetch morning brief", err);
-        setSynthesis("Failed to load synthesis.");
       } finally {
         setLoading(false);
       }
     }
-    loadStats();
+    loadBrief();
   }, []);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const ReceiptChip = ({ edge }: { edge: any }) => (
+    <button 
+      onClick={(e) => { 
+        e.stopPropagation();
+        setActiveReceipt({ 
+          source_url: edge.source_url || '#', 
+          span: edge.memory_content || `Confidence: ${(edge.confidence * 100).toFixed(1)}% | Valid From: ${new Date(edge.valid_from).toLocaleDateString()}` 
+        });
+      }}
+      style={{ 
+        background: 'rgba(255,255,255,0.05)', 
+        border: '1px solid rgba(255,255,255,0.1)', 
+        borderRadius: '4px', 
+        padding: '2px 6px', 
+        fontSize: '11px', 
+        fontFamily: 'monospace', 
+        color: '#94a3b8', 
+        cursor: 'pointer',
+        marginLeft: '12px',
+        transition: 'all 0.2s ease'
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+    >
+      Receipt
+    </button>
+  );
+
+  const SectionCard = ({ title, items, renderItem, delay }: { title: string, items: any[], renderItem: (item: any) => React.ReactNode, delay: string }) => (
+    <div style={{ 
+      background: 'var(--bg-secondary)', 
+      padding: '24px', 
+      borderRadius: '16px', 
+      border: '1px solid var(--border)',
+      animation: `slideUpFade 0.6s ease-out ${delay} forwards`,
+      opacity: 0,
+      transform: 'translateY(20px)'
+    }}>
+      <h3 style={{ fontSize: '16px', color: '#e2e8f0', margin: '0 0 16px 0', fontWeight: 600 }}>{title}</h3>
+      {items.length === 0 ? (
+        <div style={{ color: '#64748b', fontSize: '14px', fontStyle: 'italic' }}>Nothing surfaced today.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {items.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#cbd5e1', borderBottom: idx < items.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', paddingBottom: idx < items.length - 1 ? '12px' : '0' }}>
+              <div style={{ flex: 1, paddingRight: '16px' }}>
+                {renderItem(item)}
+              </div>
+              <ReceiptChip edge={item} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px', paddingBottom: '100px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
-        <div>
-          <h2 style={{ fontSize: 'clamp(24px, 5vw, 32px)', color: '#e06a3b', marginBottom: '8px', lineHeight: 1.2 }}>Morning Brief</h2>
-          <p style={{ color: '#94a3b8', margin: 0 }}>Your daily intelligence summary for {new Date().toLocaleDateString()}</p>
-        </div>
-        <div style={{ color: '#e06a3b', opacity: 0.8, filter: 'drop-shadow(0 0 8px rgba(224, 106, 59, 0.4))' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2v2"></path>
-            <path d="M4.93 4.93l1.41 1.41"></path>
-            <path d="M19.07 4.93l-1.41 1.41"></path>
-            <path d="M2 12h2"></path>
-            <path d="M20 12h2"></path>
-            <path d="M5.26 15.26A9 9 0 0 1 12 6a9 9 0 0 1 6.74 9.26"></path>
-            <path d="M2 22h20"></path>
-            <path d="M16 22v-2a4 4 0 0 0-8 0v2"></path>
-          </svg>
-        </div>
+    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '40px', paddingBottom: '100px' }}>
+      <style>{`
+        @keyframes slideUpFade {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      
+      <div style={{ marginBottom: '40px', animation: 'slideUpFade 0.6s ease-out forwards' }}>
+        <h2 style={{ fontSize: 'clamp(28px, 6vw, 42px)', color: '#f8fafc', marginBottom: '8px', lineHeight: 1.2, fontFamily: 'Fraunces, serif', fontWeight: 500 }}>
+          {getGreeting()}, {user?.name || 'User'}.
+        </h2>
+        <p style={{ color: '#94a3b8', margin: 0, fontSize: '16px' }}>Here is your morning synthesis.</p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '40px' }}>
-        
-        {/* Main Prominent Card */}
-        <div style={{ 
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          background: 'var(--bg-secondary)', 
-          padding: '40px', 
-          borderRadius: '24px', 
-          border: '1px solid var(--border)',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.04)',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          cursor: 'default',
-          textAlign: 'center'
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.08)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.04)'; }}
-        >
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px', fontWeight: 600 }}>Total Events Indexed (24h)</div>
-          <div style={{ fontSize: '72px', color: 'var(--text-primary)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>
-            {loading ? '-' : stats.total}
-          </div>
+      {loading ? (
+        <div style={{ color: '#64748b', fontSize: '14px', fontStyle: 'italic', animation: 'slideUpFade 0.6s ease-out 0.2s forwards', opacity: 0 }}>
+          Compiling the graph...
         </div>
-        
-        {/* Side-by-Side Secondary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          <div style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            background: 'var(--bg-secondary)', 
-            padding: '32px', 
-            borderRadius: '20px', 
-            border: '1px solid var(--border)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            cursor: 'default'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(16, 185, 129, 0.12)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.03)'; }}
-          >
-            <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', fontWeight: 600 }}>Notes Extracted</div>
-            <div style={{ fontSize: '48px', color: '#10b981', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {loading ? '-' : stats.notes}
-            </div>
-          </div>
+          <SectionCard 
+            title="What changed overnight" 
+            items={data.overnightChanges} 
+            delay="0.1s"
+            renderItem={(item) => (
+              <span>
+                <strong>{item.head?.name || 'Unknown'}</strong> {item.relation_label.replace(/_/g, ' ')} <strong>{item.tail?.name || 'Unknown'}</strong>
+              </span>
+            )}
+          />
 
-          <div style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            background: 'var(--bg-secondary)', 
-            padding: '32px', 
-            borderRadius: '20px', 
-            border: '1px solid var(--border)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            cursor: 'default'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(56, 189, 248, 0.12)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.03)'; }}
-          >
-            <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px', fontWeight: 600 }}>Chat Interactions</div>
-            <div style={{ fontSize: '48px', color: '#38bdf8', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {loading ? '-' : stats.chats}
-            </div>
-          </div>
+          <SectionCard 
+            title="Open commitments" 
+            items={data.openCommitments} 
+            delay="0.2s"
+            renderItem={(item) => (
+              <span>
+                Committed to <strong>{item.tail?.name || 'Unknown'}</strong>: {item.head?.name || 'Unknown'}
+                <br />
+                <span style={{ fontSize: '12px', color: '#64748b' }}>Since {new Date(item.valid_from).toLocaleDateString()}</span>
+              </span>
+            )}
+          />
+
+          <SectionCard 
+            title="Slipping" 
+            items={data.slipping} 
+            delay="0.3s"
+            renderItem={(item) => (
+              <span>
+                <strong>{item.head?.name || 'Unknown'}</strong> is delayed on <strong>{item.tail?.name || 'Unknown'}</strong>
+                <br />
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.8 }}>This hasn't moved since {new Date(item.valid_from).toLocaleDateString()} — still current?</span>
+              </span>
+            )}
+          />
+
+          <SectionCard 
+            title="On the horizon" 
+            items={data.horizon} 
+            delay="0.4s"
+            renderItem={(item) => (
+              <span>
+                <strong>{item.head?.name || 'Unknown'}</strong> {item.relation_label.replace(/_/g, ' ')} <strong>{item.tail?.name || 'Unknown'}</strong>
+                <br />
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Expected: {new Date(item.valid_from).toLocaleDateString()}</span>
+              </span>
+            )}
+          />
 
         </div>
-      </div>
+      )}
 
-      <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '24px', borderRadius: '12px' }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>✦</span> AI Synthesis
-        </h3>
-        <p style={{ margin: 0, color: 'var(--text-primary)', lineHeight: '1.6', fontSize: '15px' }}>
-          {loading ? "Analyzing your digital footprint..." : synthesis}
-        </p>
-      </div>
+      <ReceiptPanel receipt={activeReceipt} onClose={() => setActiveReceipt(null)} />
     </div>
   );
 }

@@ -66,11 +66,19 @@ export async function POST(request: Request) {
     const systemPrompt = `You are the IRIS Understanding API. Answer the user's question based strictly on the evidence below. 
 If there is no evidence, say "I don't have enough context."
 If the user is just saying a casual greeting (like "hi", "hello"), respond conversationally and DO NOT use any evidence.
+
+Intent Classification:
+- If the user is asking about commitments they made, set "intent" to "commitment".
+- If the user is asking about things they are avoiding or slipping on, set "intent" to "slippage".
+- If the user is asking about how their beliefs/opinions on a topic changed recently, set "intent" to "change".
+- Otherwise, set "intent" to "none".
+
 Respond in strict JSON format:
 {
   "answer": "your answer here",
   "confidence": 0.0 to 1.0,
-  "used_evidence_ids": [] // List the IDs of the evidence you ACTUALLY used. Leave empty if none were used (e.g. for greetings).
+  "used_evidence_ids": [],
+  "intent": "commitment" | "slippage" | "change" | "none"
 }
 
 EVIDENCE:
@@ -86,6 +94,7 @@ ${evidenceText || 'No records found.'}`;
     let answer = "No response generated.";
     let confidence = 0.0;
     let finalReceipts: any[] = [];
+    let intent = "none";
 
     try {
       if (typeof rawResponse === 'string') {
@@ -94,6 +103,7 @@ ${evidenceText || 'No records found.'}`;
           const parsed = JSON.parse(jsonMatch[0]);
           answer = parsed.answer || answer;
           confidence = parsed.confidence || 0.0;
+          intent = parsed.intent || "none";
           
           const usedIds = Array.isArray(parsed.used_evidence_ids) ? parsed.used_evidence_ids : [];
           finalReceipts = allReceipts
@@ -105,7 +115,40 @@ ${evidenceText || 'No records found.'}`;
       answer = typeof rawResponse === 'string' ? rawResponse : answer;
     }
 
-    // 4. Return the strict IRIS API v0 Schema
+    // 4. Fetch intent specific graph data if an intent was detected
+    let intentData: any[] = [];
+    if (intent === 'commitment') {
+      const { data } = await supabase
+        .from('chronic_edges')
+        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
+        .eq('user_id', user.id)
+        .eq('relation_label', 'commitment')
+        .is('valid_to', null)
+        .order('valid_from', { ascending: false })
+        .limit(5);
+      intentData = data || [];
+    } else if (intent === 'slippage') {
+      const { data } = await supabase
+        .from('chronic_edges')
+        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
+        .eq('user_id', user.id)
+        .eq('relation_label', 'delayed_on')
+        .is('valid_to', null)
+        .order('valid_from', { ascending: false })
+        .limit(5);
+      intentData = data || [];
+    } else if (intent === 'change') {
+      const { data } = await supabase
+        .from('chronic_edges')
+        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
+        .eq('user_id', user.id)
+        .not('valid_to', 'is', null)
+        .order('valid_to', { ascending: false })
+        .limit(5);
+      intentData = data || [];
+    }
+
+    // 5. Return the strict IRIS API v0 Schema
     return NextResponse.json({
       understanding: {
         answer,
@@ -114,7 +157,9 @@ ${evidenceText || 'No records found.'}`;
           believed_since: new Date().toISOString(),
           is_current: true
         },
-        receipts: finalReceipts
+        receipts: finalReceipts,
+        intent,
+        intent_data: intentData
       }
     }, { status: 200 });
 

@@ -235,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: profile.name,
           email: authUser.email || '',
           avatar: profile.avatar || initials,
-          plan: profile.plan || 'Private Beta',   // ← read from DB, fallback only if null
+          plan: profile.plan || 'Private Beta',
           joinedDate: profile.joined_date || joinedDate,
           memoriesIndexed: profile.memories_indexed || 0,
           behaviorLoggingConsent: profile.behavior_logging_consent ?? true,
@@ -253,11 +253,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const cached = loadCachedProfile();
         return {
           id: authUser.id,
-          name: fallbackName,
+          name: cached?.name || fallbackName,
           email: authUser.email || '',
-          avatar: initials,
+          avatar: cached?.avatar || initials,
           plan: cached?.plan || 'Private Beta',
-          joinedDate: joinedDate,
+          joinedDate: cached?.joinedDate || joinedDate,
           memoriesIndexed: cached?.memoriesIndexed || 0,
           behaviorLoggingConsent: cached?.behaviorLoggingConsent ?? true,
           onboardingCompleted: cached?.onboardingCompleted ?? false,
