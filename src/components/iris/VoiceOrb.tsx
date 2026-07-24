@@ -91,19 +91,19 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
     }
   };
 
-  // Dynamic styles based on voice state
-  let orbColor = '#94a3b8'; // idle
+  // Dynamic styles based on Paper & Ink tokens (§01 & §13 Spec)
+  let orbColor = 'var(--ink-faint, #6b6557)'; // idle
   let glowSize = 0;
   let pulseAnimation = 'none';
 
   if (voiceState === 'listening') {
-    orbColor = '#ef4444'; // red for listening
-    glowSize = 40;
-    pulseAnimation = 'pulse 1s infinite';
+    orbColor = 'var(--accent, #bf3d11)'; // terracotta accent for listening
+    glowSize = 30;
+    pulseAnimation = 'pulse 1.2s infinite ease-in-out';
   } else if (voiceState === 'speaking') {
-    orbColor = '#10b981'; // green for speaking
-    glowSize = 30; 
-    pulseAnimation = 'pulse 0.5s infinite';
+    orbColor = 'var(--live, #2e8b7a)'; // breathing teal for speaking
+    glowSize = 25; 
+    pulseAnimation = 'pulse 0.8s infinite ease-in-out';
   }
 
   return (

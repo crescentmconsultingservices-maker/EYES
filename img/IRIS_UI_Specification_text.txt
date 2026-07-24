@@ -1,0 +1,632 @@
+--- PAGE 1 ---
+CONFIDENTIAL · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY · DO NOT
+DISTRIBUTE
+IRIS
+THE INTERFACE · POWERED BY EYES
+The IRIS Interface Specification
+Every surface, every component, every token, every interaction — specified to
+the molecule, with the exact open-source parts to build each one. This is not a
+directive about what to build; it is the blueprint of how each surface looks, moves,
+and feels. No screens are drawn. The build is described so precisely that the
+screen is the only thing left to make.
+DOCUMENT
+IRIS UI Specification v1.0
+COMPANION TO
+Directive 04 (Surfacing)
+SCOPE
+All surfaces · vision + v0 build
+STACK
+Next.js · shadcn/ui · Motion ·
+Tailwind
+DATA
+Founder's real account. No mock.
+CLOCK
+Ship-on-true. No dates.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 1 / 20
+--- PAGE 2 ---
+00How to read this, and the one idea under all of it
+The philosophy that makes every later page make sense — and the competitor that proves the
+philosophy matters.
+Every surface in this document is a window over the Understanding API. None of them holds data;
+none of them decides truth. They render what EYES already knows, and they let the user reach the
+proof beneath any claim. That single fact is why this is buildable fast: the hard machine is done, and
+each surface is an honest rendering of it.
+Each surface is specified in two layers, always in this order: the Vision (what it becomes — the full
+ambition, so nothing built now points the wrong way) and the v0 Build (what ships first — the smallest
+honest version, molecular, with exact parts). Build the v0. Point it at the Vision. Never build something
+the Vision would throw away.
+WHY THIS EXISTS NOW — THE VENDO SIGNAL
+YC's newest batch (S26) just funded Vendo — an open-source agent layer that lets users
+compose UI live from a host product's components and API, with a voice mode that renders
+views. The interface building itself is now a funded thesis. But read what Vendo is: an agent that
+knows the product — its API, its components, its permissions. It has no memory of the person. Its
+context resets at every product boundary. Vendo composes what an app contains. IRIS composes
+what a life contains — with receipts. They built the customization layer on top of software; we built
+the understanding layer beneath all of it. Every design choice in this document should make that
+difference visible: a Vendo view is decoration over an app; an IRIS surface is understanding made
+legible. We borrow their engineering patterns freely (they are open source) and reject their ceiling
+entirely.
+Rendering without understanding is decoration. Every surface here renders
+understanding — which is the one thing no interface layer above us has.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 2 / 20
+--- PAGE 3 ---
+01The tokens — the exact values, no interpretation
+Every color, type, space, radius, motion value the whole app uses. Wire these as CSS variables /
+Tailwind theme once; every surface inherits them. Nothing in this app uses a value not on this page.
+COLOR — PAPER & INK (THE WARM BASE; NEVER COLD GREY)
+TOKEN HEX USE
+--paper #faf7f1 App background, everywhere
+--paper-2 #f2ede3 Rail, insets, secondary panels
+--card #fbfaf6 Raised cards (warm white)
+--ink-deep #1a1714 Immersive moments (voice, Timeline depth) — warm near-black, never navy
+--ink #16140f Primary text
+--ink-soft #3b372f Body / secondary text
+--ink-faint #6b6557 Meta, timestamps, empty states
+COLOR — ACCENT & SIGNAL
+TOKEN HEX USE
+--accent #bf3d11 Terracotta — primary action, active nav edge, the one word that matters
+--accent-ink #7a2a0e Accent text on light, mono kickers
+--accent-soft #f0d9cd Accent borders, tints
+--live #2e8b7a Muted teal — LIVE / current / breathing only. Never decorative.
+--good #2f6b4f Pass / true / verified
+--slate #324a52 Secondary structure, ADR/spec chrome
+TYPE — THREE FAMILIES, FIXED ROLES
+TYPE SCALE (REM / LINE-HEIGHT)
+Display Fraunces 2.4rem / 1.1 · H1 1.75rem / 1.15 · H2 1.3rem / 1.2 · Body 0.95rem / 1.55 · Small 0.82rem / 1.45 ·
+Mono-label 0.66rem / 1 · uppercase · 0.16em
+SPACE, RADIUS, SHADOW, MOTION
+THE FIXED SYSTEM
+Space scale (px): 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64. Generous whitespace is a feature; when unsure, add space.
+Radius: cards 8px · chips/buttons 6px · pills (voice orb, reactions) 999px.
+Border: 1px solid #e7e1d4 does the structural work. Borders over shadows.
+Shadow (barely there, warm): 0 2px 20px rgba(60,40,20,0.05). Nothing floats hard.
+Motion: all eases cubic-bezier(0.22,1,0.36,1). Enter 220–320ms. Cards fade up 8px, stagger 60ms. Never pop,
+never spin. The LIVE dot breathes (2s). The voice orb breathes (3s).
+Fraunces (serif) — display, greetings, surface titles, the one emotional beat. Weights 400/500/600/900.
+Never for UI labels.
+Inter — all body, all UI, all buttons. 400/500/600. The quiet workhorse.
+JetBrains Mono — everything that is evidence: timestamps, receipts, data, IDs, kicker labels (uppercase,
+letter-spacing 0.15–0.22em). Monospace = "this is provable." This is a signature; honor it everywhere.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 3 / 20
+--- PAGE 4 ---
+ONE THEMING INSTRUCTION THAT SAVES DAYS
+Install shadcn/ui (MIT) as the component base and put every token above into its CSS-variable
+theme. Every shadcn component (Card, Button, Badge, Dialog, Skeleton, Tabs, ScrollArea) then
+inherits the house look automatically — no restyling per component. Use TweakCN (free shadcn
+theme editor) once to generate the variable block from these hexes, paste it into globals.css,
+done. This is the single highest-leverage setup step; do it before any surface.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 4 / 20
+--- PAGE 5 ---
+02The receipt-depth principle — trust forward, proof
+on demand
+The most important interaction rule in the app, corrected to its final form. Read carefully; it governs
+every surface.
+Receipts are not shown by default. The interface does not litter every claim with a citation chip —
+that signals anxiety. Instead: the surface stays clean and confident, and the user trusts that any
+claim can be opened, because the first time they open one, they learn the whole system works this
+way. Proof lives underneath, reachable in layers, as deep as they want to go — but it never shouts.
+   A CLAIM ON ANY SURFACE            (clean · no chip · faint affordance only)
+        │   hover →  a whisper of underline appears  (proof exists here)
+        │   click / zoom →
+        ▼
+LAYER 1 · the source       which message, which document, when
+        │   go deeper →
+        ▼
+LAYER 2 · the exact span    the precise sentence, highlighted in context
+        │   go deeper →
+        ▼
+LAYER 3 · the full record   the whole email / thread / event, confidence,
+                              validity ("believed since · still current"),
+                              and every other belief drawn from this source
+        │   go deeper →
+        ▼
+LAYER 4 · the lineage       what this belief superseded, what contradicts it,
+                              the chain back through time
+ONE CLAIM, FOUR DEPTHS. THE USER CHOOSES HOW FAR TO FALL. DEFAULT VIEW SHOWS NONE OF IT.
+THE RULE, STATED FOR PR REVIEW
+No surface renders a visible receipt chip in its default state. Every claim is quietly openable: a
+hover affordance (faint underline / cursor change) reveals that depth exists; a click opens the
+Receipt Panel (§03) at Layer 1, which itself drills deeper. Confidence is carried as trust, not as a
+badge. The one exception: the Investigate/Audit surface, where receipts are the product and
+appear inline by design (§10). Everywhere else — brief, chat, signals, timeline, dossier — proof is
+depth, not decoration.
+WHY THIS IS THE RIGHT CALL (AND WHERE IT CAME FROM)
+Showing proof everywhere reads as a system defending itself. Holding proof underneath reads as
+a system that knows it's right and lets you check. It also keeps every surface calm and beautiful —
+the receipts are the foundation, not the furniture. This is the corrected principle; the earlier "chip
+on every claim" version is void.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 5 / 20
+--- PAGE 6 ---
+03The shared component library — build once, reuse
+everywhere
+Seven components every surface imports. Building these first (in Step 0) is what makes every later
+surface fast — they become assembly, not authoring. Exact open-source parts named for each.
+S1The Receipt Panel THE SIGNATURE · BUILD FIRST
+A right-side panel (or centered on mobile) that slides in on any claim-open. Renders the four depths of §02:
+source →  span (highlighted) →  full record (confidence + validity) →  lineage. Deep-links from anywhere;
+consistent everywhere.
+BUILD FROM
+shadcn/ui Sheet (MIT) — the slide-in container, right side.
+shadcn/ui Tabs — depth navigation (Source / Span / Record / Lineage) if not a scroll.
+Motion (framer-motion, MIT) — the slide + the span-highlight fade.
+Span highlight: a <mark> with background: var(--accent-soft), animated width.
+S2The Understanding Card THE ATOM OF EVERY SURFACE
+The base card that renders one unit of understanding — a commitment, a change, a signal, a brief item.
+Warm-white, hairline border, fades up on mount. Has a title line, a body line, an optional status chip, and a
+quiet claim-affordance (hover underline →  Receipt Panel). Every surface's cards are variants of this one.
+BUILD FROM
+shadcn/ui Card + Badge (status chip) + Skeleton (loading).
+Motion — fade-up 8px, stagger 60ms via a shared variant (define once, import everywhere).
+Optional liveliness: Magic UI (MIT, ~21k ★ ) AnimatedList for cards arriving in a stream, NumberTicker for
+any count.
+S3The Rail + Header THE FRAME
+Persistent left rail (~240px): wordmark, nav items with terracotta active-edge, identity block with the ●  live
+understanding dot at bottom. Header strip: surface title (Fraunces) + EYES knows · IRIS decides.
+BUILD FROM
+shadcn/ui Sidebar (official, MIT) — handles collapse, active state, mobile drawer out of the box.
+lucide-react (ISC) — icons: Sun (Desk), MessageSquare (Workstation), Rss (Signals), Clock (Timeline), Users
+(Dossiers), Search (Investigate).
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 6 / 20
+--- PAGE 7 ---
+S4The Live Dot + Empty State HONESTY PRIMITIVES
+The teal breathing dot (LIVE/current). And the honest empty state — a soft Fraunces line + one suggestion —
+used wherever real data is absent. An honest empty always beats a fabricated full.
+BUILD FROM
+Dot: CSS keyframe opacity+glow, 2s. Empty: plain component, --ink-faint text, one shadcn Button
+(ghost) suggestion.
+THE ORDER THAT MAKES EVERYTHING FAST
+Build S1–S4 in Step 0, themed with the §01 tokens. From that point, every surface below is
+composition of these four plus its own data query. That is why the estimates feel small — because
+after the shared library exists, they are.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 7 / 20
+--- PAGE 8 ---
+04The six surfaces — and the tense each one holds
+The mental model of the whole product on one page. Each surface answers a different question
+about the same understanding.
+THE UNDERSTANDING API  (the only door · receipts underneath)
+                              │
+   ┌───────────┬─────────────┼─────────────┬────────────┬───────────┐
+   ▼            ▼              ▼              ▼             ▼            ▼
+DESK WORKSTATION SIGNALS TIMELINE DOSSIERS INVESTIGATE
+ "now"      "doing"       "the flow"    "the past"   "who"       "prove it"
+ the home   speak/type +  the company   the time     living      universal
+ screen     live canvas   Instagram     machine      wiki per    audit engine
+                                                      entity      (lenses)
+FIVE TENSES OF ONE UNDERSTANDING, PLUS THE ENGINE THAT PROVES ANYTHING ON DEMAND.
+SURFACE THE QUESTION IT
+ANSWERS VISION TENSE V0 SHIPS
+Desk (Brief) What matters right now? The present — the company's home
+screen
+Brief sections + now-strip
+Workstation
+(Chat)
+Help me do this / think
+this
+The doing — speech + type + live
+canvas
+Type + intent cards + push-
+to-talk
+Signals What's happening
+around us?
+The flow — the company's Instagram Receipted visual feed
+(read)
+Timeline How did we get here? The past — a scrollable time machine Zoomable event stream
+Dossiers Who / what is this? The entities — a living wiki per
+person/project
+Entity page from any name-
+tap
+Investigate Prove / audit anything The engine — infinite lenses Lens picker + run + verdict
+THE MIND MAP DECISION — RESOLVED
+The force-directed graph is demoted from a destination to a lens. It never appears as a primary
+nav item (Obsidian/Roam commoditized the hairball; nobody navigates a life through a physics
+simulation). It survives only inside the Dossier as an optional "explore connections" view, and its
+one differentiator is time — a graph you can scrub, watching edges form and fade across months,
+which no notes app has because none of them stored the past. The graph's understanding is real;
+its primacy was the mistake. Dossiers replace it as the way a human actually explores entities.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 8 / 20
+--- PAGE 9 ---
+05Surface 1 — The Desk (the Brief)
+Not a morning ritual — the company's home screen. The place you sit. State-of-now: what matters
+this moment, notifications, today's activity, ambient life. A Mac desktop for a company.
+VThe Vision — the desk you sit at WHERE NOTHING IS BUILT WRONG
+The Desk is the app's home. Opening IRIS opens the Desk. It is modular and audience-shaped — the
+enterprise desk and the consumer desk share bones, show different organs. It holds: the state of now (what
+needs doing this moment), notifications living here rather than scattered, today's company activity, a
+compact now-strip of the day (a horizontal micro-timeline of today only — distinct from the Timeline
+surface), and ambient life — a music control, a mood, whatever makes it a room you want to sit in. It is
+glanceable like a desk: you look, you are oriented, you are never "reported to." Widgets are rearrangeable;
+the desk is yours.
+0The v0 Build — molecular SHIPS FIRST · PROVES THE PATTERN
+LAYOUT
+A responsive widget grid (bento layout). Top-left, largest: the greeting block — Fraunces greeting keyed to
+time (Good morning, Abhi.) + one mono line (Tuesday · while you slept, understanding kept moving). The
+rest of the grid holds the widgets below, each a variant of the Understanding Card (S2), each fading up in
+sequence on load.
+THE WIDGETS (EACH AN API QUERY + AN S2 CARD)
+ONE EMOTIONAL BEAT
+Exactly one Fraunces-italic terracotta line somewhere on the Desk. One. It is the room's heartbeat.
+BUILD FROM
+Magic UI BentoGrid (MIT) — the rearrangeable widget layout, out of the box.
+shadcn Card variants (S2) for each widget · Motion staggered fade-up.
+Magic UI NumberTicker for any count that animates in.
+Ambient music (v0): a minimal HTML audio control, house-styled — no library needed. Enterprise team-
+pulse: shadcn Chart (Recharts) sparkline.
+Empty widgets →  S4 honest empty state.
+TRUE MEANS
+The founder opens IRIS to the Desk and sees his actual now — real priorities, real overnight changes, real
+slippage, today's real strip — arranged as a calm home screen, one beat of warmth, every claim quietly
+openable to source. Ships to production the hour it's true.
+What needs doing now — the top 3 live priorities. Claim-openable to source.
+Changed overnight — 2–5 items from the latest synthesis pass.
+Slipping — delayed_on items, check-in tone ("hasn't moved since the 11th — still current?"), never a
+verdict.
+Now-strip — a thin horizontal band of today's dated items, left-to-right by hour. This is a mini-timeline of
+today only.
+Ambient — a small music/mood control (consumer desk). Enterprise desk swaps this for a team-pulse
+widget.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 9 / 20
+--- PAGE 10 ---
+06Surface 2 — The Workstation (the Chat, corrected)
+Not "chat with cards." A workstation with two inputs — type or speak — and one intelligence that
+knows when you're working and renders the thing itself, not a citation of it. This is where the magic
+happens.
+VThe Vision — objects obey speech THE INTERACTION GRAMMAR
+You type, or you speak. When you speak, you're thinking, and thinking wants visuals — so IRIS renders
+artifacts into the room and lets you manipulate them by voice while it talks back. Mention a competitor's
+hiring freeze →  the actual article snapshot slides in. Say "put our price chart next to theirs" →  the objects
+are placed. Say "connect 2024 and 2025 across X and Y — what do you see?" →  the charts merge and a
+simulation runs, live, while you keep talking and it keeps answering. This is not "an app opening inside chat"
+(that is trivial and also fine). This is understanding-driven composition: the room assembles from your life
+and your words.
+THE INTERACTION GRAMMAR — BUILD PRIMITIVES, NOT FEATURES
+Every future Workstation capability is a sentence in this grammar. Speaking and rendering happen
+simultaneously — voice never blocks the canvas, canvas never blocks voice.
+SHOW — pull an artifact (article snapshot, chart, doc, entity) into the room from understanding.
+PLACE — arrange artifacts by speech ("put that next to this," "stack these").
+MERGE — combine two data objects into one view ("overlay these two years").
+SIMULATE — project and render a result ("what happens if this trend holds").
+HOLD — pin an artifact so it persists while the conversation moves on.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 10 / 20
+--- PAGE 11 ---
+0The v0 Build — the first words of the grammar HONEST FIRST SENTENCE
+THE CONVERSATION STREAM
+IRIS replies as un-bubbled flowing prose in --ink on paper — a colleague talking, not a chat bubble. The
+user's own lines are small, right-aligned, quieter (--ink-soft, mono-tinted) — the human thinking aloud
+shouldn't shout. Prose streams in token by token.
+INTENT CARDS (SHOW, V0 SCOPE)
+Three intents render structured cards above the prose answer; anything else behaves as normal chat:
+Cards fade up staggered. Receipts stay underneath per §02 — no chips; hover reveals depth. Suggestion
+chips float above the input so the intents are one tap away (demo-critical).
+VOICE CONTROL (V0 = PUSH-TO-TALK; SEE §11)
+A push-to-talk orb in the input bar. Hold →  speak →  release →  transcript enters the same pipeline →  cards +
+prose render →  answer spoken back. The full grammar (PLACE/MERGE/SIMULATE) is Vision; v0 proves
+SHOW + the voice pipe.
+BUILD FROM
+shadcn/ui base + Vercel AI SDK (useChat, MIT) — streaming prose, token-by-token, out of the box.
+Motion — card stagger + prose fade. Magic UI AnimatedList — cards arriving.
+Reference Vendo's open-source patterns (github.com/runvendo/vendo, we may borrow): their format-
+tagged UI document approach — the agent emits typed blocks the client renders as native components.
+Adopt this pattern for intent cards now; it is exactly the substrate the full grammar needs later. Their iframe-
+jail sandbox for generated components is the pattern for the future canvas — note it, don't build it yet.
+Snapshot-in-room (Vision SHOW of an article): shadcn Card + an <img>/iframe of the source; the article
+render is trivial — the understanding deciding to show it is the hard part, and it already exists in the API.
+TRUE MEANS
+The founder types or speaks the three intents about his real life; correct cards render above streaming
+prose; a claim opens to its source underneath; push-to-talk completes the voice → answer loop. The
+grammar's first word (SHOW) works; the rest is pointed at, not faked.
+"what did I commit to…" →  Commitment cards (S2 variant).
+"what's slipping / avoiding" →  Slippage cards, check-in tone.
+"what changed about X" →  a before → after Change card (both states claim-openable).
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 11 / 20
+--- PAGE 12 ---
+07Surface 3 — Signals (the company's Instagram)
+Not a notification list. A visually-native, social, searchable feed where the founder posts, colleagues
+post, and IRIS itself posts and comments — the company's shared understanding living where the
+company hangs out.
+VThe Vision — Slack's immediacy, Instagram's grammar, a
+community's warmth
+AROUND
+WORK
+A visual feed of the company's life: pictures, diagrams, annotated snapshots, charts-as-posts. The founder
+posts; colleagues post; IRIS posts and comments as a member of the room — a participant who never
+forgets and always brings receipts (a feed member no Slack has ever had). Reactions, comments, threads,
+shares outward. Searchable across everything — "show me everything we've said about competitor X,"
+"everything about the raise." Inside jokes welcome — a feed nobody enjoys is a feed nobody checks.
+Enterprise and consumer feeds differ; the enterprise feed is the org's nervous system, the consumer feed is
+the person's.
+0The v0 Build — the receipted skeleton THE SEED OF THE ORGANISM
+LAYOUT
+A centered feed column (max ~680px), newest first, infinite scroll. Each post is a card (S2 variant) with room
+for a visual (image/chart/snapshot), a headline, a "what it means" line (the whole differentiator — an item
+without a consequence doesn't render), a timestamp, and a claim-affordance underneath. A top composer
+bar: Post to the team….
+V0 CONTENT & THE DECISION-RELEVANCE RULE
+BUILD FROM
+Magic UI AnimatedList (MIT) — feed items streaming in, the Instagram-feel motion.
+shadcn Card / Avatar / Badge — post structure. shadcn Chart (Recharts, MIT) — charts-as-posts.
+Snapshots: server-side capture is later; v0 uses the source's OG image / a stored thumbnail from the article
+the API already references.
+Search (Vision): shadcn Command ( ⌘ K palette) is the pattern — wire to API search when built.
+TRUE MEANS
+The founder opens Signals and scrolls a live, visually-native feed of only decision-relevant real events,
+each with a meaning line and a rendered visual, plus his own posts — and it feels like a feed (alive,
+scrollable, newest-first), so the social layers have a body to grow into.
+Auto-posts from detection: real events from live sources, each with its meaning line. Threshold enforced
+at query — only decision-relevant events (changes a decision / prevents a mistake / reveals an
+opportunity). Five real beat fifty.
+Founder manual post (composer works in v0 — it's just a create form).
+Rendered meaning: a competitor event shows with a small chart/snapshot, not just text.
+v0 defers: comments, reactions, IRIS-as-commenter, cross-org search — Vision layers. v0 is the feed's
+honest body.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 12 / 20
+--- PAGE 13 ---
+08Surface 4 — The Timeline (the time machine)
+Not a bar chart, not a vertical list. A zoomable, scrolling time machine — the company from day
+zero, resolving as you dive: quarters →  weeks →  days →  the moment. The magic moment of the
+whole product.
+VThe Vision — give the company a time machine NO ONE ELSE CAN RENDER THIS
+Pull back: the company at altitude, day zero to today. Dive: the view resolves through quarters, weeks, days,
+to the moment itself. Every decision node opens into when, why, who, what it triggered, what it superseded
+— the receipts, the people, the context, all inside the event. Category rails to travel by theme ("only money,"
+"only people," "only product"). Free scrubbing to move through time by hand. As you scroll, the company
+happens in front of you — because the bi-temporal substrate kept every past state, and no competitor can
+render this, because no competitor stored it. This is understanding made into time travel.
+0The v0 Build — the scrollable event stream THE DATA PROVING ITSELF
+LAYOUT
+A vertical time axis, newest at top, rendering belief-events from the graph. Node types: belief formed,
+commitment made, commitment escalated (delayed_on), belief superseded — the hero: old belief struck
+through but legible, tagged superseded · not deleted, a link-line to its replacement. Contradiction renders
+as a neutral paired question. Tap a node →  Receipt Panel with when/why/who.
+V0 ZOOM + RAILS (THE SEED OF THE MACHINE)
+BUILD FROM
+react-chrono (MIT) — vertical/timeline layouts with built-in zoom modes; or vis-timeline (MIT/Apache) for
+continuous scale + scrubbing (closer to the Vision, slightly heavier).
+Recommendation: start react-chrono for v0 speed; plan vis-timeline for the Vision's continuous scrub — it
+natively supports zoom-by-scroll across time ranges.
+Motion — the month ↔ day scale transition. shadcn ToggleGroup — category rails. Superseded
+strikethrough: text-decoration: line-through + opacity:0.7, replacement link in --accent.
+TRUE MEANS
+The founder scrolls his real last-90-days; at least one real superseded belief renders struck-through with
+its replacement linked; month ↔ day zoom works on a chosen date; category rails filter; every node
+opens to when/why/who. The time machine's first gear turns.
+Two zoom levels in v0: month view (default) and day view (dive into a date). Smooth scale transition
+between them (this is the first taste of the time machine).
+Category filter chips: money / people / product / decisions — filter the stream.
+Free vertical scroll = travel. Last ~90 days, confidence-ranked so it's readable not a firehose.
+v0 defers: the full altitude-to-moment continuous zoom, the day-zero panorama — Vision. v0 proves
+month ↔ day + the superseded-belief hero.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 13 / 20
+--- PAGE 14 ---
+09Surface 5 — Entity Dossiers (the living wiki, graph
+invisible)
+The Mind Map, transformed. The graph runs underneath but is never the interface. Instead: a living
+page for every person, project, and company — and the killer feature, the self-dossier.
+VThe Vision — every entity has a page that writes
+itself
+AND PROVES EVERY
+SENTENCE
+Click any name anywhere in IRIS — in the Desk, a Signal, a Timeline node, a prose answer — and open its
+Dossier: a living page for that person / project / company. It holds the relationship over time (a sparkline of
+interaction), open commitments between you, what changed recently, the full evidenced history — every
+claim openable to proof. It is the company's Wikipedia where every page writes itself from understanding
+and can cite every line. Obsidian draws a graph; it cannot write a dossier — because a dossier requires
+resolved entities + bi-temporal history + evidence, which is exactly your substrate and nobody else's.
+THE KILLER FEATURE — THE SELF-DOSSIER
+A person opens their own Dossier and sees their real narrative in the company: their contributions, their arc,
+their commitments kept and slipped, their relationships — evidenced, theirs. Nobody has this. It is the single
+most emotionally powerful page in the product.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 14 / 20
+--- PAGE 15 ---
+0The v0 Build — the entity page FROM ANY NAME-TAP
+LAYOUT — ONE PAGE TEMPLATE, ALL ENTITY TYPES
+ENTRY POINTS IN V0
+Names become tappable across surfaces (a lightweight entity-link decorator on rendered text). Tap →  route
+to /dossier/[entityId]. The self-dossier is the same template seeded with the founder's own entity.
+BUILD FROM
+shadcn Card / Tabs / ScrollArea — the page structure. shadcn Chart (Recharts) — the relationship
+sparkline.
+Explore-connections panel: react-force-graph (MIT, 2D/canvas) or reuse the existing D3 Mind Map code,
+scoped to the entity's neighborhood + a time slider (shadcn Slider).
+Entity-link decorator: a small render pass that wraps known entity names in a link — the API already
+resolves entities, so the IDs exist.
+TRUE MEANS
+The founder taps a real person's name in any surface and lands on their Dossier — real relationship, real
+open commitments, real recent changes, real history, all openable to proof — and opens his own self-
+dossier and sees his real narrative. The graph is present only as an optional, collapsed, time-scrubbable
+panel.
+Header — name, type (person/project/company), a one-line synthesized summary, the relationship
+sparkline.
+Open commitments — live commitments involving this entity (S2 cards).
+Recent changes — what the graph learned/updated about this entity lately.
+History — a compact vertical list of belief-events about this entity (a filtered Timeline).
+Explore connections (the demoted graph) — an optional expandable panel showing this entity's
+immediate graph neighborhood, time-scrubbable. Collapsed by default. This is the only place the graph
+appears.
+Every element claim-openable to proof (§02).
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 15 / 20
+--- PAGE 16 ---
+10Surface 6 — Investigate (the universal audit engine)
+The engine is the product; Revenue Leak Scan is one lens — a validation showcase, not the primary
+product. Type the investigation, pick the lens, watch it run, get a verdict with proof. This is the one
+surface where receipts are shown inline, because here proof IS the product.
+VThe Vision — one engine, infinite lenses PRICED BY DEPTH
+Any investigation — internal or external, for/to/by the company. Lens row prioritized by today's enterprise
+pain: SOC2 readiness, security posture, leaked credentials, compliance checks, competitive intel, reputation
+— more added as content, not code. Revenue Leak Scan is a lens (and a marketing showcase of what the
+engine can do), never the whole product. The €39 audit, the €250 Leak Scan, the recurring Exec Shield are
+three price points on this one surface. Build the frame once; every future audit is a lens definition.
+0The v0 Build — frame + two lenses THE REUSABLE ENGINE
+LAYOUT & FLOW
+V0 LENSES
+Ship the frame + two working lenses: Revenue Leaks (the built product, now correctly a lens) and one
+enterprise-pain lens (Leaked Credentials or SOC2 Readiness). Every other chip renders "coming soon"
+honestly. Fix the fabricated €7,000 default here — no invented numbers in a verdict; derive from real input
+or label as illustrative.
+BUILD FROM
+shadcn Input / ToggleGroup / Button — input + lens picker. Motion + Magic UI stepped reveal for the run
+animation.
+shadcn Card + Badge — finding rows + status dots. Inline receipt = the same Receipt Panel (S1), opened
+inline rather than on-demand.
+shadcn Progress — the stepped bar. Action chips = shadcn Button (secondary).
+TRUE MEANS
+The founder types a real investigation, picks a lens, watches the stepped run, and gets a real verdict with
+real findings and real inline receipts — on two working lenses, with the rest honestly "soon." The €7,000
+fabrication is gone.
+Input — a large calm field: What should I investigate? + a terracotta Investigate button.
+Lens picker — a row of chips (single-select, selected = terracotta fill): Revenue Leaks · Reputation ·
+Leaked Credentials · SOC2 Readiness · Compliance · more soon.
+Run animation — a stepped progress that shows the work (this sells it): Gathering evidence… →  Cross-
+referencing… →  Scoring… →  Composing…, ~500ms each, teal LIVE pulse while active. Never instant.
+Verdict — a Fraunces verdict header ("Partially ready — 3 gaps, none blocking"), findings as rows with
+status dots + inline receipts (the §02 exception — proof shown, because proof is the product here), and
+action chips ("Create the tasks," "Draft the recovery emails").
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 16 / 20
+--- PAGE 17 ---
+11The voice layer — v0 pipe now, founder-only duplex
+next
+The sequence locked with the founder: ship the simple pipe first; then tune the judgment layer on
+Customer Zero alone. Voice is the future primary interface — it gets built slowly and perfectly, not
+rushed.
+0Voice v0 — push-to-talk (ships first) ASSEMBLY, NOT RESEARCH
+A push-to-talk orb in the Workstation input. Hold →  speak →  Whisper (faster-whisper on existing EU infra)
+transcribes →  the transcript enters the existing Workstation pipeline unchanged (same intents, same cards,
+same prose) →  the text answer is spoken back via Kokoro-82M. Cards render on screen while it speaks.
+Voice in, voice out; the room is unchanged. No wake word, no interruption, no duplex — this is the pipe both
+versions share, proven simple first.
+BUILD FROM — ALL VERIFIED OPEN-SOURCE, NO NEW COST
+Kokoro-82M (Apache 2.0, ~327MB, CPU-viable, sub-2s on mid-GPU) — TTS. Commercial use permitted.
+faster-whisper (MIT) — STT on existing EU infra. Browser capture via Web Audio API →  stream to endpoint.
+Orb: CSS breathing circle + Motion states (idle/listening/thinking/speaking). Waveform: a light canvas bar-
+meter, or wavesurfer.js (BSD) if a richer waveform is wanted.
+VVoice Vision — founder-only duplex, tuned on Customer
+Zero
+AFTER V0 IS
+STABLE
+Once v0 is stable, stand up Kyutai duplex behind a flag, for exactly one user: the founder. One EU GPU, no
+rollout risk, no 32-user exposure. The founder speaks and speaks; every session generates labeled
+judgment data — a good-call / bad-call / too-harsh rating on every interruption and silence. What tunes is
+not the speech model — it's the judgment layer: the interruption policy, the silence intelligence, the
+accountability phrasing, the wait-time after a trail-off. That is the only part of voice the founder's usage
+genuinely trains, and it is the part that makes voice IRIS and not a voice mode. By the time voice reaches
+alphas, it arrives already tuned to a human. The full grammar (PLACE/MERGE/SIMULATE by voice) lives here
+too — voice driving the canvas.
+THE ONE FIRM RULE
+v0 before duplex, always. The STT → API → cards → TTS pipe is shared by both; proving it simple-first
+means the duplex build debugs one new thing (presence), not five.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 17 / 20
+--- PAGE 18 ---
+12The complete parts list — every dependency,
+licensed & free
+Everything named in this document, in one table. All permissive-licensed, all installable via CLI, zero
+vendor lock, zero new recurring cost. Nothing here needs buying.
+PART LICENSE WHERE IT'S USED
+shadcn/ui MIT Every surface — the themed component base (Card, Button, Badge, Sheet,
+Tabs, Dialog, Sidebar, Command, Slider, Progress, Skeleton, Avatar, ScrollArea,
+ToggleGroup, Input)
+Tailwind CSS MIT The token system (§01) as theme variables
+TweakCN Free tool Generate the shadcn theme block from the §01 hexes — one-time setup
+Motion (framer-
+motion)
+MIT All entrance/transition motion; the shared fade-up variant
+Magic UI MIT
+(~21k ★ )
+AnimatedList (Signals, chat cards), BentoGrid (Desk), NumberTicker (counts),
+stepped reveals (Investigate)
+lucide-react ISC All icons
+Recharts (via
+shadcn Chart)
+MIT All charts — Desk sparklines, Signals charts-as-posts, Dossier relationship
+sparkline
+Vercel AI SDK MIT Workstation streaming prose (useChat), token-by-token
+react-chrono MIT Timeline v0 (vertical + zoom modes)
+vis-timeline MIT /
+Apache-2.0
+Timeline Vision (continuous scrub / zoom-by-scroll)
+react-force-graph MIT Dossier "explore connections" panel (demoted graph) — or reuse existing D3
+Kokoro-82M Apache 2.0 Voice TTS (CPU-viable, ~327MB)
+faster-whisper MIT Voice STT on existing EU infra
+wavesurfer.js BSD Optional richer voice waveform
+Vendo (reference
+only)
+Open
+source
+Pattern reference for the Workstation grammar — format-tagged UI documents,
+sandboxed generated components. Borrow patterns; do not depend.
+COST NOTE — PRE-EMPTED
+Every part above is free and permissively licensed. Voice runs on infrastructure already paid for.
+This entire specification introduces zero new recurring cost. The standing cost-note rule is
+satisfied by construction.
+IF A BETTER PART APPEARS
+Propose it in the daily doc with license + one-line reason before adopting. The bar: permissive
+license, maintained, no new vendor lock, nothing leaves EU processing. These parts are the
+defaults; the tokens (§01), the receipt-depth principle (§02), and the iron rules are the law.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 18 / 20
+--- PAGE 19 ---
+13The build order — and the reporting contract
+Everything in this document, sequenced. Ship-on-true governs; nothing here is a date.
+Build the shared library, then the surfaces fan out. The order is dependency-driven, not calendar-
+driven.
+ORDER WHAT UNLOCKS
+Setup §01 tokens into shadcn theme (TweakCN) + §03 shared
+components S1–S4
+Everything — every surface is
+composition after this
+Then,
+sequential
+Rail (S3) →  Desk →  Workstation intent cards The frame + the pattern every
+surface copies
+Then,
+parallel
+Signals · Timeline · Dossiers · Investigate — independent
+windows over the API, built simultaneously across engineers
+The full v0 product surface
+Then Voice v0 (push-to-talk) — shares the Workstation pipe The voice pipe both versions
+need
+After stable Founder-only duplex (§11 Vision) — its own track The judgment layer, tuned on
+Customer Zero
+THE RULES THAT NEVER BEND
+REPORTING
+Daily doc, tagged per surface: "Desk · shared lib done · live [url]". Gates are demonstrated on
+production, never asserted. Founder verdicts return same-day — nobody idles at a gate. Blockers
+surface the hour they appear.
+The engine understands. These six surfaces let a person see it, walk it,
+question it, and trust it — each one a window no interface layer above us can
+build, because none of them holds the understanding underneath.
+Set the tokens, build the four shared components, then make the surfaces appear on the production
+URL one true window at a time. The founder is watching from France. Make the room real under him.
+Abhi
+Founder & CEO · EYES — Everything You Ever Said
+Ship-on-true. Each surface goes live on production the hour it's true. No dates, no batching, no
+finished-and-unshipped.
+Real data only. Every surface built and demoed on the founder's real account. No mock, ever. Honest
+empty over fabricated full.
+Receipt-depth (§02). Proof underneath, never littered — except Investigate, where proof is the product.
+The API is the only door. No surface touches the graph directly. Need something new? The API grows
+first.
+Tokens are law (§01). No value not on that page. No new design systems.
+The Vision is the target. Build the v0; point it at the Vision; never build what the Vision throws away.
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 19 / 20
+--- PAGE 20 ---
+CONFIDENTIAL · IRIS UI SPECIFICATION V1.0 · CRESCENT MOON ENGINEERING & FOUNDER OFFICE ONLY · DO NOT
+DISTRIBUTE
+IRIS INTERFACE SPECIFICATION CONFIDENTIAL · DO NOT DISTRIBUTE
+V1.0 · SHIP-ON-TRUE · NO DATES PAGE 20 / 20

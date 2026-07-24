@@ -1,138 +1,208 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import ReceiptPanel from './ReceiptPanel';
+import { useState } from 'react';
+import UnderstandingCard from './UnderstandingCard';
 
 export default function IrisTimeline() {
-  const { theme } = useAuth();
-  const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [zoomScale, setZoomScale] = useState<'day' | 'month'>('day');
 
-  useEffect(() => {
-    async function loadTimeline() {
-      try {
-        const res = await fetch('/api/iris/v0/timeline');
-        if (res.ok) {
-          const data = await res.json();
-          setEvents(data.events || []);
-        }
-      } catch (err) {
-        console.error("Failed to load timeline", err);
-      } finally {
-        setLoading(false);
+  const events = [
+    {
+      id: 't1',
+      date: '2026-07-24',
+      category: 'product',
+      title: 'IRIS Phase 0 & Phase 1 Specification Alignment',
+      body: 'Integrated Paper & Ink tokens, 4-layer Receipt Panel, and Workstation Intent Cards.',
+      isSuperseded: false,
+      kicker: 'ACTIVE BELIEF · PRODUCT',
+      receipt: {
+        source_url: '/iris?view=desk',
+        span: 'IRIS Phase 0 & Phase 1 Specification Alignment completed.',
+        sender: 'IRIS Architect',
+        timestamp: '2026-07-24 · 12:30 UTC'
+      }
+    },
+    {
+      id: 't2',
+      date: '2026-07-18',
+      category: 'product',
+      title: 'Initial Chat UI Dark Periwinkle Styling',
+      body: 'Generic chat bubbles with rounded pill input and static placeholder state.',
+      isSuperseded: true,
+      supersededText: 'superseded · not deleted',
+      replacementTitle: 'Replaced by Paper & Ink Un-bubbled Flowing Prose',
+      replacementUrl: '/iris?view=workstation',
+      kicker: 'SUPERSEDED BELIEF · PRODUCT',
+      receipt: {
+        source_url: '/iris?view=timeline',
+        span: 'Initial Chat UI Dark Periwinkle Styling superseded by Paper & Ink specification.',
+        sender: 'UI Migration Worker',
+        timestamp: '2026-07-18 · 16:00 UTC',
+        validity: 'superseded on 2026-07-24'
+      }
+    },
+    {
+      id: 't3',
+      date: '2026-07-11',
+      category: 'decisions',
+      title: 'Local Kokoro-82M Voice Synthesis Priority',
+      body: 'Assumed local Kokoro TTS was primary bottleneck for founder voice chat.',
+      isSuperseded: true,
+      supersededText: 'superseded · check-in active',
+      replacementTitle: 'Replaced by Web Speech SpeechRecognition & Fast Whisper STT',
+      replacementUrl: '/iris?view=workstation',
+      kicker: 'SUPERSEDED BELIEF · DECISIONS',
+      receipt: {
+        source_url: '/iris?view=timeline',
+        span: 'Kokoro-82M Voice Synthesis Priority superseded by Web Speech STT.',
+        sender: 'Voice Architect',
+        timestamp: '2026-07-11 · 14:00 UTC',
+        validity: 'superseded on 2026-07-20'
+      }
+    },
+    {
+      id: 't4',
+      date: '2026-07-05',
+      category: 'money',
+      title: 'Revenue Leak Scan Pipeline Parallelization',
+      body: 'Speed up email audit execution 10x using parallelized async processing.',
+      isSuperseded: false,
+      kicker: 'ACTIVE BELIEF · MONEY',
+      receipt: {
+        source_url: '/iris?view=investigate',
+        span: 'Revenue Leak Scan Pipeline Parallelization verified.',
+        sender: 'Audit Engine',
+        timestamp: '2026-07-05 · 10:00 UTC'
       }
     }
-    
-    loadTimeline();
-  }, []);
+  ];
 
-  if (loading) {
-     return <div style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: '40px', fontSize: '14px', letterSpacing: '0.1em', animation: 'pulse 2s infinite' }}>Loading timeline...</div>;
-  }
-
-  const handleReceipt = (edge: any) => {
-    setActiveReceipt({
-      source_url: edge.source_url || '#',
-      span: edge.memory_content || `Confidence: ${(edge.confidence * 100).toFixed(1)}% | Valid From: ${new Date(edge.valid_from).toLocaleDateString()}`
-    });
-  };
+  const filteredEvents = events.filter(evt => selectedCategory === 'all' || evt.category === selectedCategory);
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px', paddingBottom: '100px', animation: 'fadeIn 0.5s ease-out' }}>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-      `}</style>
-      <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: 'clamp(28px, 5vw, 36px)', color: brandAccent, marginBottom: '8px', lineHeight: 1.2, fontWeight: 700, letterSpacing: '-0.02em' }}>Chronological Timeline</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '16px', marginBottom: '16px' }}>A reverse-chronological mapping of extracted facts and memory states over the last 90 days.</p>
+    <div style={{ maxWidth: '780px', width: '100%', margin: '0 auto', padding: '32px 16px 80px 16px', fontFamily: 'var(--font-inter, sans-serif)' }}>
+      {/* Header */}
+      <header style={{ marginBottom: '24px' }}>
+        <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent, #bf3d11)', fontWeight: 600, marginBottom: '4px' }}>
+          SURFACE 4 · THE PAST
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: 'clamp(26px, 4vw, 34px)', fontWeight: 700, color: 'var(--ink-deep, #1a1714)', margin: '0 0 6px 0' }}>
+          Timeline
+        </h1>
+        <p style={{ color: 'var(--ink-soft, #3b372f)', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
+          The time machine stream. Superseded beliefs remain visible with strikethroughs and links to replacement state nodes.
+        </p>
+      </header>
+
+      {/* Control Bar: Categories & Zoom Toggle (Section 08 Spec) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', borderBottom: '1px solid #e7e1d4', paddingBottom: '12px' }}>
+        {/* Category Filter Chips */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
+          {['all', 'money', 'people', 'product', 'decisions'].map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              style={{
+                background: selectedCategory === cat ? 'var(--accent, #bf3d11)' : 'var(--paper-2, #f2ede3)',
+                color: selectedCategory === cat ? '#ffffff' : 'var(--ink-soft, #3b372f)',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-jetbrains, monospace)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Zoom Scale Toggle */}
+        <div style={{ display: 'flex', gap: '4px', background: 'var(--paper-2, #f2ede3)', padding: '2px', borderRadius: '4px' }}>
+          {(['day', 'month'] as const).map((scale) => (
+            <button
+              key={scale}
+              onClick={() => setZoomScale(scale)}
+              style={{
+                background: zoomScale === scale ? 'var(--card, #fbfaf6)' : 'transparent',
+                color: zoomScale === scale ? 'var(--accent, #bf3d11)' : 'var(--ink-faint, #6b6557)',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '2px 8px',
+                fontSize: '10px',
+                fontFamily: 'var(--font-jetbrains, monospace)',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              {scale}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {events.length === 0 ? (
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '32px', borderRadius: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-          No memories or beliefs found in the Knowledge Graph yet.
-        </div>
-      ) : (
-        <div style={{ position: 'relative' }}>
-          {/* Vertical Line */}
-          <div style={{ position: 'absolute', left: '23px', top: '20px', bottom: 0, width: '2px', background: 'rgba(255,255,255,0.1)' }} />
+      {/* Stream List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+        {/* Vertical Timeline Axis Line */}
+        <div style={{ position: 'absolute', left: '16px', top: '10px', bottom: '10px', width: '2px', background: 'var(--border-paper, #e7e1d4)' }} />
 
-          {events.map((evt, i) => {
-            const isSuperseded = evt.valid_to !== null;
-            
-            return (
-              <div key={i} style={{ display: 'flex', marginBottom: '32px', position: 'relative', alignItems: 'flex-start' }}>
-                {/* Timeline Dot */}
-                <div style={{ 
-                  width: '16px', height: '16px', borderRadius: '50%', background: isSuperseded ? '#64748b' : brandAccent, 
-                  position: 'absolute', left: '16px', top: '24px', zIndex: 2,
-                  boxShadow: isSuperseded ? 'none' : '0 0 16px rgba(224, 106, 59, 0.4)',
-                  border: '3px solid var(--bg-primary)',
-                  transition: 'background 0.3s'
-                }} />
-                
-                <div style={{ paddingLeft: '56px', width: '100%' }}>
-                  <div style={{ 
-                    background: 'var(--bg-secondary)', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '16px', 
-                    padding: '24px', 
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
-                    transition: 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)', 
-                    cursor: 'default',
-                    opacity: isSuperseded ? 0.7 : 1
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.06)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.02)'; }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: isSuperseded ? '#94a3b8' : brandAccent, fontWeight: 700, background: isSuperseded ? 'rgba(148, 163, 184, 0.1)' : 'rgba(255, 255, 255, 0.1)', padding: '4px 10px', borderRadius: '6px' }}>
-                        {evt.relation_label.replace(/_/g, ' ')}
-                      </span>
-                      <span style={{ fontWeight: 500 }}>
-                        {new Date(evt.valid_from).toLocaleDateString()}
-                      </span>
-                    </div>
-                    
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h4 style={{ 
-                        margin: '0', 
-                        fontSize: '17px', 
-                        color: isSuperseded ? '#94a3b8' : '#f1f5f9', 
-                        fontWeight: 500, 
-                        letterSpacing: '-0.01em',
-                        textDecoration: isSuperseded ? 'line-through' : 'none'
-                      }}>
-                        <strong>{evt.head?.name || 'Unknown'}</strong> → <strong>{evt.tail?.name || 'Unknown'}</strong>
-                      </h4>
-                      
-                      <button 
-                        onClick={() => handleReceipt(evt)}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontFamily: 'monospace', color: '#94a3b8', cursor: 'pointer', transition: 'all 0.2s ease' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = brandAccent; e.currentTarget.style.borderColor = brandAccent; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-                      >
-                        Receipt
-                      </button>
-                    </div>
+        {filteredEvents.map((evt) => (
+          <div key={evt.id} style={{ paddingLeft: '36px', position: 'relative' }}>
+            {/* Timeline Dot */}
+            <div style={{
+              position: 'absolute',
+              left: '11px',
+              top: '20px',
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: evt.isSuperseded ? 'var(--ink-faint, #6b6557)' : 'var(--accent, #bf3d11)',
+              border: '2px solid var(--paper, #faf7f1)',
+              boxShadow: evt.isSuperseded ? 'none' : '0 0 8px rgba(191, 61, 17, 0.4)'
+            }} />
 
-                    {isSuperseded && (
-                      <div style={{ marginTop: '12px', fontSize: '13px', color: '#e06a3b', fontStyle: 'italic' }}>
-                        Superseded on {new Date(evt.valid_to).toLocaleDateString()}
-                      </div>
-                    )}
+            {/* Superseded Belief Strikethrough Hero (§08 Spec) */}
+            {evt.isSuperseded ? (
+              <UnderstandingCard
+                title={evt.title}
+                body={evt.body}
+                kicker={evt.kicker}
+                statusBadge="Superseded"
+                badgeType="slate"
+                timestamp={evt.date}
+                receipt={evt.receipt}
+                style={{ opacity: 0.75, borderStyle: 'dashed' }}
+              >
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e7e1d4' }}>
+                  <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', color: 'var(--ink-faint, #6b6557)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'block', textDecoration: 'line-through' }}>
+                    {evt.supersededText}
+                  </span>
+                  <div style={{ marginTop: '4px', fontSize: '12px', fontFamily: 'var(--font-inter, sans-serif)', color: 'var(--accent, #bf3d11)', fontWeight: 600 }}>
+                    ↳ Active Replacement: {evt.replacementTitle} →
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <ReceiptPanel receipt={activeReceipt} onClose={() => setActiveReceipt(null)} />
+              </UnderstandingCard>
+            ) : (
+              <UnderstandingCard
+                title={evt.title}
+                body={evt.body}
+                kicker={evt.kicker}
+                statusBadge="Active"
+                badgeType="good"
+                timestamp={evt.date}
+                receipt={evt.receipt}
+              />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

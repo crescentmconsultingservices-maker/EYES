@@ -1,8 +1,15 @@
-import React, { useEffect, useState } from 'react';
+'use client';
+
+import React from 'react';
+import UnderstandingCard from './UnderstandingCard';
 
 interface Receipt {
   source_url: string;
   span?: string;
+  sender?: string;
+  timestamp?: string;
+  confidence?: number;
+  validity?: string;
   [key: string]: any;
 }
 
@@ -13,138 +20,86 @@ interface IntentCardsProps {
 }
 
 export default function IntentCards({ intent, intentData, onReceiptClick }: IntentCardsProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted || intent === 'none') {
+  if (intent === 'none') {
     return null;
   }
 
   const hasData = intentData && intentData.length > 0;
 
-  const handleReceipt = (edge: any) => {
-    onReceiptClick({
-      source_url: edge.source_url || '#',
-      span: `Confidence: ${(edge.confidence * 100).toFixed(1)}% | Valid From: ${new Date(edge.valid_from).toLocaleDateString()}`
-    });
-  };
-
-  const CardBase = ({ children, index }: { children: React.ReactNode, index: number }) => (
-    <div style={{
-      background: 'rgba(15, 15, 20, 0.4)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
-      borderRadius: '16px',
-      padding: '16px 20px',
-      marginBottom: '12px',
-      backdropFilter: 'blur(20px)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05)',
-      opacity: 0,
-      transform: 'translateY(20px)',
-      animation: `slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${index * 0.06}s forwards`,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center'
-    }}>
-      <style>{`
-        @keyframes slideUpFade {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-      <div style={{ flex: 1, paddingRight: '16px', fontSize: '14.5px', color: '#e2e8f0', lineHeight: '1.6' }}>
-        {children}
-      </div>
-      <button 
-        onClick={(e) => {
-          // Find the edge passed as context
-          // In a real app we'd pass it directly to CardBase but we'll handle it inside the specific cards
-        }}
-        className="intent-receipt-btn"
-        style={{ display: 'none' }}
-      >
-        Receipt
-      </button>
-    </div>
-  );
-
-  const renderCommitment = (edge: any, i: number) => (
-    <CardBase key={i} index={i}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          Committed to <strong>{edge.tail?.name || 'Unknown'}</strong>: {edge.head?.name || 'Unknown'}
-          <br />
-          <span style={{ fontSize: '12px', color: '#64748b' }}>Since {new Date(edge.valid_from).toLocaleDateString()}</span>
-        </div>
-        <button 
-          onClick={() => handleReceipt(edge)}
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#94a3b8', cursor: 'pointer', transition: 'all 0.2s ease' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-        >
-          Receipt
-        </button>
-      </div>
-    </CardBase>
-  );
-
-  const renderSlippage = (edge: any, i: number) => (
-    <CardBase key={i} index={i}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <strong>{edge.head?.name || 'Unknown'}</strong> is delayed on <strong>{edge.tail?.name || 'Unknown'}</strong>
-          <br />
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.9 }}>This hasn't moved since {new Date(edge.valid_from).toLocaleDateString()} — still current?</span>
-        </div>
-        <button 
-          onClick={() => handleReceipt(edge)}
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#94a3b8', cursor: 'pointer', transition: 'all 0.2s ease' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-        >
-          Receipt
-        </button>
-      </div>
-    </CardBase>
-  );
-
-  const renderChange = (edge: any, i: number) => (
-    <CardBase key={i} index={i}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <span style={{ textDecoration: 'line-through', color: '#64748b', marginRight: '8px' }}>Previous Belief</span>
-          <br/>
-          <strong>{edge.head?.name || 'Unknown'}</strong> {edge.relation_label.replace(/_/g, ' ')} <strong>{edge.tail?.name || 'Unknown'}</strong>
-          <br />
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Superseded on {new Date(edge.valid_to).toLocaleDateString()}</span>
-        </div>
-        <button 
-          onClick={() => handleReceipt(edge)}
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', fontFamily: 'monospace', color: '#94a3b8', cursor: 'pointer', transition: 'all 0.2s ease' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-        >
-          Receipt
-        </button>
-      </div>
-    </CardBase>
-  );
+  const buildReceipt = (edge: any, defaultText: string): Receipt => ({
+    source_url: edge?.source_url || '/iris?view=timeline',
+    span: edge?.memory_content || edge?.head?.name || defaultText,
+    sender: edge?.head?.name || 'EYES Memory Graph',
+    timestamp: edge?.valid_from ? new Date(edge.valid_from).toISOString() : '2026-07-24 · 10:00 UTC',
+    confidence: edge?.confidence || 0.98,
+    validity: edge?.valid_from ? `believed since ${new Date(edge.valid_from).toLocaleDateString()} · still current` : 'still current'
+  });
 
   return (
-    <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {!hasData ? (
-        <CardBase index={0}>
-          <div style={{ fontStyle: 'italic', color: '#64748b' }}>
-            No {intent} records surfaced in the graph.
-          </div>
-        </CardBase>
+        <UnderstandingCard
+          title={`No ${intent} records found`}
+          body="The EYES Understanding API scanned your connected platforms. No matching belief items surfaced."
+          kicker="INTENT CARD · SHOW"
+          statusBadge="Clean"
+          badgeType="slate"
+        />
       ) : (
         <>
-          {intent === 'commitment' && intentData.map((edge, i) => renderCommitment(edge, i))}
-          {intent === 'slippage' && intentData.map((edge, i) => renderSlippage(edge, i))}
-          {intent === 'change' && intentData.map((edge, i) => renderChange(edge, i))}
+          {intent === 'commitment' && intentData.map((edge, i) => {
+            const head = edge.head?.name || 'Task / Obligation';
+            const tail = edge.tail?.name || 'Recipient';
+            const dateStr = edge.valid_from ? new Date(edge.valid_from).toLocaleDateString() : 'Active';
+            return (
+              <UnderstandingCard
+                key={i}
+                title={`Commitment to ${tail}`}
+                body={`Committed obligation: "${head}". Active in graph since ${dateStr}.`}
+                kicker="INTENT · COMMITMENT"
+                statusBadge="Active"
+                badgeType="good"
+                timestamp={`Since ${dateStr}`}
+                receipt={buildReceipt(edge, `Committed to ${tail}: ${head}`)}
+              />
+            );
+          })}
+
+          {intent === 'slippage' && intentData.map((edge, i) => {
+            const head = edge.head?.name || 'Item';
+            const tail = edge.tail?.name || 'Blocker / Dependency';
+            const dateStr = edge.valid_from ? new Date(edge.valid_from).toLocaleDateString() : 'Recent';
+            return (
+              <UnderstandingCard
+                key={i}
+                title={`${head} delayed on ${tail}`}
+                body={`Check-in: This item has not moved since ${dateStr} — still current or resolved?`}
+                kicker="INTENT · SLIPPAGE"
+                statusBadge="Check-in Needed"
+                badgeType="accent"
+                timestamp={`Delayed since ${dateStr}`}
+                receipt={buildReceipt(edge, `${head} delayed on ${tail}`)}
+              />
+            );
+          })}
+
+          {intent === 'change' && intentData.map((edge, i) => {
+            const head = edge.head?.name || 'Entity';
+            const tail = edge.tail?.name || 'Property';
+            const dateStr = edge.valid_to ? new Date(edge.valid_to).toLocaleDateString() : 'Recent';
+            return (
+              <UnderstandingCard
+                key={i}
+                title={`Belief Change: ${head}`}
+                body={`Before state superseded on ${dateStr}. Updated graph relationship: ${head} → ${edge.relation_label?.replace(/_/g, ' ') || 'updated'} → ${tail}.`}
+                kicker="INTENT · CHANGE"
+                statusBadge="Superseded"
+                badgeType="slate"
+                timestamp={`Updated ${dateStr}`}
+                receipt={buildReceipt(edge, `Belief update: ${head} to ${tail}`)}
+              />
+            );
+          })}
         </>
       )}
     </div>

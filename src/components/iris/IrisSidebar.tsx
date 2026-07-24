@@ -1,142 +1,180 @@
 'use client';
 
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useRouter, useSearchParams } from 'next/navigation';
 import EyesLogo from '../common/EyesLogo';
-import styles from '../layout/Sidebar.module.css'; // Safely reusing existing CSS
+import styles from '../layout/Sidebar.module.css';
 
 export default function IrisSidebar() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { theme } = useAuth();
-  const activeView = searchParams.get('view') || 'investigate'; // Default to investigate for IRIS
-
-  const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
+  const activeView = searchParams.get('view') || 'desk'; // Default to Desk (Surface 1)
 
   const navigateToView = (view: string) => {
     router.push(`/iris?view=${view}`);
   };
 
+  const navItems = [
+    {
+      id: 'desk',
+      label: 'Desk',
+      sublabel: 'The home screen · now',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+          <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+          <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+        </svg>
+      )
+    },
+    {
+      id: 'workstation',
+      label: 'Workstation',
+      sublabel: 'Speak / type + canvas',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      )
+    },
+    {
+      id: 'signals',
+      label: 'Signals',
+      sublabel: 'The flow · company feed',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 11a9 9 0 0 1 9 9"></path>
+          <path d="M4 4a16 16 0 0 1 16 16"></path>
+          <circle cx="5" cy="19" r="1"></circle>
+        </svg>
+      )
+    },
+    {
+      id: 'timeline',
+      label: 'Timeline',
+      sublabel: 'The past · time machine',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      )
+    },
+    {
+      id: 'dossiers',
+      label: 'Dossiers',
+      sublabel: 'Living wiki per entity',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      )
+    },
+    {
+      id: 'investigate',
+      label: 'Investigate',
+      sublabel: 'Universal audit engine',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      )
+    }
+  ];
+
   return (
-    <aside className={styles.sidebar}>
+    <aside className={styles.sidebar} style={{ background: 'var(--paper-2, #f2ede3)', borderRight: '1px solid var(--border-paper, #e7e1d4)' }}>
+      {/* Wordmark Header */}
       <div 
         onClick={() => router.push('/iris')} 
-        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px 12px', marginBottom: '16px', color: 'var(--text-primary)' }}
+        style={{ 
+          cursor: 'pointer', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          padding: '16px 16px 12px 16px', 
+          marginBottom: '8px', 
+          borderBottom: '1px solid rgba(231, 225, 212, 0.6)'
+        }}
       >
-        <EyesLogo width={92} height={22} />
-        <span style={{ marginLeft: '8px', fontSize: '10px', color: brandAccent, border: `1px solid ${brandAccent}`, padding: '2px 4px', borderRadius: '4px', transition: 'all 0.3s ease' }}>IRIS</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <EyesLogo width={84} height={20} />
+          <span style={{ 
+            fontFamily: 'var(--font-jetbrains, monospace)',
+            fontSize: '11px', 
+            fontWeight: 700, 
+            color: 'var(--accent, #bf3d11)', 
+            background: 'var(--accent-soft, #f0d9cd)', 
+            padding: '2px 6px', 
+            borderRadius: '4px',
+            letterSpacing: '0.12em'
+          }}>
+            IRIS
+          </span>
+        </div>
       </div>
 
+      {/* Nav Section */}
       <div className={styles.scrollArea}>
         <div className={styles.section}>
-          
-          {/* 1. Morning Brief */}
-          <div
-            className={`${styles.item} ${activeView === 'morning-brief' ? styles.itemActive : ''}`}
-            onClick={() => navigateToView('morning-brief')}
-            style={activeView === 'morning-brief' ? { borderLeft: `3px solid ${brandAccent}`, paddingLeft: '9px' } : { paddingLeft: '12px' }}
-          >
-            <div className={styles.itemIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="4"></circle>
-                <path d="M12 2v2"></path>
-                <path d="M12 20v2"></path>
-                <path d="M4.93 4.93l1.41 1.41"></path>
-                <path d="M17.66 17.66l1.41 1.41"></path>
-                <path d="M2 12h2"></path>
-                <path d="M20 12h2"></path>
-                <path d="M6.34 17.66l-1.41 1.41"></path>
-                <path d="M19.07 4.93l-1.41 1.41"></path>
-              </svg>
-            </div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Morning Brief</span>
-              <span className={styles.itemDesc}>Curated daily summary</span>
-            </div>
-          </div>
-
-          {/* 2. Chat / Investigate */}
-          <div
-            className={`${styles.item} ${activeView === 'investigate' ? styles.itemActive : ''}`}
-            onClick={() => navigateToView('investigate')}
-            style={activeView === 'investigate' ? { borderLeft: `3px solid ${brandAccent}`, paddingLeft: '9px' } : { paddingLeft: '12px' }}
-          >
-            <div className={styles.itemIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Investigate</span>
-              <span className={styles.itemDesc}>Deep querying engine</span>
-            </div>
-          </div>
-
-          {/* 3. Signals */}
-          <div
-            className={`${styles.item} ${activeView === 'signals' ? styles.itemActive : ''}`}
-            onClick={() => navigateToView('signals')}
-            style={activeView === 'signals' ? { borderLeft: `3px solid ${brandAccent}`, paddingLeft: '9px' } : { paddingLeft: '12px' }}
-          >
-            <div className={styles.itemIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-            </div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Signals</span>
-              <span className={styles.itemDesc}>High-priority alerts</span>
-            </div>
-          </div>
-
-          {/* 4. Timeline */}
-          <div
-            className={`${styles.item} ${activeView === 'timeline' ? styles.itemActive : ''}`}
-            onClick={() => navigateToView('timeline')}
-            style={activeView === 'timeline' ? { borderLeft: `3px solid ${brandAccent}`, paddingLeft: '9px' } : { paddingLeft: '12px' }}
-          >
-            <div className={styles.itemIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Timeline</span>
-              <span className={styles.itemDesc}>Chronological map</span>
-            </div>
-          </div>
-
-          {/* 5. Mind Map */}
-          <div
-            className={`${styles.item} ${activeView === 'mind-map' ? styles.itemActive : ''}`}
-            onClick={() => navigateToView('mind-map')}
-            style={activeView === 'mind-map' ? { borderLeft: `3px solid ${brandAccent}`, paddingLeft: '9px' } : { paddingLeft: '12px' }}
-          >
-            <div className={styles.itemIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3"></circle>
-                <circle cx="6" cy="12" r="3"></circle>
-                <circle cx="18" cy="19" r="3"></circle>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-              </svg>
-            </div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Mind Map</span>
-              <span className={styles.itemDesc}>Knowledge Graph visualization</span>
-            </div>
-          </div>
-
+          {navItems.map((item) => {
+            const isActive = activeView === item.id || (item.id === 'workstation' && activeView === 'chat');
+            return (
+              <div
+                key={item.id}
+                className={`${styles.item} ${isActive ? styles.itemActive : ''}`}
+                onClick={() => navigateToView(item.id)}
+                style={{
+                  borderLeft: isActive ? '3px solid var(--accent, #bf3d11)' : '3px solid transparent',
+                  background: isActive ? 'var(--card, #fbfaf6)' : 'transparent',
+                  paddingLeft: '12px',
+                  borderRadius: '0 6px 6px 0',
+                  marginRight: '8px',
+                  transition: 'all 0.18s ease'
+                }}
+              >
+                <div className={styles.itemIcon} style={{ color: isActive ? 'var(--accent, #bf3d11)' : 'var(--ink-soft, #3b372f)' }}>
+                  {item.icon}
+                </div>
+                <div className={styles.itemMain}>
+                  <span className={styles.itemLabel} style={{ 
+                    fontFamily: isActive ? 'var(--font-serif-display, serif)' : 'var(--font-inter, sans-serif)',
+                    fontWeight: isActive ? 600 : 500,
+                    color: isActive ? 'var(--ink-deep, #1a1714)' : 'var(--ink-soft, #3b372f)',
+                    fontSize: '14px'
+                  }}>
+                    {item.label}
+                  </span>
+                  <span className={styles.itemDesc} style={{ 
+                    fontFamily: 'var(--font-jetbrains, monospace)', 
+                    fontSize: '10px', 
+                    color: 'var(--ink-faint, #6b6557)' 
+                  }}>
+                    {item.sublabel}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
       
-      <div className={styles.footer}>
-        <div style={{ padding: '16px', fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center', opacity: 0.5 }}>
-          IRIS v0.1.0 • Isolated Mode
+      {/* S3 Identity Block with Breathing Teal Dot */}
+      <div className={styles.footer} style={{ borderTop: '1px solid var(--border-paper, #e7e1d4)', padding: '16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="live-dot-breathe" title="Live Understanding active" />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', fontWeight: 600, color: 'var(--live, #2e8b7a)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              ● Live Understanding
+            </div>
+            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '9px', color: 'var(--ink-faint, #6b6557)', marginTop: '1px' }}>
+              EYES knows · IRIS decides
+            </div>
+          </div>
         </div>
       </div>
     </aside>

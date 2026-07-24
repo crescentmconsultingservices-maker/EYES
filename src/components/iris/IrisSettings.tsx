@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useConfirm } from '@/context/ConfirmContext';
 
 export default function IrisSettings() {
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
-  const { openConfirm } = useConfirm();
-  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'theme' | 'feedback'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'theme' | 'privacy' | 'feedback'>('profile');
   const [feedbackMessages, setFeedbackMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; time: string }>>([]);
   const [feedbackInput, setFeedbackInput] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -27,7 +25,7 @@ export default function IrisSettings() {
       setFeedbackMessages([
         {
           sender: 'bot',
-          text: `Hi ${user?.name || 'there'}! 👋 Welcome to IRIS Feedback. What's on your mind? Share any ideas, feedback, or bug reports and our dev team will receive it instantly!`,
+          text: `Hi ${user?.name || 'there'}! 👋 Welcome to IRIS Feedback. Share your thoughts or bug reports — messages are dispatched to our core dev team and logged on EYES memory graph!`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -83,7 +81,7 @@ export default function IrisSettings() {
       if (res.ok) {
         updateUser({ behaviorLoggingConsent: gdprConsent });
       }
-      setSettingsSaved(res.ok ? 'Settings saved!' : 'Failed to save.');
+      setSettingsSaved(res.ok ? 'Settings saved successfully!' : 'Failed to save settings.');
     } catch {
       setSettingsSaved('Error saving settings.');
     } finally {
@@ -109,47 +107,47 @@ export default function IrisSettings() {
     }
   };
 
-  const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
-  const brandBgSoft = theme === 'ember' ? 'rgba(224, 106, 59, 0.12)' : theme === 'light' ? 'rgba(15, 23, 42, 0.08)' : 'rgba(255, 255, 255, 0.12)';
-  const saveBtnBg = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
-  const saveBtnText = theme === 'dark' ? '#000000' : '#ffffff';
-
   return (
-    <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '40px 60px', animation: 'fadeIn 0.4s ease-out', boxSizing: 'border-box' }}>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-      `}</style>
+    <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto', padding: '32px 16px 80px 16px', fontFamily: 'var(--font-inter, sans-serif)' }}>
+      {/* Header */}
+      <header style={{ marginBottom: '28px' }}>
+        <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent, #bf3d11)', fontWeight: 600, marginBottom: '4px' }}>
+          SYSTEM PREFERENCES
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: 'clamp(26px, 4vw, 34px)', fontWeight: 700, color: 'var(--ink-deep, #1a1714)', margin: '0 0 6px 0' }}>
+          IRIS Settings
+        </h1>
+        <p style={{ color: 'var(--ink-soft, #3b372f)', fontSize: '14px', margin: 0 }}>
+          Configure Paper & Ink design preferences, sensitivity thresholds, and developer feedback.
+        </p>
+      </header>
 
-      <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '28px', color: 'var(--text-primary)', marginBottom: '6px', fontWeight: 700, letterSpacing: '-0.02em' }}>IRIS Settings</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '14px' }}>Configure system behavior, sensitivity thresholds, and interface preferences.</p>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '40px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '28px', alignItems: 'start' }}>
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--paper-2, #f2ede3)', padding: '6px', borderRadius: '8px' }}>
           {[
             { id: 'profile', label: 'Profile Details' },
-            { id: 'tuning', label: 'Sensitivity' },
-            { id: 'theme', label: 'Interface Theme' },
+            { id: 'tuning', label: 'Sensitivity Tuning' },
+            { id: 'theme', label: 'Visual Theme' },
             { id: 'privacy', label: 'Privacy Shields' },
-            { id: 'security', label: 'Secure Access' },
-            { id: 'feedback', label: 'Feedback & Support' }
+            { id: 'feedback', label: 'Feedback Desk' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               style={{
                 textAlign: 'left',
-                padding: '12px 16px',
-                borderRadius: '10px',
+                padding: '10px 14px',
+                borderRadius: '6px',
                 fontSize: '13px',
-                fontWeight: 600,
+                fontFamily: 'var(--font-inter, sans-serif)',
+                fontWeight: activeTab === tab.id ? 600 : 500,
                 cursor: 'pointer',
                 border: 'none',
-                transition: 'all 0.2s ease',
-                background: activeTab === tab.id ? brandBgSoft : 'transparent',
-                color: activeTab === tab.id ? brandAccent : 'var(--text-secondary)'
+                transition: 'all 0.15s ease',
+                background: activeTab === tab.id ? 'var(--card, #fbfaf6)' : 'transparent',
+                color: activeTab === tab.id ? 'var(--accent, #bf3d11)' : 'var(--ink-soft, #3b372f)',
+                boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.06)' : 'none'
               }}
             >
               {tab.label}
@@ -157,38 +155,38 @@ export default function IrisSettings() {
           ))}
         </div>
 
-        {/* Settings Panel Card */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+        {/* Content Card */}
+        <div style={{ background: 'var(--card, #fbfaf6)', border: '1px solid var(--border-paper, #e7e1d4)', borderRadius: '10px', padding: '28px', boxShadow: 'var(--shadow-paper, 0 2px 20px rgba(60,40,20,0.05))' }}>
           {activeTab === 'profile' && (
             <div>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '20px', fontWeight: 600 }}>Profile Details</h3>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 18px 0' }}>Profile Details</h3>
               
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px' }}>DISPLAY NAME</label>
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>DISPLAY NAME</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'var(--paper-2, #f2ede3)', border: '1px solid var(--border-paper, #e7e1d4)', borderRadius: '6px', color: 'var(--ink, #16140f)', fontSize: '14px', outline: 'none' }}
                 />
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px' }}>EMAIL ADDRESS</label>
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>EMAIL ADDRESS</label>
                 <input
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '14px', opacity: 0.7 }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'var(--paper-2, #f2ede3)', border: '1px solid var(--border-paper, #e7e1d4)', borderRadius: '6px', color: 'var(--ink-faint, #6b6557)', fontSize: '14px', opacity: 0.7 }}
                 />
               </div>
 
-              {saveStatus && <p style={{ color: saveStatus.includes('success') ? '#10b981' : '#ef4444', fontSize: '13px', marginBottom: '16px' }}>{saveStatus}</p>}
+              {saveStatus && <p style={{ color: saveStatus.includes('success') ? 'var(--good, #2f6b4f)' : 'var(--accent, #bf3d11)', fontSize: '13px', marginBottom: '16px' }}>{saveStatus}</p>}
 
               <button
                 onClick={handleUpdateProfile}
                 disabled={isSaving}
-                style={{ background: saveBtnBg, color: saveBtnText, border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--accent, #bf3d11)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '8px 18px', fontSize: '13px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, cursor: 'pointer' }}
               >
                 {isSaving ? 'Updating...' : 'Update Profile'}
               </button>
@@ -197,23 +195,24 @@ export default function IrisSettings() {
 
           {activeTab === 'tuning' && (
             <div>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '20px', fontWeight: 600 }}>System Sensitivity & Sync Depth</h3>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 18px 0' }}>Sensitivity Tuning</h3>
               
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px' }}>RISK SENSITIVITY</label>
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '8px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>RISK SENSITIVITY</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
                   {['LOW', 'MEDIUM', 'HIGH'].map(level => (
                     <button
                       key={level}
                       onClick={() => setRiskSensitivity(level)}
                       style={{
                         flex: 1,
-                        padding: '10px',
-                        borderRadius: '8px',
-                        border: riskSensitivity === level ? `1px solid ${brandAccent}` : '1px solid var(--border)',
-                        background: riskSensitivity === level ? brandBgSoft : 'rgba(255,255,255,0.02)',
-                        color: riskSensitivity === level ? brandAccent : 'var(--text-secondary)',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        border: riskSensitivity === level ? '1px solid var(--accent, #bf3d11)' : '1px solid var(--border-paper, #e7e1d4)',
+                        background: riskSensitivity === level ? 'var(--accent-soft, #f0d9cd)' : 'var(--paper-2, #f2ede3)',
+                        color: riskSensitivity === level ? 'var(--accent-ink, #7a2a0e)' : 'var(--ink-soft, #3b372f)',
                         fontSize: '12px',
+                        fontFamily: 'var(--font-jetbrains, monospace)',
                         fontWeight: 600,
                         cursor: 'pointer'
                       }}
@@ -222,27 +221,27 @@ export default function IrisSettings() {
                     </button>
                   ))}
                 </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>Adjust how aggressively IRIS flags potential risks and slippage.</p>
+                <p style={{ fontSize: '12px', color: 'var(--ink-faint, #6b6557)', margin: 0 }}>Adjust how aggressively IRIS surfaces slippage and risk signals.</p>
               </div>
 
-              <div style={{ marginBottom: '28px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px' }}>SYNC DEPTH</label>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>GRAPH SYNC DEPTH</label>
                 <select
                   value={syncDepth}
                   onChange={(e) => setSyncDepth(e.target.value)}
-                  style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                  style={{ width: '100%', padding: '10px 12px', background: 'var(--paper-2, #f2ede3)', border: '1px solid var(--border-paper, #e7e1d4)', borderRadius: '6px', color: 'var(--ink, #16140f)', fontSize: '14px', outline: 'none' }}
                 >
-                  <option value="shallow" style={{ background: '#111' }}>Shallow (Last 30 Days)</option>
-                  <option value="balanced" style={{ background: '#111' }}>Balanced (Last 6 Months)</option>
-                  <option value="deep" style={{ background: '#111' }}>Deep (Full History)</option>
+                  <option value="shallow">Shallow (Last 30 Days)</option>
+                  <option value="balanced">Balanced (Last 6 Months)</option>
+                  <option value="deep">Deep (Full Vector History)</option>
                 </select>
               </div>
 
-              {settingsSaved && <p style={{ color: settingsSaved.includes('saved') ? '#10b981' : '#ef4444', fontSize: '13px', marginBottom: '16px' }}>{settingsSaved}</p>}
+              {settingsSaved && <p style={{ color: 'var(--good, #2f6b4f)', fontSize: '13px', marginBottom: '16px' }}>{settingsSaved}</p>}
 
               <button
                 onClick={handleSaveSettings}
-                style={{ background: saveBtnBg, color: saveBtnText, border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--accent, #bf3d11)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '8px 18px', fontSize: '13px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, cursor: 'pointer' }}
               >
                 Save Sensitivity Settings
               </button>
@@ -251,32 +250,32 @@ export default function IrisSettings() {
 
           {activeTab === 'theme' && (
             <div>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '8px', fontWeight: 600 }}>Interface Theme</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>Select your preferred visual theme for the IRIS dashboard.</p>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 6px 0' }}>Visual Theme</h3>
+              <p style={{ fontSize: '13px', color: 'var(--ink-soft, #3b372f)', marginBottom: '20px' }}>Paper & Ink theme is active by default (§01 Spec).</p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                 {[
+                  { id: 'paper', label: 'Paper & Ink', bg: '#faf7f1', color: '#bf3d11' },
                   { id: 'dark', label: 'Dark Mode', bg: '#09090b', color: '#ffffff' },
-                  { id: 'light', label: 'Light Mode', bg: '#f8fafc', color: '#0f172a' },
                   { id: 'ember', label: 'Ember Mode', bg: '#120a07', color: '#e06a3b' }
                 ].map(t => (
                   <div
                     key={t.id}
                     onClick={() => setGlobalTheme(t.id as any)}
                     style={{
-                      border: theme === t.id ? `2px solid ${brandAccent}` : '1px solid var(--border)',
-                      borderRadius: '12px',
-                      padding: '16px',
+                      border: theme === t.id ? '2px solid var(--accent, #bf3d11)' : '1px solid var(--border-paper, #e7e1d4)',
+                      borderRadius: '8px',
+                      padding: '14px',
                       cursor: 'pointer',
-                      background: theme === t.id ? brandBgSoft : 'rgba(255,255,255,0.02)',
+                      background: theme === t.id ? 'var(--accent-soft, #f0d9cd)' : 'var(--paper-2, #f2ede3)',
                       textAlign: 'center',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    <div style={{ height: '40px', borderRadius: '6px', background: t.bg, border: '1px solid rgba(255,255,255,0.1)', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: t.color }} />
+                    <div style={{ height: '36px', borderRadius: '4px', background: t.bg, border: '1px solid rgba(0,0,0,0.1)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: t.color }} />
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: theme === t.id ? brandAccent : 'var(--text-primary)' }}>{t.label}</span>
+                    <span style={{ fontSize: '12px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, color: 'var(--ink-deep, #1a1714)' }}>{t.label}</span>
                   </div>
                 ))}
               </div>
@@ -285,17 +284,17 @@ export default function IrisSettings() {
 
           {activeTab === 'privacy' && (
             <div>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '20px', fontWeight: 600 }}>Privacy & Data Exclusion</h3>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 18px 0' }}>Privacy Shields</h3>
               
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', marginBottom: '8px' }}>EXCLUDED SENDERS / DOMAINS</label>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>EXCLUDED DOMAINS / SENDERS</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                   <input
                     type="text"
-                    placeholder="Add email or domain..."
+                    placeholder="Add domain to shield..."
                     value={newSender}
                     onChange={(e) => setNewSender(e.target.value)}
-                    style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                    style={{ flex: 1, padding: '8px 12px', background: 'var(--paper-2, #f2ede3)', border: '1px solid var(--border-paper, #e7e1d4)', borderRadius: '6px', color: 'var(--ink, #16140f)', fontSize: '13px', outline: 'none' }}
                   />
                   <button
                     onClick={() => {
@@ -304,70 +303,52 @@ export default function IrisSettings() {
                         setNewSender('');
                       }
                     }}
-                    style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', padding: '0 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                    style={{ background: 'var(--accent, #bf3d11)', border: 'none', color: '#fff', padding: '0 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600 }}
                   >
                     Add
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {excludedSenders.map((s: string) => (
-                    <span key={s} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span key={s} style={{ background: 'var(--paper-2, #f2ede3)', border: '1px solid var(--border-paper, #e7e1d4)', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontFamily: 'var(--font-jetbrains, monospace)', color: 'var(--ink-soft, #3b372f)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {s}
-                      <button onClick={() => setExcludedSenders((prev: string[]) => prev.filter((item: string) => item !== s))} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', padding: 0 }}>×</button>
+                      <button onClick={() => setExcludedSenders((prev: string[]) => prev.filter((item: string) => item !== s))} style={{ background: 'transparent', border: 'none', color: 'var(--accent, #bf3d11)', cursor: 'pointer', fontSize: '12px', padding: 0 }}>×</button>
                     </span>
                   ))}
                 </div>
               </div>
 
-              {settingsSaved && <p style={{ color: settingsSaved.includes('saved') ? '#10b981' : '#ef4444', fontSize: '13px', marginBottom: '16px' }}>{settingsSaved}</p>}
+              {settingsSaved && <p style={{ color: 'var(--good, #2f6b4f)', fontSize: '13px', marginBottom: '16px' }}>{settingsSaved}</p>}
 
               <button
                 onClick={handleSaveSettings}
-                style={{ background: saveBtnBg, color: saveBtnText, border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--accent, #bf3d11)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '8px 18px', fontSize: '13px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, cursor: 'pointer' }}
               >
                 Save Privacy Settings
               </button>
             </div>
           )}
 
-          {activeTab === 'security' && (
-            <div>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginBottom: '12px', fontWeight: 600 }}>Security & OAuth Connections</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>Your account is secured via authenticated session providers.</p>
-
-              <div style={{ padding: '16px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                <h4 style={{ color: '#ef4444', margin: '0 0 4px 0', fontSize: '14px' }}>Danger Zone</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: '0 0 12px 0' }}>Data deletion actions are permanent.</p>
-                <button
-                  onClick={() => alert("Please visit the master settings page to confirm account deletion.")}
-                  style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Request Account Deletion
-                </button>
-              </div>
-            </div>
-          )}
-
           {activeTab === 'feedback' && (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '480px', animation: 'fadeIn 0.3s ease-out' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>IRIS Feedback Desk</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>Send feature suggestions or bug reports directly to our core development team.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '420px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 4px 0' }}>IRIS Feedback Desk</h3>
+                <p style={{ fontSize: '13px', color: 'var(--ink-soft, #3b372f)', margin: 0 }}>Direct channel to the dev team. Messages dispatched here log on the memory graph.</p>
               </div>
 
               {/* Chat Container */}
               <div style={{ 
                 flex: 1, 
-                background: 'rgba(0,0,0,0.15)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '12px', 
-                padding: '16px', 
+                background: 'var(--paper-2, #f2ede3)', 
+                border: '1px solid var(--border-paper, #e7e1d4)', 
+                borderRadius: '8px', 
+                padding: '14px', 
                 overflowY: 'auto', 
                 display: 'flex', 
                 flexDirection: 'column', 
-                gap: '12px',
-                marginBottom: '16px'
+                gap: '10px',
+                marginBottom: '14px'
               }}>
                 {feedbackMessages.map((msg, i) => (
                   <div 
@@ -375,38 +356,37 @@ export default function IrisSettings() {
                     style={{ 
                       alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
                       maxWidth: '82%',
-                      background: msg.sender === 'user' ? brandAccent : 'rgba(255,255,255,0.06)',
-                      color: msg.sender === 'user' ? saveBtnText : 'var(--text-primary)',
-                      border: msg.sender === 'user' ? 'none' : '1px solid var(--border)',
-                      borderRadius: msg.sender === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      padding: '12px 16px',
-                      fontSize: '13.5px',
-                      lineHeight: 1.5,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                      background: msg.sender === 'user' ? 'var(--accent, #bf3d11)' : 'var(--card, #fbfaf6)',
+                      color: msg.sender === 'user' ? '#ffffff' : 'var(--ink, #16140f)',
+                      border: msg.sender === 'user' ? 'none' : '1px solid var(--border-paper, #e7e1d4)',
+                      borderRadius: msg.sender === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      padding: '10px 14px',
+                      fontSize: '13px',
+                      lineHeight: 1.5
                     }}
                   >
                     <div>{msg.text}</div>
-                    <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px', textAlign: 'right' }}>{msg.time}</div>
+                    <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px', textAlign: 'right', fontFamily: 'var(--font-jetbrains, monospace)' }}>{msg.time}</div>
                   </div>
                 ))}
               </div>
 
               {/* Input Bar */}
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <input 
                   type="text" 
-                  placeholder="Type feedback for the dev team..."
+                  placeholder="Type feedback for dev team..."
                   value={feedbackInput}
                   onChange={(e) => setFeedbackInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleSendFeedback(); }}
                   style={{ 
                     flex: 1, 
-                    background: 'rgba(255,255,255,0.04)', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '8px', 
-                    padding: '12px 16px', 
-                    color: 'var(--text-primary)', 
-                    fontSize: '13.5px',
+                    background: 'var(--paper-2, #f2ede3)', 
+                    border: '1px solid var(--border-paper, #e7e1d4)', 
+                    borderRadius: '6px', 
+                    padding: '10px 12px', 
+                    color: 'var(--ink, #16140f)', 
+                    fontSize: '13px',
                     outline: 'none'
                   }}
                 />
@@ -414,19 +394,20 @@ export default function IrisSettings() {
                   onClick={handleSendFeedback}
                   disabled={isSubmittingFeedback || !feedbackInput.trim()}
                   style={{ 
-                    background: saveBtnBg, 
-                    color: saveBtnText, 
+                    background: 'var(--accent, #bf3d11)', 
+                    color: '#ffffff', 
                     border: 'none', 
-                    borderRadius: '8px', 
-                    padding: '0 20px', 
-                    fontSize: '13px', 
+                    borderRadius: '6px', 
+                    padding: '0 16px', 
+                    fontSize: '12px', 
+                    fontFamily: 'var(--font-jetbrains, monospace)',
                     fontWeight: 600, 
                     cursor: isSubmittingFeedback || !feedbackInput.trim() ? 'not-allowed' : 'pointer',
                     opacity: isSubmittingFeedback || !feedbackInput.trim() ? 0.6 : 1,
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  {isSubmittingFeedback ? 'Sending...' : 'Send'}
+                  {isSubmittingFeedback ? 'Sending...' : 'Send →'}
                 </button>
               </div>
             </div>

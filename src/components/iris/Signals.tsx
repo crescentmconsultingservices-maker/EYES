@@ -1,103 +1,198 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import ReceiptPanel from './ReceiptPanel';
+import { useState } from 'react';
+import UnderstandingCard from './UnderstandingCard';
+
+interface Post {
+  id: string;
+  author: string;
+  authorRole: string;
+  timestamp: string;
+  title: string;
+  body: string;
+  meaning: string;
+  score: number;
+  badgeType: 'live' | 'good' | 'accent' | 'slate';
+  receipt: any;
+}
 
 export default function Signals() {
-  const { theme } = useAuth();
-  const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
-  const [hoverId, setHoverId] = useState<string | null>(null);
-  const [signals, setSignals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
-
-  useEffect(() => {
-    async function loadSignals() {
-      try {
-        const res = await fetch('/api/iris/v0/signals');
-        if (res.ok) {
-          const data = await res.json();
-          setSignals(data.signals || []);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const [posts, setPosts] = useState<Post[]>([
+    {
+      id: 'sig-1',
+      author: 'IRIS Synthesis Engine',
+      authorRole: 'Auto-Post · Score 9.4/10',
+      timestamp: 'Today · 10:14 UTC',
+      title: 'Competitor Vendo (YC S26) Open-Source Launch',
+      body: 'Vendo published their live UI composition framework for host products.',
+      meaning: 'What it means: Proves UI composition thesis, but lacks personal memory context. Our receipted understanding layer remains our core moat.',
+      score: 9.4,
+      badgeType: 'accent',
+      receipt: {
+        source_url: '/iris?view=dossiers',
+        span: 'Competitor Vendo (YC S26) Open-Source Launch — Proves UI composition thesis.',
+        sender: 'Intel Synthesis Worker',
+        timestamp: '2026-07-24 · 10:14 UTC',
+        confidence: 0.98
+      }
+    },
+    {
+      id: 'sig-2',
+      author: 'Abhi (Founder)',
+      authorRole: 'Founder Office',
+      timestamp: 'Today · 09:30 UTC',
+      title: 'Paper & Ink Token Integration Completed',
+      body: 'All surfaces now inherit the warm #faf7f1 palette, Fraunces serif display titles, and JetBrains Mono evidence.',
+      meaning: 'What it means: The interface is now visually cohesive and aligned to the IRIS UI Specification v1.0.',
+      score: 8.8,
+      badgeType: 'good',
+      receipt: {
+        source_url: '/iris?view=desk',
+        span: 'Paper & Ink Token Integration Completed in globals.css.',
+        sender: 'Abhi (Founder)',
+        timestamp: '2026-07-24 · 09:30 UTC'
+      }
+    },
+    {
+      id: 'sig-3',
+      author: 'IRIS Security Daemon',
+      authorRole: 'Auto-Post · Score 9.1/10',
+      timestamp: 'Yesterday · 22:40 UTC',
+      title: 'X-Engine-Secret Auth Audit Passed',
+      body: 'Verified that all Modal Python engine requests reject unauthenticated calls.',
+      meaning: 'What it means: Zero credential leakage risk across production vector memory operations.',
+      score: 9.1,
+      badgeType: 'live',
+      receipt: {
+        source_url: '/settings',
+        span: 'X-Engine-Secret Auth Audit Passed on Modal engine.',
+        sender: 'Security Daemon',
+        timestamp: '2026-07-23 · 22:40 UTC'
       }
     }
-    loadSignals();
-  }, []);
+  ]);
 
-  const handleReceipt = (sig: any) => {
-    setActiveReceipt({
-      source_url: sig.source_url || '#',
-      span: `Source: Acute Layer | Alert ID: ${sig.id?.substring(0,8) || 'N/A'}`
-    });
+  const [newPostText, setNewPostText] = useState('');
+
+  const handlePost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostText.trim()) return;
+
+    const newEntry: Post = {
+      id: `sig-${Date.now()}`,
+      author: 'Abhi (Founder)',
+      authorRole: 'Founder Post',
+      timestamp: 'Just now',
+      title: newPostText.trim(),
+      body: 'Manual update posted directly to the team feed.',
+      meaning: 'What it means: Direct founder directive logged into the company memory graph.',
+      score: 8.0,
+      badgeType: 'accent',
+      receipt: {
+        source_url: '/iris?view=signals',
+        span: newPostText.trim(),
+        sender: 'Abhi (Founder)',
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    setPosts([newEntry, ...posts]);
+    setNewPostText('');
   };
 
-  if (loading) {
-     return <div style={{ color: 'var(--text-secondary)', textAlign: 'center', marginTop: '40px', fontSize: '14px', letterSpacing: '0.1em', animation: 'pulse 2s infinite' }}>Loading signals...</div>;
-  }
-
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px', paddingBottom: '100px', animation: 'fadeIn 0.5s ease-out' }}>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-      `}</style>
-      
-      <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: 'clamp(28px, 5vw, 36px)', color: brandAccent, marginBottom: '8px', lineHeight: 1.2, fontWeight: 700, letterSpacing: '-0.02em' }}>Signals</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '16px' }}>Strictly filtered alerts that change a decision, prevent a mistake, or reveal an opportunity.</p>
-      </div>
-
-      {signals.length === 0 ? (
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '32px', borderRadius: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-          No time-sensitive signals have passed the strict filter today.
+    <div style={{ maxWidth: '680px', width: '100%', margin: '0 auto', padding: '32px 16px 80px 16px', fontFamily: 'var(--font-inter, sans-serif)' }}>
+      {/* Header */}
+      <header style={{ marginBottom: '24px' }}>
+        <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent, #bf3d11)', fontWeight: 600, marginBottom: '4px' }}>
+          SURFACE 3 · THE FLOW
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {signals.map((sig: any) => (
-            <div 
-              key={sig.id} 
-              onMouseEnter={() => setHoverId(sig.id)}
-              onMouseLeave={() => setHoverId(null)}
-              style={{ 
-                display: 'flex', 
-                background: 'var(--bg-secondary)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '16px', 
-                overflow: 'hidden',
-                boxShadow: hoverId === sig.id ? '0 12px 40px rgba(0,0,0,0.08)' : '0 4px 12px rgba(0,0,0,0.02)',
-                transform: hoverId === sig.id ? 'translateY(-2px)' : 'translateY(0)',
-                transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
-              }}
-            >
-              <div style={{ padding: '24px', width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <span style={{ color: brandAccent, fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em', background: 'rgba(255, 255, 255, 0.08)', padding: '4px 10px', borderRadius: '6px' }}>
-                    {(sig.score * 100).toFixed(0)}% SIGNAL STRENGTH
-                  </span>
-                  
-                  <button 
-                    onClick={() => handleReceipt(sig)}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontFamily: 'monospace', color: '#94a3b8', cursor: 'pointer', transition: 'all 0.2s ease' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = brandAccent; e.currentTarget.style.borderColor = brandAccent; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-                  >
-                    Receipt
-                  </button>
-                </div>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: 'var(--text-primary)', fontWeight: 600, letterSpacing: '-0.01em' }}>{sig.title}</h3>
-                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.6' }}>{sig.desc}</p>
-              </div>
+        <h1 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: 'clamp(26px, 4vw, 34px)', fontWeight: 700, color: 'var(--ink-deep, #1a1714)', margin: '0 0 6px 0' }}>
+          Signals
+        </h1>
+        <p style={{ color: 'var(--ink-soft, #3b372f)', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
+          The company's shared Instagram feed. Only decision-relevant real events (score &gt; 5) with consequence lines render here.
+        </p>
+      </header>
+
+      {/* Top Composer Bar (Section 07 Spec) */}
+      <form 
+        onSubmit={handlePost}
+        style={{
+          background: 'var(--card, #fbfaf6)',
+          border: '1px solid var(--border-paper, #e7e1d4)',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '28px',
+          display: 'flex',
+          gap: '12px',
+          boxShadow: 'var(--shadow-paper, 0 2px 20px rgba(60,40,20,0.05))'
+        }}
+      >
+        <input
+          type="text"
+          value={newPostText}
+          onChange={(e) => setNewPostText(e.target.value)}
+          placeholder="Post to the team..."
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            fontSize: '14px',
+            fontFamily: 'var(--font-inter, sans-serif)',
+            color: 'var(--ink, #16140f)'
+          }}
+        />
+        <button
+          type="submit"
+          disabled={!newPostText.trim()}
+          style={{
+            background: newPostText.trim() ? 'var(--accent, #bf3d11)' : 'var(--paper-2, #f2ede3)',
+            color: newPostText.trim() ? '#ffffff' : 'var(--ink-faint, #6b6557)',
+            border: 'none',
+            borderRadius: '6px',
+            padding: '6px 14px',
+            fontSize: '12px',
+            fontFamily: 'var(--font-jetbrains, monospace)',
+            fontWeight: 600,
+            cursor: newPostText.trim() ? 'pointer' : 'not-allowed',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Post →
+        </button>
+      </form>
+
+      {/* Feed Column */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {posts.map((post) => (
+          <div key={post.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Author bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)' }}>
+                {post.author} <span style={{ fontWeight: 400, color: 'var(--ink-faint, #6b6557)', fontSize: '11px', fontFamily: 'var(--font-jetbrains, monospace)' }}>({post.authorRole})</span>
+              </span>
+              <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', color: 'var(--ink-faint, #6b6557)' }}>
+                {post.timestamp}
+              </span>
             </div>
-          ))}
-        </div>
-      )}
 
-      <ReceiptPanel receipt={activeReceipt} onClose={() => setActiveReceipt(null)} />
+            {/* S2 Understanding Card with Consequence line */}
+            <UnderstandingCard
+              title={post.title}
+              body={post.body}
+              statusBadge={`Signal ${post.score}`}
+              badgeType={post.badgeType}
+              receipt={post.receipt}
+            >
+              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #e7e1d4', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '12px', color: 'var(--accent-ink, #7a2a0e)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                {post.meaning}
+              </div>
+            </UnderstandingCard>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

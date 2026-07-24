@@ -17,6 +17,8 @@ import EmbeddedTab from '@/components/iris/EmbeddedTab';
 import ReceiptPanel from '@/components/iris/ReceiptPanel';
 import IntentCards from '@/components/iris/IntentCards';
 import KnowledgeGraph from '@/components/dashboard/KnowledgeGraph';
+import EntityDossier from '@/components/iris/EntityDossier';
+import UniversalInvestigate from '@/components/iris/UniversalInvestigate';
 
 import VoiceOrb, { VoiceOrbRef } from '@/components/iris/VoiceOrb';
 
@@ -181,10 +183,14 @@ function IrisDashboardInner() {
           
           {view === 'timeline' ? (
             <IrisTimeline />
-          ) : view === 'morning-brief' ? (
+          ) : view === 'morning-brief' || view === 'desk' ? (
              <MorningBrief />
           ) : view === 'signals' ? (
              <Signals />
+          ) : view === 'dossiers' ? (
+             <EntityDossier />
+          ) : view === 'investigate' ? (
+             <UniversalInvestigate />
           ) : view === 'mind-map' ? (
              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px', overflow: 'hidden', borderRadius: '16px', border: '1px solid var(--border)' }}>
                <KnowledgeGraph />
@@ -274,7 +280,43 @@ function IrisDashboardInner() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form id="chat-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: 'auto auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '40px', background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)' }}>
+          {/* Floating Suggestion Chips (§06 Spec) */}
+          <div style={{ width: '100%', maxWidth: '700px', margin: '0 auto', display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', zIndex: 10 }}>
+            {[
+              { label: 'what did I commit to', text: 'what did I commit to' },
+              { label: 'what\'s slipping', text: 'what\'s slipping' },
+              { label: 'what changed about EYES', text: 'what changed about EYES' }
+            ].map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => processQuery(chip.text)}
+                style={{
+                  background: 'var(--card, #fbfaf6)',
+                  color: 'var(--accent, #bf3d11)',
+                  border: '1px solid var(--border-paper, #e7e1d4)',
+                  borderRadius: '16px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontFamily: 'var(--font-jetbrains, monospace)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 8px rgba(60, 40, 20, 0.04)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--accent-soft, #f0d9cd)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--card, #fbfaf6)';
+                }}
+              >
+                + {chip.label}
+              </button>
+            ))}
+          </div>
+
+          <form id="chat-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: '0 auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '8px', background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)' }}>
             <div className="iris-glass-pill" style={{ display: 'flex', padding: '10px 16px 10px 24px', alignItems: 'center' }}>
               <textarea 
                 value={query}

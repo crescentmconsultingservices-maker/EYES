@@ -9,14 +9,37 @@
 }
 
 :root {
+  /* IRIS PAPER & INK TOKENS (Section 01 Spec) */
+  --paper: #faf7f1;
+  --paper-2: #f2ede3;
+  --card: #fbfaf6;
+  --ink-deep: #1a1714;
+  --ink: #16140f;
+  --ink-soft: #3b372f;
+  --ink-faint: #6b6557;
+  
+  --accent: #bf3d11;
+  --accent-ink: #7a2a0e;
+  --accent-soft: #f0d9cd;
+  --live: #2e8b7a;
+  --good: #2f6b4f;
+  --slate: #324a52;
+
+  --border-paper: #e7e1d4;
+  --shadow-paper: 0 2px 20px rgba(60, 40, 20, 0.05);
+
+  --font-serif-display: 'Fraunces', serif;
+  --font-inter: 'Inter', sans-serif;
+  --font-jetbrains: 'JetBrains Mono', monospace;
+
   /* FEATURE-FIRST (Dark) - Minimalist depth */
   --bg-primary: #050505;      
   --bg-secondary: #0F0F0F;
-  --bg-card: rgba(255, 255, 255, 0.06); /* Increased visibility */
+  --bg-card: rgba(255, 255, 255, 0.06);
   --bg-card-hover: rgba(255, 255, 255, 0.1);
 
-  --text-primary: #E5E5E5;    /* Sharpened white */
-  --text-secondary: #A0A0A0;  /* Better contrast */
+  --text-primary: #E5E5E5;
+  --text-secondary: #A0A0A0;
   --text-muted: #666666;
 
   --accent-primary: #FFFFFF; 
@@ -25,28 +48,45 @@
   --accent-red: #FF4D4D;
   --accent-vital: #00A3B8;
 
-  --border-primary: rgba(255, 255, 255, 0.14); /* Much more visible */
+  --border-primary: rgba(255, 255, 255, 0.14);
   --border-subtle: rgba(255, 255, 255, 0.08);
 
   --sidebar-width: 280px;
   --header-height: 64px;
 
-  --font-sans: 'Outfit', sans-serif;
-  --font-display: 'Syne', sans-serif;
-  --font-serif: 'Cormorant Garamond', serif;
-  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'Inter', 'Outfit', sans-serif;
+  --font-display: 'Fraunces', 'Syne', serif;
+  --font-serif: 'Fraunces', 'Cormorant Garamond', serif;
+  --font-mono: 'JetBrains Mono', 'DM Mono', monospace;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-xl: 24px;
+  --radius-pill: 999px;
   
   --shadow-sm: 0 2px 10px rgba(0,0,0,0.5);
   --shadow-md: 0 4px 20px rgba(0,0,0,0.6);
   --shadow-lg: 0 12px 40px rgba(0,0,0,0.7);
   
-  --transition-main: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-main: 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-slow: 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Breathing Keyframes (IRIS Spec S4) --- */
+@keyframes liveDotBreathe {
+  0% { opacity: 0.4; transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 139, 122, 0.7); }
+  50% { opacity: 1; transform: scale(1.05); box-shadow: 0 0 10px 3px rgba(46, 139, 122, 0.4); }
+  100% { opacity: 0.4; transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 139, 122, 0.7); }
+}
+
+.live-dot-breathe {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--live);
+  display: inline-block;
+  animation: liveDotBreathe 2s ease-in-out infinite;
 }
 
 [data-theme='light'] {
