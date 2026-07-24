@@ -12,7 +12,7 @@ interface VoiceOrbProps {
 
 const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) => {
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'speaking'>('idle');
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -27,27 +27,47 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = 'en-US';
+        try {
+          const rec = new SpeechRecognition();
+          rec.continuous = false;
+          rec.interimResults = false;
+          rec.lang = 'en-US';
 
-        recognitionRef.current.onresult = (event: any) => {
-          const transcript = event.results[0][0].transcript;
-          if (onTranscribe) onTranscribe(transcript);
-        };
+          rec.onspeechstart = () => {
+            if (synthRef.current && synthRef.current.speaking) {
+              synthRef.current.cancel();
+              setVoiceState('listening');
+            }
+          };
 
-        recognitionRef.current.onerror = (event: any) => {
-          // Gracefully ignore benign browser timeouts (silence/aborted)
-          if (event.error !== 'no-speech' && event.error !== 'aborted') {
-            console.warn('Speech recognition status:', event.error);
-          }
-          setVoiceState('idle');
-        };
+          rec.onresult = (event: any) => {
+            const transcript = event.results[0][0]?.transcript;
+            if (synthRef.current && synthRef.current.speaking) {
+              synthRef.current.cancel();
+            }
+            if (transcript && onTranscribe) {
+              onTranscribe(transcript);
+            }
+            setVoiceState('idle');
+          };
 
-        recognitionRef.current.onend = () => {
-          setVoiceState('idle');
-        };
+          rec.onerror = (event: any) => {
+            if (event.error === 'not-allowed') {
+              setErrorMessage('Microphone access denied. Please allow microphone permission.');
+            } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+              console.warn('Speech recognition status:', event.error);
+            }
+            setVoiceState('idle');
+          };
+
+          rec.onend = () => {
+            setVoiceState('idle');
+          };
+
+          recognitionRef.current = rec;
+        } catch (e) {
+          console.warn('SpeechRecognition init warning:', e);
+        }
       }
     }
   }, [onTranscribe]);
@@ -56,87 +76,151 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
     speak: (text: string) => {
       if (!synthRef.current) return;
       
-      // Stop any ongoing speech
-      synthRef.current.cancel();
+      try {
+        if (synthRef.current.paused) {
+          synthRef.current.resume();
+        }
+        synthRef.current.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.onstart = () => setVoiceState('speaking');
-      utterance.onend = () => setVoiceState('idle');
-      utterance.onerror = () => setVoiceState('idle');
-      
-      synthRef.current.speak(utterance);
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => setVoiceState('speaking');
+        utterance.onend = () => setVoiceState('idle');
+        utterance.onerror = (e) => {
+          console.warn('Speech synthesis playback note:', e);
+          setVoiceState('idle');
+        };
+
+        synthRef.current.speak(utterance);
+      } catch (err) {
+        console.error('Speech synthesis error:', err);
+        setVoiceState('idle');
+      }
     }
   }));
 
   const toggleVoice = () => {
-    if (voiceState === 'idle') {
+    setErrorMessage(null);
+
+    // If currently speaking, stop TTS
+    if (voiceState === 'speaking') {
+      if (synthRef.current) {
+        synthRef.current.cancel();
+      }
+      setVoiceState('idle');
+      return;
+    }
+
+    // If currently listening, stop STT
+    if (voiceState === 'listening') {
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.start();
-          setVoiceState('listening');
-        } catch (e) {
-          console.error(e);
+          recognitionRef.current.stop();
+        } catch {}
+      }
+      setVoiceState('idle');
+      return;
+    }
+
+    // If idle, start STT speech recognition or fallback voice test
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+        setVoiceState('listening');
+      } catch (e: any) {
+        // If already started or browser state busy, try stopping first
+        try {
+          recognitionRef.current.stop();
+          setTimeout(() => {
+            recognitionRef.current?.start();
+            setVoiceState('listening');
+          }, 100);
+        } catch {
+          setVoiceState('idle');
         }
-      } else {
-        alert("Speech Recognition API not supported in this browser.");
       }
     } else {
-      if (voiceState === 'listening' && recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      if (voiceState === 'speaking' && synthRef.current) {
-        synthRef.current.cancel();
-        setVoiceState('idle');
+      // Fallback: Test Speech Synthesis audio voice out loud if SpeechRecognition is missing
+      if (synthRef.current) {
+        const testUtterance = new SpeechSynthesisUtterance("IRIS Voice Engine active and listening.");
+        testUtterance.onstart = () => setVoiceState('speaking');
+        testUtterance.onend = () => setVoiceState('idle');
+        synthRef.current.speak(testUtterance);
+      } else {
+        alert("Speech API not supported in this browser environment.");
       }
     }
   };
 
   // Dynamic styles based on Paper & Ink tokens (§01 & §13 Spec)
-  let orbColor = 'var(--ink-faint, #6b6557)'; // idle
+  let orbBg = '#e8e2d5'; // high contrast warm paper
+  let iconColor = '#2c2824'; // crisp dark ink icon
   let glowSize = 0;
   let pulseAnimation = 'none';
 
   if (voiceState === 'listening') {
-    orbColor = 'var(--accent, #bf3d11)'; // terracotta accent for listening
-    glowSize = 30;
+    orbBg = 'var(--accent, #bf3d11)'; // terracotta accent for listening
+    iconColor = '#ffffff';
+    glowSize = 20;
     pulseAnimation = 'pulse 1.2s infinite ease-in-out';
   } else if (voiceState === 'speaking') {
-    orbColor = 'var(--live, #2e8b7a)'; // breathing teal for speaking
-    glowSize = 25; 
+    orbBg = 'var(--live, #2e8b7a)'; // breathing teal for speaking
+    iconColor = '#ffffff';
+    glowSize = 20; 
     pulseAnimation = 'pulse 0.8s infinite ease-in-out';
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
       <style>{`
         @keyframes pulse {
           0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.8; }
+          50% { transform: scale(1.08); opacity: 0.85; }
           100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
+
+      {errorMessage && (
+        <div style={{
+          position: 'absolute',
+          bottom: '50px',
+          background: 'var(--accent-soft, #f0d9cd)',
+          color: 'var(--accent-ink, #7a2a0e)',
+          border: '1px solid var(--accent, #bf3d11)',
+          borderRadius: '6px',
+          padding: '6px 12px',
+          fontSize: '11px',
+          fontFamily: 'var(--font-jetbrains, monospace)',
+          whiteSpace: 'nowrap',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          ⚠️ {errorMessage}
+        </div>
+      )}
       
       <button 
         type="button"
         onClick={toggleVoice}
         style={{
-          width: '44px',
-          height: '44px',
+          width: '40px',
+          height: '40px',
           borderRadius: '50%',
-          background: orbColor,
-          border: 'none',
+          background: orbBg,
+          border: voiceState === 'idle' ? '1px solid #c8beaa' : 'none',
           cursor: 'pointer',
-          boxShadow: voiceState !== 'idle' ? `0 0 ${glowSize / 2}px ${orbColor}` : 'none',
+          boxShadow: voiceState !== 'idle' ? `0 0 ${glowSize / 2}px ${orbBg}` : 'none',
           animation: pulseAnimation,
-          transition: 'background 0.3s ease, box-shadow 0.1s ease',
+          transition: 'all 0.2s ease',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative'
         }}
-        title={voiceState === 'idle' ? 'Start Voice Mode' : 'Stop Voice Mode'}
+        title={voiceState === 'idle' ? 'Click to speak or listen' : 'Stop voice session'}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {voiceState === 'idle' ? (
             <>
               <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
@@ -144,12 +228,14 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
               <line x1="12" y1="19" x2="12" y2="22"></line>
             </>
           ) : (
-            <rect x="8" y="8" width="8" height="8" fill="white" />
+            <rect x="8" y="8" width="8" height="8" fill={iconColor} />
           )}
         </svg>
       </button>
     </div>
   );
 });
+
+VoiceOrb.displayName = 'VoiceOrb';
 
 export default VoiceOrb;

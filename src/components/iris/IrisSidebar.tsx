@@ -96,9 +96,11 @@ export default function IrisSidebar() {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          padding: '16px 16px 12px 16px', 
-          marginBottom: '8px', 
-          borderBottom: '1px solid rgba(231, 225, 212, 0.6)'
+          padding: '0 16px', 
+          height: '64px',
+          boxSizing: 'border-box',
+          borderBottom: '1px solid var(--border-paper, #e7e1d4)',
+          background: 'var(--paper-2, #f2ede3)'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -163,20 +165,6 @@ export default function IrisSidebar() {
         </div>
       </div>
       
-      {/* S3 Identity Block with Breathing Teal Dot */}
-      <div className={styles.footer} style={{ borderTop: '1px solid var(--border-paper, #e7e1d4)', padding: '16px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="live-dot-breathe" title="Live Understanding active" />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', fontWeight: 600, color: 'var(--live, #2e8b7a)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              ● Live Understanding
-            </div>
-            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '9px', color: 'var(--ink-faint, #6b6557)', marginTop: '1px' }}>
-              EYES knows · IRIS decides
-            </div>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

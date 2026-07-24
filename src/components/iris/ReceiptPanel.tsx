@@ -142,7 +142,7 @@ export default function ReceiptPanel({ receipt, onClose }: ReceiptPanelProps) {
                   Layer 1 · Source Origin
                 </span>
                 <p style={{ margin: '8px 0 4px 0', fontWeight: 600, color: 'var(--ink, #16140f)' }}>
-                  Sender: {receipt.sender || 'Abhi (Founder Office)'}
+                  Sender: {receipt.sender || 'Founder Office'}
                 </p>
                 <p style={{ margin: 0, fontSize: '12px', color: 'var(--ink-faint, #6b6557)' }}>
                   Timestamp: {receipt.timestamp || '2026-07-24 · 10:14:02 UTC'}

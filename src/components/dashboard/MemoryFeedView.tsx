@@ -142,7 +142,10 @@ export function MemoryFeedView({
               <div key={i} className="skeleton" style={{
                 height: '80px', borderRadius: '12px',
                 background: 'rgba(255,255,255,0.04)',
-                animation: 'pulse 1.5s ease-in-out infinite',
+                animationName: 'pulse',
+                animationDuration: '1.5s',
+                animationTimingFunction: 'ease-in-out',
+                animationIterationCount: 'infinite',
                 animationDelay: `${i * 0.1}s`,
               }} />
             ))}

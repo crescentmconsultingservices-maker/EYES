@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function IrisSettings() {
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'theme' | 'privacy' | 'feedback'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'theme' | 'privacy' | 'feedback' | 'duplex'>('profile');
   const [feedbackMessages, setFeedbackMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; time: string }>>([]);
   const [feedbackInput, setFeedbackInput] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -18,6 +18,13 @@ export default function IrisSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [settingsSaved, setSettingsSaved] = useState<string | null>(null);
+
+  // Founder Duplex Engine (Section 15 Spec)
+  const [duplexEnabled, setDuplexEnabled] = useState(true);
+  const [interruptionPolicy, setInterruptionPolicy] = useState<'aggressive' | 'balanced' | 'patient'>('balanced');
+  const [silenceThresholdMs, setSilenceThresholdMs] = useState<number>(500);
+  const [truthRatio, setTruthRatio] = useState<number>(85);
+  const [duplexSaved, setDuplexSaved] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.name) setDisplayName(user.name);
@@ -89,6 +96,27 @@ export default function IrisSettings() {
     }
   };
 
+  const handleSaveDuplexSettings = async () => {
+    setDuplexSaved(null);
+    try {
+      const res = await fetch('/api/iris/v0/duplex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: duplexEnabled,
+          interruptionPolicy,
+          silenceThresholdMs,
+          truthToComfortRatio: truthRatio / 100
+        }),
+      });
+      setDuplexSaved(res.ok ? 'Duplex Engine settings saved!' : 'Failed to save.');
+    } catch {
+      setDuplexSaved('Error updating duplex settings.');
+    } finally {
+      setTimeout(() => setDuplexSaved(null), 3000);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (displayName === user?.name) return;
     setIsSaving(true);
@@ -108,7 +136,7 @@ export default function IrisSettings() {
   };
 
   return (
-    <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto', padding: '32px 16px 80px 16px', fontFamily: 'var(--font-inter, sans-serif)' }}>
+    <div style={{ maxWidth: '1000px', width: '100%', padding: '32px 40px 80px 40px', boxSizing: 'border-box', fontFamily: 'var(--font-inter, sans-serif)' }}>
       {/* Header */}
       <header style={{ marginBottom: '28px' }}>
         <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--accent, #bf3d11)', fontWeight: 600, marginBottom: '4px' }}>
@@ -118,7 +146,7 @@ export default function IrisSettings() {
           IRIS Settings
         </h1>
         <p style={{ color: 'var(--ink-soft, #3b372f)', fontSize: '14px', margin: 0 }}>
-          Configure Paper & Ink design preferences, sensitivity thresholds, and developer feedback.
+          Configure Paper & Ink preferences, sensitivity thresholds, and Founder Duplex voice engine.
         </p>
       </header>
 
@@ -127,6 +155,7 @@ export default function IrisSettings() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--paper-2, #f2ede3)', padding: '6px', borderRadius: '8px' }}>
           {[
             { id: 'profile', label: 'Profile Details' },
+            { id: 'duplex', label: 'Founder Duplex' },
             { id: 'tuning', label: 'Sensitivity Tuning' },
             { id: 'theme', label: 'Visual Theme' },
             { id: 'privacy', label: 'Privacy Shields' },
@@ -193,6 +222,136 @@ export default function IrisSettings() {
             </div>
           )}
 
+          {activeTab === 'duplex' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                <div>
+                  <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--accent, #bf3d11)', fontWeight: 600 }}>
+                    CUSTOMER ZERO FEATURE FLAG
+                  </span>
+                  <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '20px', fontWeight: 700, color: 'var(--ink-deep, #1a1714)', margin: '2px 0 0 0' }}>
+                    Founder Duplex Voice Engine
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setDuplexEnabled(!duplexEnabled)}
+                  style={{
+                    background: duplexEnabled ? 'var(--good, #2f6b4f)' : 'var(--paper-2, #f2ede3)',
+                    color: duplexEnabled ? '#ffffff' : 'var(--ink-faint, #6b6557)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '6px 14px',
+                    fontSize: '11px',
+                    fontFamily: 'var(--font-jetbrains, monospace)',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {duplexEnabled ? '● DUPLEX ENABLED' : '○ DUPLEX DISABLED'}
+                </button>
+              </div>
+
+              <p style={{ fontSize: '13px', color: 'var(--ink-soft, #3b372f)', lineHeight: 1.5, marginBottom: '22px' }}>
+                Kyutai real-time speech duplex engine parameters for Customer Zero. Tune interruption thresholds, silence intelligence, and judgment directness.
+              </p>
+
+              {/* Interruption Policy */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>
+                  INTERRUPTION POLICY (BARGE-IN SENSITIVITY)
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[
+                    { id: 'aggressive', label: 'Aggressive (Instant)' },
+                    { id: 'balanced', label: 'Balanced (200ms)' },
+                    { id: 'patient', label: 'Patient (Sentence End)' }
+                  ].map(policy => (
+                    <button
+                      key={policy.id}
+                      onClick={() => setInterruptionPolicy(policy.id as any)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        border: interruptionPolicy === policy.id ? '1px solid var(--accent, #bf3d11)' : '1px solid var(--border-paper, #e7e1d4)',
+                        background: interruptionPolicy === policy.id ? 'var(--accent-soft, #f0d9cd)' : 'var(--paper-2, #f2ede3)',
+                        color: interruptionPolicy === policy.id ? 'var(--accent-ink, #7a2a0e)' : 'var(--ink-soft, #3b372f)',
+                        fontSize: '12px',
+                        fontFamily: 'var(--font-jetbrains, monospace)',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {policy.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Silence Intelligence */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600, marginBottom: '6px' }}>
+                  SILENCE INTELLIGENCE (SPEECH PAUSE THRESHOLD)
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[
+                    { ms: 300, label: '300ms (Fast Turn)' },
+                    { ms: 500, label: '500ms (Natural)' },
+                    { ms: 800, label: '800ms (Thoughtful)' }
+                  ].map(item => (
+                    <button
+                      key={item.ms}
+                      onClick={() => setSilenceThresholdMs(item.ms)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        border: silenceThresholdMs === item.ms ? '1px solid var(--accent, #bf3d11)' : '1px solid var(--border-paper, #e7e1d4)',
+                        background: silenceThresholdMs === item.ms ? 'var(--accent-soft, #f0d9cd)' : 'var(--paper-2, #f2ede3)',
+                        color: silenceThresholdMs === item.ms ? 'var(--accent-ink, #7a2a0e)' : 'var(--ink-soft, #3b372f)',
+                        fontSize: '12px',
+                        fontFamily: 'var(--font-jetbrains, monospace)',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Truth-to-Comfort Judgment Slider */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 600 }}>
+                    TRUTH-TO-COMFORT RATIO (JUDGMENT DIRECTNESS)
+                  </label>
+                  <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', color: 'var(--accent, #bf3d11)', fontWeight: 600 }}>
+                    {truthRatio}% Unfiltered Truth
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  value={truthRatio}
+                  onChange={(e) => setTruthRatio(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--accent, #bf3d11)' }}
+                />
+              </div>
+
+              {duplexSaved && <p style={{ color: 'var(--good, #2f6b4f)', fontSize: '13px', marginBottom: '16px' }}>{duplexSaved}</p>}
+
+              <button
+                onClick={handleSaveDuplexSettings}
+                style={{ background: 'var(--accent, #bf3d11)', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '8px 18px', fontSize: '13px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Save Founder Duplex Settings
+              </button>
+            </div>
+          )}
+
           {activeTab === 'tuning' && (
             <div>
               <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 18px 0' }}>Sensitivity Tuning</h3>
@@ -251,33 +410,36 @@ export default function IrisSettings() {
           {activeTab === 'theme' && (
             <div>
               <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '18px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)', margin: '0 0 6px 0' }}>Visual Theme</h3>
-              <p style={{ fontSize: '13px', color: 'var(--ink-soft, #3b372f)', marginBottom: '20px' }}>Paper & Ink theme is active by default (§01 Spec).</p>
+              <p style={{ fontSize: '13px', color: 'var(--ink-soft, #3b372f)', marginBottom: '20px' }}>Paper & Ink theme is active by default.</p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                 {[
                   { id: 'paper', label: 'Paper & Ink', bg: '#faf7f1', color: '#bf3d11' },
                   { id: 'dark', label: 'Dark Mode', bg: '#09090b', color: '#ffffff' },
                   { id: 'ember', label: 'Ember Mode', bg: '#120a07', color: '#e06a3b' }
-                ].map(t => (
-                  <div
-                    key={t.id}
-                    onClick={() => setGlobalTheme(t.id as any)}
-                    style={{
-                      border: theme === t.id ? '2px solid var(--accent, #bf3d11)' : '1px solid var(--border-paper, #e7e1d4)',
-                      borderRadius: '8px',
-                      padding: '14px',
-                      cursor: 'pointer',
-                      background: theme === t.id ? 'var(--accent-soft, #f0d9cd)' : 'var(--paper-2, #f2ede3)',
-                      textAlign: 'center',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ height: '36px', borderRadius: '4px', background: t.bg, border: '1px solid rgba(0,0,0,0.1)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: t.color }} />
+                ].map(t => {
+                  const isSelected = theme === t.id || (t.id === 'paper' && theme === 'light');
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => setGlobalTheme(t.id as any)}
+                      style={{
+                        border: isSelected ? '2px solid var(--accent, #bf3d11)' : '1px solid var(--border-paper, #e7e1d4)',
+                        borderRadius: '8px',
+                        padding: '14px',
+                        cursor: 'pointer',
+                        background: isSelected ? 'var(--accent-soft, #f0d9cd)' : 'var(--paper-2, #f2ede3)',
+                        textAlign: 'center',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <div style={{ height: '36px', borderRadius: '4px', background: t.bg, border: '1px solid rgba(0,0,0,0.1)', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: t.color }} />
+                      </div>
+                      <span style={{ fontSize: '12px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, color: 'var(--ink-deep, #1a1714)' }}>{t.label}</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600, color: 'var(--ink-deep, #1a1714)' }}>{t.label}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

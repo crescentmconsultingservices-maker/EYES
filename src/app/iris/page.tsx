@@ -179,7 +179,7 @@ function IrisDashboardInner() {
           <IrisHeader />
         </div>
         
-        <div className={styles.chatContentContainer} style={{ padding: view === 'investigate' ? '40px 40px 0 40px' : '0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div className={styles.chatContentContainer} style={{ padding: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', flex: 1 }}>
           
           {view === 'timeline' ? (
             <IrisTimeline />
@@ -213,24 +213,28 @@ function IrisDashboardInner() {
                   animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
                 .iris-glass-pill {
-                  background: rgba(15, 15, 20, 0.65);
-                  backdrop-filter: blur(16px);
-                  border: 1px solid ${pillBorder};
+                  background: #ffffff;
+                  border: 1.5px solid #d4cbba;
                   border-radius: 32px;
-                  box-shadow: 0 10px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
-                  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+                  box-shadow: 0 10px 32px rgba(35, 25, 15, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
+                  transition: all 0.25s ease;
                 }
                 .iris-glass-pill:focus-within {
-                  border-color: ${pillBorder};
-                  box-shadow: 0 10px 40px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.05);
+                  border-color: var(--accent, #bf3d11);
+                  box-shadow: 0 12px 38px rgba(191, 61, 17, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
+                }
+                .iris-glass-pill textarea::placeholder {
+                  color: #575247;
+                  font-weight: 500;
+                  opacity: 0.9;
                 }
               `}</style>
               {messages.length === 0 && (
             <div style={{ marginBottom: '40px', marginTop: '10vh', textAlign: 'center', animation: 'slideUpFade 0.6s ease-out' }}>
-              <h1 style={{ fontSize: 'clamp(28px, 6vw, 42px)', lineHeight: 1.2, fontWeight: 800, background: titleGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', animation: 'pulseGlow 4s infinite alternate', margin: '0 0 12px 0', letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontSize: 'clamp(28px, 6vw, 42px)', lineHeight: 1.2, fontWeight: 800, color: 'var(--ink-deep, #1a1714)', fontFamily: 'var(--font-serif-display, serif)', margin: '0 0 12px 0', letterSpacing: '-0.02em' }}>
                 IRIS Analysis Engine
               </h1>
-              <p style={{ color: '#94a3b8', fontSize: '15px', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>Strict JSON Contract • Receipt Anchored</p>
+              <p style={{ color: 'var(--ink-soft, #3b372f)', fontSize: '13px', fontFamily: 'var(--font-jetbrains, monospace)', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>Strict JSON Contract • Receipt Anchored</p>
             </div>
           )}
 
@@ -239,7 +243,19 @@ function IrisDashboardInner() {
             {messages.map((m, i) => (
               <div key={i} className="iris-message-enter" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 {m.role === 'user' ? (
-                  <div style={{ background: userBubbleBg, color: 'white', padding: '14px 20px', borderRadius: '18px 18px 4px 18px', maxWidth: '80%', fontSize: '15px', lineHeight: '1.6', whiteSpace: 'pre-wrap', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{
+                    background: 'var(--paper-2, #f2ede3)',
+                    color: 'var(--ink-soft, #3b372f)',
+                    fontFamily: 'var(--font-jetbrains, monospace)',
+                    fontSize: '13px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    maxWidth: '75%',
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap',
+                    border: '1px solid var(--border-paper, #e7e1d4)',
+                    boxShadow: '0 1px 4px rgba(60,40,20,0.03)'
+                  }}>
                     {m.content}
                   </div>
                 ) : (
@@ -273,7 +289,7 @@ function IrisDashboardInner() {
               </div>
             ))}
             {loading && (
-               <div style={{ alignSelf: 'flex-start', color: '#94a3b8', fontSize: '14px', fontStyle: 'italic', paddingLeft: '16px' }}>
+               <div style={{ alignSelf: 'flex-start', color: 'var(--ink-faint, #6b6557)', fontSize: '14px', fontFamily: 'var(--font-jetbrains, monospace)', fontStyle: 'italic', paddingLeft: '16px' }}>
                  IRIS is analyzing... <span className={styles.typingCursor}>▊</span>
                </div>
             )}
@@ -292,23 +308,24 @@ function IrisDashboardInner() {
                 type="button"
                 onClick={() => processQuery(chip.text)}
                 style={{
-                  background: 'var(--card, #fbfaf6)',
+                  background: '#ffffff',
                   color: 'var(--accent, #bf3d11)',
-                  border: '1px solid var(--border-paper, #e7e1d4)',
+                  border: '1.5px solid #d4cbba',
                   borderRadius: '16px',
-                  padding: '6px 14px',
+                  padding: '7px 16px',
                   fontSize: '12px',
+                  fontWeight: 600,
                   fontFamily: 'var(--font-jetbrains, monospace)',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  boxShadow: '0 2px 8px rgba(60, 40, 20, 0.04)',
-                  transition: 'all 0.15s ease'
+                  boxShadow: '0 3px 10px rgba(40, 30, 20, 0.05)',
+                  transition: 'all 0.18s ease'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'var(--accent-soft, #f0d9cd)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--card, #fbfaf6)';
+                  e.currentTarget.style.background = '#ffffff';
                 }}
               >
                 + {chip.label}
@@ -316,7 +333,7 @@ function IrisDashboardInner() {
             ))}
           </div>
 
-          <form id="chat-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: '0 auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '8px', background: 'linear-gradient(to top, var(--bg-primary) 70%, transparent)' }}>
+          <form id="chat-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: '0 auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '8px', background: 'transparent' }}>
             <div className="iris-glass-pill" style={{ display: 'flex', padding: '10px 16px 10px 24px', alignItems: 'center' }}>
               <textarea 
                 value={query}
@@ -330,7 +347,7 @@ function IrisDashboardInner() {
                   }
                 }}
                 placeholder="Message IRIS or type /agent <task>..."
-                style={{ flex: 1, background: 'transparent', border: 'none', color: '#f8fafc', fontSize: '15px', outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '10px 0', fontFamily: 'inherit', lineHeight: '1.5' }}
+                style={{ flex: 1, background: 'transparent', border: 'none', color: '#16140f', fontSize: '15px', fontWeight: 500, outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '10px 0', fontFamily: 'inherit', lineHeight: '1.5' }}
                 rows={query.split('\n').length > 1 ? Math.min(query.split('\n').length, 8) : 1}
                 disabled={loading}
               />
@@ -340,23 +357,19 @@ function IrisDashboardInner() {
                   type="submit" 
                   disabled={loading || !query.trim()}
                   style={{ 
-                    background: query.trim() 
-                      ? (theme === 'ember' ? 'linear-gradient(135deg, #e06a3b, #d94a1c)' : theme === 'light' ? '#0f172a' : '#ffffff') 
-                      : 'rgba(255,255,255,0.05)', 
-                    color: query.trim() 
-                      ? (theme === 'dark' ? '#000000' : '#ffffff') 
-                      : '#64748b', 
-                    border: query.trim() ? 'none' : '1px solid rgba(255,255,255,0.1)', 
+                    background: query.trim() ? 'var(--accent, #bf3d11)' : '#e8e2d5', 
+                    color: query.trim() ? '#ffffff' : '#4a4438', 
+                    border: query.trim() ? 'none' : '1px solid #c8beaa', 
                     borderRadius: '50%', 
                     width: '40px', 
                     height: '40px', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
-                    cursor: loading ? 'not-allowed' : 'pointer', 
-                    opacity: loading || !query.trim() ? 0.7 : 1, 
+                    cursor: loading || !query.trim() ? 'not-allowed' : 'pointer', 
+                    opacity: loading ? 0.7 : 1, 
                     transition: 'all 0.2s ease', 
-                    boxShadow: query.trim() ? `0 4px 15px ${glowColor}` : 'none' 
+                    boxShadow: query.trim() ? '0 4px 15px rgba(191, 61, 17, 0.35)' : 'none' 
                   }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -364,10 +377,10 @@ function IrisDashboardInner() {
                 <button
                   type="button"
                   onClick={() => setIsTasksDrawerOpen(true)}
-                  style={{ background: 'rgba(255,255,255,0.03)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  style={{ background: '#e8e2d5', color: '#2c2824', border: '1px solid #c8beaa', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
                   title="Cloud Tasks"
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#94a3b8'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent, #bf3d11)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'var(--accent, #bf3d11)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#e8e2d5'; e.currentTarget.style.color = '#2c2824'; e.currentTarget.style.borderColor = '#c8beaa'; }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>

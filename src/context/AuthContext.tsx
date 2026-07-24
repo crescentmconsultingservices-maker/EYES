@@ -45,8 +45,8 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<AuthResult>;
   supabase: ReturnType<typeof createClient>;
   updateUser: (updates: Partial<User>) => Promise<AuthResult>;
-  theme: 'dark' | 'light' | 'ember';
-  setGlobalTheme: (theme: 'dark' | 'light' | 'ember') => void;
+  theme: 'dark' | 'light' | 'paper' | 'ember';
+  setGlobalTheme: (theme: 'dark' | 'light' | 'paper' | 'ember') => void;
 }
 
 type AuthMetadata = {
@@ -143,7 +143,7 @@ const ONBOARDING_ROUTE = '/onboarding';
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [theme, setTheme] = useState<'dark' | 'light' | 'ember'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light' | 'paper' | 'ember'>('paper');
   const [showAuthFallback, setShowAuthFallback] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -329,10 +329,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Theme init — sole purpose of this effect after hook extraction
   useEffect(() => {
     let mounted = true;
-    const savedTheme = localStorage.getItem('eyes-theme') as 'dark' | 'light' | 'ember';
+    const savedTheme = localStorage.getItem('eyes-theme') as 'dark' | 'light' | 'paper' | 'ember';
     if (savedTheme && mounted) {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
+    } else if (mounted) {
+      // Default to paper theme for IRIS Paper & Ink baseline
+      document.documentElement.setAttribute('data-theme', 'paper');
     }
     return () => { mounted = false; };
   }, []);
@@ -556,7 +559,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, user]);
 
-  const setGlobalTheme = useCallback((newTheme: 'dark' | 'light' | 'ember') => {
+  const setGlobalTheme = useCallback((newTheme: 'dark' | 'light' | 'paper' | 'ember') => {
     setTheme(newTheme);
     if (typeof document !== 'undefined') document.documentElement.setAttribute('data-theme', newTheme); // L9: SSR guard
     localStorage.setItem('eyes-theme', newTheme);

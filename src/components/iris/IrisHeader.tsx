@@ -29,7 +29,15 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
   const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
 
   return (
-    <header className={styles.header}>
+    <header 
+      className={styles.header}
+      style={{
+        height: '64px',
+        background: 'var(--paper-2, #f2ede3)',
+        borderBottom: '1px solid var(--border-paper, #e7e1d4)',
+        boxShadow: 'none'
+      }}
+    >
       <div className={styles.left}>
         <button 
           className={styles.menuOpenBtn}
@@ -38,12 +46,6 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
         >
           <MenuIcon />
         </button>
-        {/* Keep the user inside IRIS by routing to /iris instead of / */}
-        <div className={styles.mobileLogo} onClick={() => router.push('/iris')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-          <EyesLogo width={82} height={20} />
-          <span style={{ marginLeft: '8px', fontSize: '10px', color: brandAccent, border: `1px solid ${brandAccent}`, padding: '2px 4px', borderRadius: '4px', transition: 'all 0.3s ease' }}>IRIS</span>
-          <span style={{ marginLeft: '12px', fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace', letterSpacing: '0.05em' }}>EYES knows · IRIS decides</span>
-        </div>
       </div>
 
       <div className={styles.right}>
