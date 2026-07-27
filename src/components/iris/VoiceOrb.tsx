@@ -8,9 +8,10 @@ export interface VoiceOrbRef {
 
 interface VoiceOrbProps {
   onTranscribe?: (text: string) => void;
+  onVoiceStateChange?: (isActive: boolean) => void;
 }
 
-const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) => {
+const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoiceStateChange }, ref) => {
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'speaking'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
@@ -22,6 +23,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTextRef = useRef<string>('');
+  const accumulatedTextRef = useRef<string>('');
 
   const stopCurrentAudio = () => {
     if (audioRef.current) {
@@ -143,22 +145,38 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
     isCommittingRef.current = true;
     clearTimers();
 
+    lastTextRef.current = '';
+    accumulatedTextRef.current = '';
+    setLiveTranscript('');
+
+    if (activeRecognitionRef.current) {
+      try {
+        activeRecognitionRef.current.onresult = null;
+        activeRecognitionRef.current.onend = null;
+        activeRecognitionRef.current.onerror = null;
+        activeRecognitionRef.current.stop();
+      } catch {}
+      activeRecognitionRef.current = null;
+    }
+
     if (onTranscribe) {
       onTranscribe(clean);
     }
 
-    lastTextRef.current = '';
-    setLiveTranscript('');
-    setVoiceState('idle');
-
-    if (activeRecognitionRef.current) {
-      try { activeRecognitionRef.current.stop(); } catch {}
-      activeRecognitionRef.current = null;
-    }
-
     setTimeout(() => {
       isCommittingRef.current = false;
-    }, 800);
+    }, 400);
+
+    if (isActiveSessionRef.current) {
+      setTimeout(() => {
+        if (isActiveSessionRef.current) {
+          startListening();
+        }
+      }, 500);
+    } else {
+      setVoiceState('idle');
+      if (onVoiceStateChange) onVoiceStateChange(false);
+    }
   };
 
   const startListening = async () => {
@@ -179,6 +197,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
       setErrorMessage('Microphone access denied. Allow mic permission in browser URL bar.');
       setVoiceState('idle');
       isActiveSessionRef.current = false;
+      if (onVoiceStateChange) onVoiceStateChange(false);
       return;
     }
 
@@ -186,11 +205,19 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
 
     if (!SpeechRecognition) {
       setErrorMessage('Browser does not support SpeechRecognition. Please use Chrome/Edge.');
+      setVoiceState('idle');
+      isActiveSessionRef.current = false;
+      if (onVoiceStateChange) onVoiceStateChange(false);
       return;
     }
 
     if (activeRecognitionRef.current) {
-      try { activeRecognitionRef.current.abort(); } catch {}
+      try {
+        activeRecognitionRef.current.onresult = null;
+        activeRecognitionRef.current.onend = null;
+        activeRecognitionRef.current.onerror = null;
+        activeRecognitionRef.current.abort();
+      } catch {}
       activeRecognitionRef.current = null;
     }
 
@@ -202,28 +229,36 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
 
       rec.onstart = () => {
         setVoiceState('listening');
-        setLiveTranscript('');
+        if (accumulatedTextRef.current) {
+          setLiveTranscript(accumulatedTextRef.current);
+        } else {
+          setLiveTranscript('');
+        }
+        if (onVoiceStateChange) onVoiceStateChange(true);
       };
 
       rec.onresult = (event: any) => {
+        if (isCommittingRef.current) return;
         stopCurrentAudio();
-        let transcriptStr = '';
+        let currentTurn = '';
         for (let i = 0; i < event.results.length; i++) {
-          transcriptStr += event.results[i][0]?.transcript || '';
+          currentTurn += event.results[i][0]?.transcript || '';
         }
 
-        if (transcriptStr.trim()) {
-          lastTextRef.current = transcriptStr;
-          setLiveTranscript(transcriptStr);
+        const fullText = (accumulatedTextRef.current ? accumulatedTextRef.current + ' ' + currentTurn : currentTurn).trim();
+
+        if (fullText) {
+          lastTextRef.current = fullText;
+          setLiveTranscript(fullText);
           setVoiceState('listening');
 
-          // Reset 1.1s Silence Timer on Speech Activity
+          // Reset 2.5s Silence Timer on Speech Activity (allows long continuous sentences without premature cut-off)
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
-            if (lastTextRef.current.trim()) {
+            if (lastTextRef.current.trim() && !isCommittingRef.current) {
               commitTranscript(lastTextRef.current);
             }
-          }, 1100);
+          }, 2500);
         }
       };
 
@@ -234,24 +269,37 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
           setVoiceState('idle');
           isActiveSessionRef.current = false;
           clearTimers();
+          if (onVoiceStateChange) onVoiceStateChange(false);
         } else if (event.error === 'no-speech') {
-          setLiveTranscript('');
+          // keep accumulated text intact
         } else if (event.error !== 'aborted') {
-          if (!isActiveSessionRef.current) setVoiceState('idle');
+          if (!isActiveSessionRef.current) {
+            setVoiceState('idle');
+            if (onVoiceStateChange) onVoiceStateChange(false);
+          }
         }
       };
 
       rec.onend = () => {
-        if (lastTextRef.current.trim()) {
-          commitTranscript(lastTextRef.current);
-        } else if (isActiveSessionRef.current) {
+        if (isCommittingRef.current) return;
+
+        if (isActiveSessionRef.current) {
+          // Preserve accumulated text so far and restart Chrome speech engine seamlessly
+          accumulatedTextRef.current = lastTextRef.current;
           setTimeout(() => {
-            if (isActiveSessionRef.current) startListening();
-          }, 400);
+            if (isActiveSessionRef.current && !isCommittingRef.current) {
+              startListening();
+            }
+          }, 200);
         } else {
-          setVoiceState('idle');
-          setLiveTranscript('');
-          clearTimers();
+          if (lastTextRef.current.trim()) {
+            commitTranscript(lastTextRef.current);
+          } else {
+            setVoiceState('idle');
+            setLiveTranscript('');
+            clearTimers();
+            if (onVoiceStateChange) onVoiceStateChange(false);
+          }
         }
       };
 
@@ -261,6 +309,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
       console.error('Failed to start speech recognition:', err);
       setErrorMessage('Could not access microphone: ' + (err.message || 'Unknown error'));
       setVoiceState('idle');
+      if (onVoiceStateChange) onVoiceStateChange(false);
     }
   };
 
@@ -272,6 +321,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
       if (voiceState === 'speaking') {
         stopCurrentAudio();
         setVoiceState('listening');
+        if (onVoiceStateChange) onVoiceStateChange(true);
         startListening();
         return;
       }
@@ -286,14 +336,21 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
       stopCurrentAudio();
       clearTimers();
       if (activeRecognitionRef.current) {
-        try { activeRecognitionRef.current.abort(); } catch {}
+        try {
+          activeRecognitionRef.current.onresult = null;
+          activeRecognitionRef.current.onend = null;
+          activeRecognitionRef.current.onerror = null;
+          activeRecognitionRef.current.abort();
+        } catch {}
         activeRecognitionRef.current = null;
       }
       setVoiceState('idle');
       setLiveTranscript('');
+      if (onVoiceStateChange) onVoiceStateChange(false);
     } else {
       // Turn ON live continuous voice call session
       isActiveSessionRef.current = true;
+      if (onVoiceStateChange) onVoiceStateChange(true);
       startListening();
     }
   };
@@ -330,23 +387,24 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe }, ref) 
       {(liveTranscript || errorMessage) && (
         <div style={{
           position: 'absolute',
-          bottom: '52px',
-          background: errorMessage ? '#fcedea' : '#102a24',
-          color: errorMessage ? '#bf3d11' : '#4ade80',
-          border: `1.5px solid ${errorMessage ? '#bf3d11' : '#2e8b7a'}`,
+          bottom: '76px',
+          right: '0px',
+          background: errorMessage ? '#fcedea' : 'var(--paper-2, #f2ede3)',
+          color: errorMessage ? '#bf3d11' : 'var(--ink-soft, #3b372f)',
+          border: `1px solid ${errorMessage ? '#bf3d11' : 'var(--border-paper, #e7e1d4)'}`,
           borderRadius: '12px',
           padding: '8px 16px',
-          fontSize: '12px',
-          fontWeight: 600,
+          fontSize: '13px',
+          fontWeight: 500,
           fontFamily: 'var(--font-jetbrains, monospace)',
           whiteSpace: 'nowrap',
-          maxWidth: '360px',
+          maxWidth: '400px',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
+          boxShadow: '0 4px 14px rgba(60, 40, 20, 0.08)',
           zIndex: 100
         }}>
-          {errorMessage ? `⚠️ ${errorMessage}` : `🎙️ ${liveTranscript}`}
+          {errorMessage ? `⚠️ ${errorMessage}` : liveTranscript}
         </div>
       )}
 

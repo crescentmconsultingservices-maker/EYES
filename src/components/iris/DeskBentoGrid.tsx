@@ -31,13 +31,23 @@ export default function DeskBentoGrid() {
         });
         oscillatorsRef.current = [];
         setIsPlayingAudio(false);
+        setPlaybackProgress(0);
       }, 300);
     } else {
       setIsPlayingAudio(false);
+      setPlaybackProgress(0);
     }
     if (progressTimerRef.current) {
       clearInterval(progressTimerRef.current);
     }
+  };
+
+  const restartAudio = () => {
+    stopAllAudio();
+    setPlaybackProgress(0);
+    setTimeout(() => {
+      toggleAmbientSound();
+    }, 150);
   };
 
   const toggleAmbientSound = () => {
@@ -169,9 +179,9 @@ export default function DeskBentoGrid() {
   return (
     <div style={{
       padding: '32px 40px',
-      background: '#faf7f1', // --paper base from PDF §01
+      background: 'var(--bg-primary)',
       minHeight: '100vh',
-      color: '#16140f', // --ink primary text
+      color: 'var(--text-primary)',
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif"
     }}>
       {/* Import Google Fonts for Fraunces, Inter, and JetBrains Mono */}
@@ -190,8 +200,8 @@ export default function DeskBentoGrid() {
           border-bottom: 1px dashed transparent;
         }
         .claim-hover:hover {
-          border-bottom: 1px solid #bf3d11;
-          color: #bf3d11;
+          border-bottom: 1px solid var(--accent);
+          color: var(--accent);
           cursor: pointer;
         }
         @keyframes soundwaveMotion {
@@ -207,12 +217,12 @@ export default function DeskBentoGrid() {
 
       {/* --- HERO GREETING BLOCK (PDF §05: Top-left largest block) --- */}
       <div style={{
-        background: '#fbfaf6', // --card (warm white)
-        border: '1px solid #e7e1d4',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-primary)',
         borderRadius: '16px',
         padding: '32px 36px',
         marginBottom: '24px',
-        boxShadow: '0 2px 20px rgba(60, 40, 20, 0.04)',
+        boxShadow: 'var(--shadow-sm)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -225,43 +235,43 @@ export default function DeskBentoGrid() {
               width: '9px',
               height: '9px',
               borderRadius: '50%',
-              background: '#2e8b7a', // --live (muted teal)
+              background: 'var(--live, #2e8b7a)',
               display: 'inline-block',
               animation: 'liveDotPulse 2s ease-in-out infinite'
             }} />
-            <span className="mono-text" style={{ fontSize: '11px', fontWeight: 600, color: '#7a2a0e', textTransform: 'uppercase' }}>
+            <span className="mono-text" style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase' }}>
               DESK · STATE OF NOW
             </span>
           </div>
 
           {/* Fraunces Display Greeting */}
-          <h1 className="fraunces-title" style={{ fontSize: '2.4rem', fontWeight: 500, color: '#16140f', margin: '0 0 8px 0', lineHeight: 1.1 }}>
+          <h1 className="fraunces-title" style={{ fontSize: '2.4rem', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 8px 0', lineHeight: 1.1 }}>
             Good morning, {userName}.
           </h1>
 
           {/* JetBrains Mono sub-line */}
-          <p className="mono-text" style={{ fontSize: '0.82rem', color: '#6b6557', margin: 0, textTransform: 'uppercase' }}>
+          <p className="mono-text" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase' }}>
             Tuesday · while you slept, understanding kept moving
           </p>
         </div>
 
-        {/* ONE EMOTIONAL BEAT (PDF §05: Exactly one Fraunces-italic terracotta line as room heartbeat) */}
+        {/* ONE EMOTIONAL BEAT */}
         <div style={{
-          background: '#f0d9cd', // --accent-soft
-          borderLeft: '3px solid #bf3d11', // --accent terracotta
+          background: 'var(--accent-soft)',
+          borderLeft: '3px solid var(--accent)',
           padding: '12px 18px',
           borderRadius: '0 8px 8px 0'
         }}>
-          <p className="fraunces-title" style={{ fontStyle: 'italic', fontSize: '1.05rem', color: '#bf3d11', margin: 0, fontWeight: 500 }}>
+          <p className="fraunces-title" style={{ fontStyle: 'italic', fontSize: '1.05rem', color: 'var(--accent)', margin: 0, fontWeight: 500 }}>
             “The company is an organic system; every decision leaves a trace.”
           </p>
         </div>
       </div>
 
-      {/* --- NOW-STRIP WIDGET (PDF §05: Thin horizontal band of today's dated items left-to-right by hour) --- */}
+      {/* --- NOW-STRIP WIDGET --- */}
       <div style={{
-        background: '#fbfaf6',
-        border: '1px solid #e7e1d4',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-primary)',
         borderRadius: '14px',
         padding: '16px 24px',
         marginBottom: '28px',
@@ -270,22 +280,22 @@ export default function DeskBentoGrid() {
         gap: '24px',
         overflowX: 'auto'
       }}>
-        <div className="mono-text" style={{ fontSize: '10px', fontWeight: 700, color: '#7a2a0e', textTransform: 'uppercase', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="mono-text" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span>TODAY STRIP</span>
-          <span style={{ color: '#d1d5db' }}>│</span>
+          <span style={{ color: 'var(--border-primary)' }}>│</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flex: 1 }}>
           {todayTimeline.map((item, idx) => (
             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap' }}>
-              <span className="mono-text" style={{ fontSize: '11px', fontWeight: 700, color: item.status === 'verified' ? '#2f6b4f' : item.status === 'current' ? '#bf3d11' : '#6b6557' }}>
+              <span className="mono-text" style={{ fontSize: '11px', fontWeight: 700, color: item.status === 'verified' ? 'var(--good, #2f6b4f)' : item.status === 'current' ? 'var(--accent)' : 'var(--text-muted)' }}>
                 {item.time}
               </span>
-              <span style={{ fontSize: '13px', fontWeight: 500, color: item.status === 'current' ? '#16140f' : '#3b372f' }}>
+              <span style={{ fontSize: '13px', fontWeight: 500, color: item.status === 'current' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                 {item.label}
               </span>
               {idx < todayTimeline.length - 1 && (
-                <span style={{ color: '#e7e1d4', marginLeft: '16px' }}>→</span>
+                <span style={{ color: 'var(--border-primary)', marginLeft: '16px' }}>→</span>
               )}
             </div>
           ))}
@@ -295,25 +305,25 @@ export default function DeskBentoGrid() {
       {/* --- MAIN 2-COLUMN DUAL DASHBOARD GRID --- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '28px', alignItems: 'start' }}>
 
-        {/* LEFT COLUMN: WHAT NEEDS DOING NOW + CHANGED OVERNIGHT + SLIPPING */}
+        {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-          {/* WIDGET 1: WHAT NEEDS DOING NOW (PDF §05: Top 3 Priorities) */}
+          {/* WIDGET 1: WHAT NEEDS DOING NOW */}
           <div style={{
-            background: '#fbfaf6',
-            border: '1px solid #e7e1d4',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-primary)',
             borderRadius: '16px',
             padding: '24px 28px',
-            boxShadow: '0 2px 14px rgba(60, 40, 20, 0.03)'
+            boxShadow: 'var(--shadow-sm)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#bf3d11' }} />
-                <h2 className="fraunces-title" style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#16140f' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)' }} />
+                <h2 className="fraunces-title" style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                   What needs doing now
                 </h2>
               </div>
-              <span className="mono-text" style={{ fontSize: '10px', color: '#6b6557', textTransform: 'uppercase' }}>
+              <span className="mono-text" style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
                 TOP 3 PRIORITIES
               </span>
             </div>
@@ -323,8 +333,8 @@ export default function DeskBentoGrid() {
                 <div
                   key={p.id}
                   style={{
-                    background: '#ffffff',
-                    border: '1px solid #e7e1d4',
+                    background: 'var(--bg-card-hover)',
+                    border: '1px solid var(--border-primary)',
                     borderRadius: '12px',
                     padding: '16px 20px',
                     display: 'flex',
@@ -334,10 +344,10 @@ export default function DeskBentoGrid() {
                   }}
                 >
                   <div>
-                    <h3 className="claim-hover" style={{ fontSize: '15px', fontWeight: 600, color: '#16140f', margin: '0 0 4px 0' }}>
+                    <h3 className="claim-hover" style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
                       {p.title}
                     </h3>
-                    <p style={{ fontSize: '13px', color: '#3b372f', margin: 0, lineHeight: 1.4 }}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
                       {p.sub}
                     </p>
                   </div>
@@ -347,8 +357,8 @@ export default function DeskBentoGrid() {
                     fontWeight: 700,
                     padding: '4px 10px',
                     borderRadius: '999px',
-                    background: p.tagBg,
-                    color: p.tagColor,
+                    background: 'var(--accent-soft)',
+                    color: 'var(--accent)',
                     whiteSpace: 'nowrap',
                     textTransform: 'uppercase'
                   }}>
@@ -359,38 +369,38 @@ export default function DeskBentoGrid() {
             </div>
           </div>
 
-          {/* DUAL WIDGET ROW: CHANGED OVERNIGHT + SLIPPING */}
+          {/* DUAL WIDGET ROW */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
 
-            {/* WIDGET 2: CHANGED OVERNIGHT (PDF §05: Synthesis pass items) */}
+            {/* WIDGET 2: CHANGED OVERNIGHT */}
             <div style={{
-              background: '#fbfaf6',
-              border: '1px solid #e7e1d4',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-primary)',
               borderRadius: '16px',
               padding: '22px 24px',
-              boxShadow: '0 2px 14px rgba(60, 40, 20, 0.03)'
+              boxShadow: 'var(--shadow-sm)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <h3 className="fraunces-title" style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: '#16140f' }}>
+                <h3 className="fraunces-title" style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                   Changed overnight
                 </h3>
-                <span className="mono-text" style={{ fontSize: '9px', color: '#2f6b4f', textTransform: 'uppercase', fontWeight: 700 }}>
+                <span className="mono-text" style={{ fontSize: '9px', color: 'var(--good, #2f6b4f)', textTransform: 'uppercase', fontWeight: 700 }}>
                   SYNTHESIS PASS
                 </span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {changedOvernight.map(item => (
-                  <div key={item.id} style={{ background: '#ffffff', border: '1px solid #e7e1d4', borderRadius: '10px', padding: '12px 14px' }}>
+                  <div key={item.id} style={{ background: 'var(--bg-card-hover)', border: '1px solid var(--border-primary)', borderRadius: '10px', padding: '12px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span className="claim-hover" style={{ fontSize: '13px', fontWeight: 600, color: '#16140f' }}>
+                      <span className="claim-hover" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                         {item.title}
                       </span>
-                      <span className="mono-text" style={{ fontSize: '9px', color: '#6b6557' }}>
+                      <span className="mono-text" style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
                         {item.time}
                       </span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#3b372f', margin: 0, lineHeight: 1.35 }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.35 }}>
                       {item.sub}
                     </p>
                   </div>
@@ -398,35 +408,35 @@ export default function DeskBentoGrid() {
               </div>
             </div>
 
-            {/* WIDGET 3: SLIPPING (PDF §05: delayed_on check-in tone) */}
+            {/* WIDGET 3: SLIPPING */}
             <div style={{
-              background: '#fbfaf6',
-              border: '1px solid #e7e1d4',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-primary)',
               borderRadius: '16px',
               padding: '22px 24px',
-              boxShadow: '0 2px 14px rgba(60, 40, 20, 0.03)'
+              boxShadow: 'var(--shadow-sm)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <h3 className="fraunces-title" style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: '#16140f' }}>
+                <h3 className="fraunces-title" style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                   Slipping
                 </h3>
-                <span className="mono-text" style={{ fontSize: '9px', color: '#7a2a0e', textTransform: 'uppercase', fontWeight: 700 }}>
+                <span className="mono-text" style={{ fontSize: '9px', color: 'var(--accent)', textTransform: 'uppercase', fontWeight: 700 }}>
                   CHECK-IN TONE
                 </span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {slippingItems.map(item => (
-                  <div key={item.id} style={{ background: '#ffffff', border: '1px solid #e7e1d4', borderRadius: '10px', padding: '12px 14px' }}>
+                  <div key={item.id} style={{ background: 'var(--bg-card-hover)', border: '1px solid var(--border-primary)', borderRadius: '10px', padding: '12px 14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span className="claim-hover" style={{ fontSize: '13px', fontWeight: 600, color: '#16140f' }}>
+                      <span className="claim-hover" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                         {item.title}
                       </span>
-                      <span className="mono-text" style={{ fontSize: '9px', color: '#bf3d11', fontWeight: 600 }}>
+                      <span className="mono-text" style={{ fontSize: '9px', color: 'var(--accent)', fontWeight: 600 }}>
                         {item.time}
                       </span>
                     </div>
-                    <p className="fraunces-title" style={{ fontSize: '12px', fontStyle: 'italic', color: '#7a2a0e', margin: 0, lineHeight: 1.35 }}>
+                    <p className="fraunces-title" style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--accent)', margin: 0, lineHeight: 1.35 }}>
                       "{item.delayNote}"
                     </p>
                   </div>
@@ -438,36 +448,36 @@ export default function DeskBentoGrid() {
 
         </div>
 
-        {/* RIGHT COLUMN: WIDGET 5 - AMBIENT AUDIO BRIEF PLAYER (PDF §05) */}
+        {/* RIGHT COLUMN: WIDGET 5 - AMBIENT AUDIO BRIEF PLAYER */}
         <div style={{
-          background: '#fbfaf6',
-          border: '1px solid #e7e1d4',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-primary)',
           borderRadius: '16px',
           padding: '28px 24px',
-          boxShadow: '0 2px 14px rgba(60, 40, 20, 0.03)',
+          boxShadow: 'var(--shadow-sm)',
           position: 'sticky',
           top: '24px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPlayingAudio ? '#bf3d11' : '#6b6557' }} />
-              <h2 className="fraunces-title" style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: '#16140f' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isPlayingAudio ? 'var(--accent)' : 'var(--text-muted)' }} />
+              <h2 className="fraunces-title" style={{ fontSize: '1.2rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
                 Ambient Brief & Pad
               </h2>
             </div>
-            <span className="mono-text" style={{ fontSize: '9px', color: '#7a2a0e', fontWeight: 700 }}>
+            <span className="mono-text" style={{ fontSize: '9px', color: 'var(--accent)', fontWeight: 700 }}>
               KOKORO-82M
             </span>
           </div>
 
-          <p style={{ fontSize: '13px', color: '#3b372f', margin: '0 0 20px 0', lineHeight: 1.45 }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px 0', lineHeight: 1.45 }}>
             Synthesized morning executive briefing paired with low-pass ambient background pad.
           </p>
 
-          {/* DYNAMIC SOUNDWAVE EQUALIZER (PDF §05: Ambient Control) */}
+          {/* DYNAMIC SOUNDWAVE EQUALIZER */}
           <div style={{
-            background: '#faf7f1',
-            border: '1px solid #e7e1d4',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-primary)',
             borderRadius: '12px',
             padding: '20px 16px',
             marginBottom: '20px'
@@ -479,7 +489,7 @@ export default function DeskBentoGrid() {
                   style={{ 
                     width: '3.5px', 
                     height: `${h}px`, 
-                    background: isPlayingAudio ? '#bf3d11' : '#16140f', 
+                    background: isPlayingAudio ? 'var(--accent)' : 'var(--text-primary)', 
                     borderRadius: '2px',
                     transformOrigin: 'bottom',
                     animationName: isPlayingAudio ? 'soundwaveMotion' : 'none',
@@ -495,27 +505,56 @@ export default function DeskBentoGrid() {
             </div>
 
             {/* Audio Track Timeline Bar */}
-            <div style={{ position: 'relative', width: '100%', height: '4px', background: '#e7e1d4', borderRadius: '2px', overflow: 'hidden' }}>
+            <div 
+              onClick={restartAudio}
+              style={{ position: 'relative', width: '100%', height: '6px', background: 'var(--border-primary)', borderRadius: '3px', overflow: 'hidden', cursor: 'pointer' }}
+              title="Click to Restart Brief"
+            >
               <div style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 height: '100%',
                 width: `${playbackProgress}%`,
-                background: '#bf3d11',
+                background: 'var(--accent)',
                 transition: 'width 0.3s linear'
               }} />
             </div>
           </div>
 
           {/* Audio Player Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+            {/* Replay Button */}
+            <button
+              type="button"
+              onClick={restartAudio}
+              style={{
+                background: 'var(--bg-card-hover)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-primary)',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '16px',
+                boxShadow: 'var(--shadow-sm)',
+                transition: 'all 0.2s ease'
+              }}
+              title="Replay Brief from Start"
+            >
+              ↺
+            </button>
+
+            {/* Play / Pause Button */}
             <button
               type="button"
               onClick={toggleAmbientSound}
               style={{
-                background: isPlayingAudio ? '#bf3d11' : '#16140f',
-                color: '#ffffff',
+                background: isPlayingAudio ? 'var(--accent)' : 'var(--text-primary)',
+                color: 'var(--bg-primary)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '48px',
@@ -525,7 +564,7 @@ export default function DeskBentoGrid() {
                 justifyContent: 'center',
                 cursor: 'pointer',
                 fontSize: '18px',
-                boxShadow: isPlayingAudio ? '0 0 18px rgba(191, 61, 17, 0.35)' : '0 4px 12px rgba(22, 20, 15, 0.15)',
+                boxShadow: isPlayingAudio ? '0 0 18px rgba(191, 61, 17, 0.35)' : 'var(--shadow-sm)',
                 transition: 'all 0.2s ease'
               }}
               title={isPlayingAudio ? 'Pause Brief' : 'Play Brief'}

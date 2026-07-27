@@ -87,7 +87,7 @@ export default function IrisSidebar() {
   ];
 
   return (
-    <aside className={styles.sidebar} style={{ background: 'var(--paper-2, #f2ede3)', borderRight: '1px solid var(--border-paper, #e7e1d4)' }}>
+    <aside className={styles.sidebar} style={{ background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-primary)', padding: '12px 10px', height: '100%', boxSizing: 'border-box' }}>
       {/* Wordmark Header */}
       <div 
         onClick={() => router.push('/iris')} 
@@ -99,8 +99,8 @@ export default function IrisSidebar() {
           padding: '0 16px', 
           height: '64px',
           boxSizing: 'border-box',
-          borderBottom: '1px solid var(--border-paper, #e7e1d4)',
-          background: 'var(--paper-2, #f2ede3)'
+          borderBottom: '1px solid var(--border-primary)',
+          background: 'var(--bg-secondary)'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

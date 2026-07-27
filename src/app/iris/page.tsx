@@ -77,8 +77,10 @@ function IrisDashboardInner() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
   const [isTasksDrawerOpen, setIsTasksDrawerOpen] = useState(false);
+  const [hasStartedChat, setHasStartedChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceOrbRef = useRef<VoiceOrbRef>(null);
+  const isProcessingRef = useRef<boolean>(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -94,41 +96,43 @@ function IrisDashboardInner() {
 
   const processQuery = async (userText: string) => {
     const trimmed = userText.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || isProcessingRef.current) return;
     
-    const userMessage = { role: 'user' as const, content: trimmed };
-    setMessages(prev => [...prev, userMessage]);
-    setQuery('');
-    
-    if (trimmed.startsWith('/agent ')) {
-      const task = trimmed.replace('/agent ', '').trim();
-      setMessages(prev => [...prev, { role: 'assistant', content: task, isAgent: true }]);
-      return;
-    }
-
-    if (trimmed.startsWith('/app ')) {
-      const type = trimmed.replace('/app ', '').trim();
-      const appData = type === 'graph' 
-        ? { type: 'knowledge-graph', data: { nodes: 42, edges: 112 } }
-        : { type: 'data-grid', data: { rows: [{date: '2023-10-01', metric: 'MRR', value: '$12,000'}, {date: '2023-10-02', metric: 'MRR', value: '$12,400'}] } };
-
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        understanding: { 
-          answer: `Here is the embedded interactive ${type} application you requested.`, 
-          confidence: 0.99, 
-          temporal_validity: null,
-          receipts: [],
-          intent: 'render_app',
-          app_data: appData
-        } 
-      }]);
-      return;
-    }
-
+    setHasStartedChat(true);
+    isProcessingRef.current = true;
     setLoading(true);
-
+    
     try {
+      const userMessage = { role: 'user' as const, content: trimmed };
+      setMessages(prev => [...prev, userMessage]);
+      setQuery('');
+      
+      if (trimmed.startsWith('/agent ')) {
+        const task = trimmed.replace('/agent ', '').trim();
+        setMessages(prev => [...prev, { role: 'assistant', content: task, isAgent: true }]);
+        return;
+      }
+
+      if (trimmed.startsWith('/app ')) {
+        const type = trimmed.replace('/app ', '').trim();
+        const appData = type === 'graph' 
+          ? { type: 'knowledge-graph', data: { nodes: 42, edges: 112 } }
+          : { type: 'data-grid', data: { rows: [{date: '2023-10-01', metric: 'MRR', value: '$12,000'}, {date: '2023-10-02', metric: 'MRR', value: '$12,400'}] } };
+
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          understanding: { 
+            answer: `Here is the embedded interactive ${type} application you requested.`, 
+            confidence: 0.99, 
+            temporal_validity: null,
+            receipts: [],
+            intent: 'render_app',
+            app_data: appData
+          } 
+        }]);
+        return;
+      }
+
       const res = await fetch('/api/iris/v0', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -137,26 +141,24 @@ function IrisDashboardInner() {
       
       const data = await res.json();
       setMessages(prev => [...prev, { role: 'assistant', understanding: data.understanding }]);
-      
-      // Trigger TTS to speak the answer
-      if (data.understanding?.answer && voiceOrbRef.current) {
-        voiceOrbRef.current.speak(data.understanding.answer);
-      }
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ Error connecting to IRIS API.' }]);
     } finally {
       setLoading(false);
+      isProcessingRef.current = false;
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+    setHasStartedChat(true);
     processQuery(query);
   };
 
   const handleVoiceTranscribe = (text: string) => {
+    setHasStartedChat(true);
     if (!text.trim()) return;
     processQuery(text);
   };
@@ -170,11 +172,11 @@ function IrisDashboardInner() {
   }
 
   return (
-    <div className={styles.chatRoot}>
-      <div className={styles.sidebarWrapper}>
+    <div className={styles.chatRoot} style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <div className={styles.sidebarWrapper} style={{ background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-primary)' }}>
         <IrisSidebar />
       </div>
-      <div className={styles.mainWrapper}>
+      <div className={styles.mainWrapper} style={{ background: 'var(--bg-primary)' }}>
         <div className={styles.headerWrapper}>
           <IrisHeader />
         </div>
@@ -213,18 +215,18 @@ function IrisDashboardInner() {
                   animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
                 .iris-glass-pill {
-                  background: #ffffff;
-                  border: 1.5px solid #d4cbba;
+                  background: var(--bg-card);
+                  border: 1.5px solid var(--border-primary);
                   border-radius: 32px;
-                  box-shadow: 0 10px 32px rgba(35, 25, 15, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
+                  box-shadow: var(--shadow-sm);
                   transition: all 0.25s ease;
                 }
                 .iris-glass-pill:focus-within {
                   border-color: var(--accent, #bf3d11);
-                  box-shadow: 0 12px 38px rgba(191, 61, 17, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
+                  box-shadow: 0 0 24px rgba(191, 61, 17, 0.25);
                 }
                 .iris-glass-pill textarea::placeholder {
-                  color: #575247;
+                  color: var(--text-muted);
                   font-weight: 500;
                   opacity: 0.9;
                 }
@@ -239,13 +241,13 @@ function IrisDashboardInner() {
           )}
 
           {/* Chat History */}
-          <div style={{ maxWidth: '700px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, paddingBottom: '40px' }}>
+          <div style={{ maxWidth: '700px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1, paddingTop: '20px', paddingBottom: '40px' }}>
             {messages.map((m, i) => (
               <div key={i} className="iris-message-enter" style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 {m.role === 'user' ? (
                   <div style={{
-                    background: 'var(--paper-2, #f2ede3)',
-                    color: 'var(--ink-soft, #3b372f)',
+                    background: 'var(--bg-card-hover)',
+                    color: 'var(--text-primary)',
                     fontFamily: 'var(--font-jetbrains, monospace)',
                     fontSize: '13px',
                     padding: '8px 14px',
@@ -253,8 +255,8 @@ function IrisDashboardInner() {
                     maxWidth: '75%',
                     lineHeight: '1.5',
                     whiteSpace: 'pre-wrap',
-                    border: '1px solid var(--border-paper, #e7e1d4)',
-                    boxShadow: '0 1px 4px rgba(60,40,20,0.03)'
+                    border: '1px solid var(--border-primary)',
+                    boxShadow: 'var(--shadow-sm)'
                   }}>
                     {m.content}
                   </div>
@@ -296,42 +298,47 @@ function IrisDashboardInner() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Floating Suggestion Chips (§06 Spec) */}
-          <div style={{ width: '100%', maxWidth: '700px', margin: '0 auto', display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', zIndex: 10 }}>
-            {[
-              { label: 'what did I commit to', text: 'what did I commit to' },
-              { label: 'what\'s slipping', text: 'what\'s slipping' },
-              { label: 'what changed about EYES', text: 'what changed about EYES' }
-            ].map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => processQuery(chip.text)}
-                style={{
-                  background: '#ffffff',
-                  color: 'var(--accent, #bf3d11)',
-                  border: '1.5px solid #d4cbba',
-                  borderRadius: '16px',
-                  padding: '7px 16px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  fontFamily: 'var(--font-jetbrains, monospace)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 3px 10px rgba(40, 30, 20, 0.05)',
-                  transition: 'all 0.18s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--accent-soft, #f0d9cd)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#ffffff';
-                }}
-              >
-                + {chip.label}
-              </button>
-            ))}
-          </div>
+          {/* Floating Suggestion Chips (§06 Spec) - Only shown initially before conversation or audio interaction starts */}
+          {!hasStartedChat && messages.length === 0 && (
+            <div style={{ width: '100%', maxWidth: '700px', margin: '0 auto', display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', zIndex: 10 }}>
+              {[
+                { label: 'what did I commit to', text: 'what did I commit to' },
+                { label: 'what\'s slipping', text: 'what\'s slipping' },
+                { label: 'what changed about EYES', text: 'what changed about EYES' }
+              ].map((chip, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setHasStartedChat(true);
+                    processQuery(chip.text);
+                  }}
+                  style={{
+                    background: 'var(--bg-card)',
+                    color: 'var(--accent, #bf3d11)',
+                    border: '1.5px solid var(--border-primary)',
+                    borderRadius: '16px',
+                    padding: '7px 16px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    fontFamily: 'var(--font-jetbrains, monospace)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'all 0.18s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--accent-soft)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-card)';
+                  }}
+                >
+                  + {chip.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           <form id="chat-form" onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '700px', margin: '0 auto 0 auto', position: 'sticky', bottom: 0, paddingBottom: '40px', paddingTop: '8px', background: 'transparent' }}>
             <div className="iris-glass-pill" style={{ display: 'flex', padding: '10px 16px 10px 24px', alignItems: 'center' }}>
@@ -347,19 +354,25 @@ function IrisDashboardInner() {
                   }
                 }}
                 placeholder="Message IRIS or type /agent <task>..."
-                style={{ flex: 1, background: 'transparent', border: 'none', color: '#16140f', fontSize: '15px', fontWeight: 500, outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '10px 0', fontFamily: 'inherit', lineHeight: '1.5' }}
+                style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: '15px', fontWeight: 500, outline: 'none', resize: 'none', maxHeight: '200px', minHeight: '24px', padding: '10px 0', fontFamily: 'inherit', lineHeight: '1.5' }}
                 rows={query.split('\n').length > 1 ? Math.min(query.split('\n').length, 8) : 1}
                 disabled={loading}
               />
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', paddingBottom: '2px' }}>
-                <VoiceOrb ref={voiceOrbRef} onTranscribe={handleVoiceTranscribe} />
+                <VoiceOrb 
+                  ref={voiceOrbRef} 
+                  onTranscribe={handleVoiceTranscribe} 
+                  onVoiceStateChange={(isActive) => {
+                    if (isActive) setHasStartedChat(true);
+                  }}
+                />
                 <button 
                   type="submit" 
                   disabled={loading || !query.trim()}
                   style={{ 
-                    background: query.trim() ? 'var(--accent, #bf3d11)' : '#e8e2d5', 
-                    color: query.trim() ? '#ffffff' : '#4a4438', 
-                    border: query.trim() ? 'none' : '1px solid #c8beaa', 
+                    background: query.trim() ? 'var(--accent, #bf3d11)' : 'var(--bg-card-hover)', 
+                    color: query.trim() ? '#ffffff' : 'var(--text-muted)', 
+                    border: query.trim() ? 'none' : '1px solid var(--border-primary)', 
                     borderRadius: '50%', 
                     width: '40px', 
                     height: '40px', 
@@ -377,10 +390,10 @@ function IrisDashboardInner() {
                 <button
                   type="button"
                   onClick={() => setIsTasksDrawerOpen(true)}
-                  style={{ background: '#e8e2d5', color: '#2c2824', border: '1px solid #c8beaa', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  style={{ background: 'var(--bg-card-hover)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s ease' }}
                   title="Cloud Tasks"
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent, #bf3d11)'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = 'var(--accent, #bf3d11)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#e8e2d5'; e.currentTarget.style.color = '#2c2824'; e.currentTarget.style.borderColor = '#c8beaa'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-primary)'; }}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 </button>

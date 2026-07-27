@@ -33,8 +33,8 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
       className={styles.header}
       style={{
         height: '64px',
-        background: 'var(--paper-2, #f2ede3)',
-        borderBottom: '1px solid var(--border-paper, #e7e1d4)',
+        background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-primary)',
         boxShadow: 'none'
       }}
     >

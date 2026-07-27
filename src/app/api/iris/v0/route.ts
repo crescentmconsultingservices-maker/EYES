@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
 
+const GREETINGS = new Set(['hi', 'hello', 'hey', 'hi there', 'hello there', 'hey there', 'good morning', 'good evening', 'good afternoon', 'help', 'who are you', 'what are you']);
+
+function isGreeting(q: string): boolean {
+  const clean = q.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  return GREETINGS.has(clean) || clean === 'hi' || clean === 'hello' || clean === 'hey';
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -18,16 +25,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 1. Get embedding for the natural language query
-    const embedResult = await invokeModel({
-      capability: 'embed',
-      messages: [{ role: 'user', content: query }],
-      capture: false,
-    });
-    
+    // 0. Instant Fast-Path for Simple Greetings (~30ms)
+    if (isGreeting(query)) {
+      return NextResponse.json({
+        understanding: {
+          answer: "Hey there! How's it going? How can I help you today?",
+          confidence: 1.0,
+          temporal_validity: {
+            believed_since: new Date().toISOString(),
+            is_current: true
+          },
+          receipts: [],
+          intent: 'none',
+          intent_data: []
+        }
+      }, { status: 200 });
+    }
+
+    // 1. Get embedding for natural language query with quick timeout safeguard
     let embedding: number[] | null = null;
-    if (embedResult && typeof embedResult === 'object' && 'embedding' in embedResult) {
-      embedding = embedResult.embedding as number[];
+    try {
+      const embedPromise = invokeModel({
+        capability: 'embed',
+        messages: [{ role: 'user', content: query }],
+        capture: false,
+      });
+
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1800));
+      const embedResult = await Promise.race([embedPromise, timeoutPromise]) as any;
+
+      if (embedResult && typeof embedResult === 'object' && 'embedding' in embedResult) {
+        embedding = embedResult.embedding as number[];
+      }
+    } catch (e) {
+      console.warn('[IRIS API] Embedding fallback activated:', e);
     }
 
     // 2. Perform hybrid search to retrieve context and receipts
