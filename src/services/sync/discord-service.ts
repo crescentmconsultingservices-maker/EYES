@@ -116,6 +116,9 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
     const dmLimit = depth === 'deep' ? 20 : 5;
     const messageLimit = depth === 'deep' ? 100 : 20;
 
+    const { getPrivacyExclusions } = await import('@/utils/privacy/filter');
+    const excludedGuilds = await getPrivacyExclusions(supabase, userId, 'discord', 'discord_server');
+
     const activeDMs = dmChannels.slice(0, dmLimit);
 
     const messagePromises = activeDMs.map(async (channel) => {
@@ -141,6 +144,9 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
     const guildHistories: Array<{ guild: DiscordGuild; channel: DiscordGuildChannel; messages: DiscordMessage[] }> = [];
 
     for (const guild of discordGuilds.slice(0, guildLimit)) {
+      if (excludedGuilds.has(guild.id.toLowerCase()) || excludedGuilds.has(guild.name.toLowerCase())) {
+        continue;
+      }
       const channelsResponse = await fetch(`https://discord.com/api/v10/guilds/${guild.id}/channels`, {
         headers: { Authorization: `Bearer ${accessToken}` },
         cache: 'no-store',
@@ -199,6 +205,9 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
     ];
 
     for (const guild of discordGuilds) {
+      if (excludedGuilds.has(guild.id.toLowerCase()) || excludedGuilds.has(guild.name.toLowerCase())) {
+        continue;
+      }
       events.push({
         user_id: userId,
         platform: 'discord',

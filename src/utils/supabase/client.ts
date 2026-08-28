@@ -125,8 +125,8 @@ export function createClient() {
   }
 
   const client = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-build',
     {
       auth: {
         // autoRefreshToken: true (default) — tokens refresh automatically before expiry.

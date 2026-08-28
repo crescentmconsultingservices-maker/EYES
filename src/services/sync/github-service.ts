@@ -109,7 +109,15 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
 
   const now = new Date().toISOString();
 
-  const rawEvents = await Promise.all(allRepos.map(async (repo) => {
+  const { getPrivacyExclusions } = await import('@/utils/privacy/filter');
+  const excludedRepos = await getPrivacyExclusions(supabase, userId, 'github', 'github_repo');
+
+  const rawEventsRaw = await Promise.all(allRepos.map(async (repo) => {
+    // Privacy Shield: Drop excluded repositories
+    if (excludedRepos.has(repo.full_name.toLowerCase()) || excludedRepos.has(repo.name.toLowerCase())) {
+      return null;
+    }
+
     const description = repo.description || 'No description provided.';
     const content = [
       description,
@@ -150,6 +158,8 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
       flag_reason: risk.reasons[0] || null,
     };
   }));
+
+  const rawEvents = rawEventsRaw.filter(Boolean) as any[];
 
   await upsertRawEventsSafely(supabase, rawEvents);
   console.log(`[GitHub Sync] Upserted ${rawEvents.length} events for user ${userId}`);

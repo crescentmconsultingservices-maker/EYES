@@ -91,16 +91,8 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
     const messageLimit = depth === 'deep' ? 100 : 20;
 
     // Fetch privacy exclusions from the database table (GDPR Privacy Shield Integration)
-    const { data: dbExclusions } = await supabase
-      .from('privacy_excludes')
-      .select('exclude_value')
-      .eq('user_id', userId)
-      .eq('connector_id', 'slack')
-      .eq('exclude_type', 'slack_channel');
-
-    const excludedChannels = new Set(
-      (dbExclusions ?? []).map((e: { exclude_value: string }) => e.exclude_value.toLowerCase())
-    );
+    const { getPrivacyExclusions } = await import('@/utils/privacy/filter');
+    const excludedChannels = await getPrivacyExclusions(supabase, userId, 'slack', 'slack_channel');
 
     const activeChannels = allConversations
       .filter((conversation) => {

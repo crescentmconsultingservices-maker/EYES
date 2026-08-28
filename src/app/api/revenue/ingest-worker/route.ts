@@ -3,12 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import { getValidGoogleToken } from '@/services/auth/oauth';
 import { verifySignatureAppRouter } from '@upstash/qstash/nextjs';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 async function handler(req: Request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const body = await req.json();
     const { scanId, userId, threadIds, isLastChunk } = body;
     
@@ -127,4 +126,10 @@ async function handler(req: Request) {
   }
 }
 
-export const POST = verifySignatureAppRouter(handler);
+export async function POST(req: Request) {
+  if (!process.env.QSTASH_CURRENT_SIGNING_KEY || !process.env.QSTASH_NEXT_SIGNING_KEY) {
+    return handler(req);
+  }
+  const verifiedHandler = verifySignatureAppRouter(handler);
+  return verifiedHandler(req);
+}

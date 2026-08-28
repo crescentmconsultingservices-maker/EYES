@@ -127,16 +127,10 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
     }
 
     // Fetch privacy exclusions from database table (GDPR Privacy Shield Integration)
-    const { data: dbExclusions } = await supabase
-      .from('privacy_excludes')
-      .select('exclude_value')
-      .eq('user_id', userId)
-      .eq('connector_id', 'gmail')
-      .eq('exclude_type', 'email_address');
-
-    if (dbExclusions && dbExclusions.length > 0) {
-      const dbExcludedSenders = dbExclusions.map((e: { exclude_value: string }) => e.exclude_value.toLowerCase());
-      excludedSenders = Array.from(new Set([...excludedSenders, ...dbExcludedSenders]));
+    const { getPrivacyExclusions } = await import('@/utils/privacy/filter');
+    const dbExcludedSenders = await getPrivacyExclusions(supabase, userId, 'gmail', 'email_address');
+    if (dbExcludedSenders.size > 0) {
+      excludedSenders = Array.from(new Set([...excludedSenders, ...Array.from(dbExcludedSenders)]));
     }
 
     // 1. Get existing sync status to find the cursor

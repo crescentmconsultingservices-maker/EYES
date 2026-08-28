@@ -2,16 +2,14 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getValidGoogleToken } from '@/services/auth/oauth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-const SCAN_WINDOW_DAYS = 182;
-const BATCH_PAGE_SIZE = 100;
-const MAX_MAILBOX_THREADS = 20000;
-
 export async function POST(req: Request) {
   try {
+    const SCAN_WINDOW_DAYS = 182;
+    const BATCH_PAGE_SIZE = 100;
+    const MAX_MAILBOX_THREADS = 20000;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const authHeader = req.headers.get('authorization');
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -2,12 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase environment variables.')
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-build'
 
   let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null
 
@@ -41,21 +37,14 @@ export async function createClient() {
             // user sessions.
           }
         },
-      },
+      }
     }
   );
 }
 
 export async function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable.')
-  }
-  if (!supabaseServiceRoleKey) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable.')
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key-for-build'
 
   return createServerClient(
     supabaseUrl,

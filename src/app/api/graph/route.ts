@@ -3,13 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export async function GET(request: Request) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
     // In a real app, we'd get the user_id from the session. 
     // Since we know the test user is thomasshelby251890@gmail.com, we can hardcode for testing, 
     // or allow a query param.
