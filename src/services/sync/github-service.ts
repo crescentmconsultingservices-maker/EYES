@@ -24,6 +24,16 @@ function formatDate(input: string | null) {
 export async function executeGithubSync(actor: SyncActor, mode: string = 'delta') {
   const { supabase, userId, userEmail, userName } = actor;
 
+  // Fetch user profile for B2B multi-tenant organization check
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('account_type, organization_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const isOrg = profile?.account_type === 'organization' && profile?.organization_id;
+  const orgId = isOrg ? profile.organization_id : null;
+
   // --- DATA LOCKDOWN GUARD ---
   const { data: activeAudit } = await supabase
     .from('reputation_audits')
@@ -164,6 +174,8 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
       content,
       author: userEmail || userName || 'GitHub',
       timestamp: formatDate(repo.updated_at || repo.pushed_at),
+      scope: isOrg ? 'organizational' : 'personal',
+      organization_id: orgId,
       metadata: {
         html_url: repo.html_url,
         language: repo.language,

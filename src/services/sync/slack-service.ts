@@ -48,6 +48,16 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
       .eq('platform', 'slack')
       .maybeSingle();
 
+    // Fetch user profile for B2B multi-tenant organization check
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('account_type, organization_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const isOrg = profile?.account_type === 'organization' && profile?.organization_id;
+    const orgId = isOrg ? profile.organization_id : null;
+
     // --- DATA LOCKDOWN GUARD ---
     // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
     const { data: activeAudit } = await supabase
@@ -203,6 +213,8 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
           is_flagged: risk.flagged,
           flag_severity: risk.severity,
           flag_reason: risk.reasons.join(', '),
+          scope: isOrg ? 'organizational' : 'personal',
+          organization_id: orgId,
           metadata: {
             ...msg,
             channel_id: channel.id,
