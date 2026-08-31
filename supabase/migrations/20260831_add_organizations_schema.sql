@@ -55,3 +55,120 @@ USING (
           AND role IN ('owner', 'admin')
     )
 );
+
+-- ============================================================================
+-- MULTI-TENANT SEARCH FUNCTION UPDATES
+-- ============================================================================
+
+-- Recreate hybrid_search at 1024 dims with multi-tenant support
+CREATE OR REPLACE FUNCTION hybrid_search(
+  query_text      TEXT,
+  query_embedding vector(1024),
+  match_count     INT,
+  user_id_arg     UUID,
+  start_date      TIMESTAMPTZ DEFAULT NULL,
+  end_date        TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS TABLE (
+  id              UUID,
+  platform        TEXT,
+  source_id       TEXT,
+  event_type      TEXT,
+  title           TEXT,
+  content         TEXT,
+  author          TEXT,
+  source_url      TEXT,
+  event_timestamp TIMESTAMPTZ,
+  metadata        JSONB,
+  is_flagged      BOOLEAN,
+  similarity      FLOAT,
+  keyword_rank    FLOAT,
+  combined_score  FLOAT
+)
+LANGUAGE sql
+AS $$
+  WITH semantic_matches AS (
+    SELECT
+      m.id,
+      (1 - (m.embedding <=> query_embedding))::FLOAT AS similarity
+    FROM memories m
+    WHERE (m.user_id = user_id_arg OR (m.organization_id = (SELECT organization_id FROM public.user_profiles WHERE user_id = user_id_arg) AND m.scope = 'organizational'))
+      AND m.embedding IS NOT NULL
+      AND (start_date IS NULL OR m.timestamp >= start_date)
+      AND (end_date   IS NULL OR m.timestamp <= end_date)
+    ORDER BY m.embedding <=> query_embedding
+    LIMIT 50
+  ),
+  keyword_matches AS (
+    SELECT
+      m.id,
+      ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT AS keyword_rank
+    FROM memories m
+    WHERE (m.user_id = user_id_arg OR (m.organization_id = (SELECT organization_id FROM public.user_profiles WHERE user_id = user_id_arg) AND m.scope = 'organizational'))
+      AND m.fts @@ websearch_to_tsquery('english', query_text)
+      AND (start_date IS NULL OR m.timestamp >= start_date)
+      AND (end_date   IS NULL OR m.timestamp <= end_date)
+    ORDER BY ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text)) DESC
+    LIMIT 50
+  )
+  SELECT
+    m.id,
+    m.platform,
+    m.source_id,
+    m.event_type,
+    m.title,
+    m.content,
+    m.author,
+    m.source_url,
+    m.timestamp AS event_timestamp,
+    m.metadata,
+    m.is_flagged,
+    COALESCE(sm.similarity, (1 - (m.embedding <=> query_embedding))::FLOAT) AS similarity,
+    COALESCE(km.keyword_rank, ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT) AS keyword_rank,
+    (
+      COALESCE(sm.similarity, (1 - (m.embedding <=> query_embedding))::FLOAT) * 0.7
+      + COALESCE(km.keyword_rank, ts_rank_cd(m.fts, websearch_to_tsquery('english', query_text))::FLOAT) * 0.3
+    )::FLOAT AS combined_score
+  FROM memories m
+  LEFT JOIN semantic_matches sm ON m.id = sm.id
+  LEFT JOIN keyword_matches km ON m.id = km.id
+  WHERE sm.id IS NOT NULL OR km.id IS NOT NULL
+  ORDER BY combined_score DESC
+  LIMIT match_count;
+$$;
+
+-- Recreate match_memories at 1024 dims with multi-tenant support
+CREATE OR REPLACE FUNCTION match_memories(
+  query_embedding vector(1024),
+  match_threshold FLOAT,
+  match_count     INT,
+  user_id_arg     UUID
+)
+RETURNS TABLE (
+  id              UUID,
+  platform        TEXT,
+  title           TEXT,
+  content         TEXT,
+  event_timestamp TIMESTAMPTZ,
+  similarity      FLOAT
+)
+LANGUAGE sql
+AS $$
+  SELECT
+    m.id,
+    m.platform,
+    m.title,
+    m.content,
+    m.timestamp  AS event_timestamp,
+    (1 - (m.embedding <=> query_embedding))::FLOAT AS similarity
+  FROM memories m
+  WHERE (m.user_id = user_id_arg OR (m.organization_id = (SELECT organization_id FROM public.user_profiles WHERE user_id = user_id_arg) AND m.scope = 'organizational'))
+    AND m.embedding IS NOT NULL
+    AND (1 - (m.embedding <=> query_embedding)) > match_threshold
+  ORDER BY similarity DESC
+  LIMIT match_count;
+$$;
+
+-- Grant execution
+GRANT EXECUTE ON FUNCTION hybrid_search TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION match_memories TO authenticated, service_role;
