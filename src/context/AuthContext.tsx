@@ -26,6 +26,8 @@ export interface User {
   memoriesIndexed: number;
   behaviorLoggingConsent: boolean;
   onboardingCompleted: boolean;
+  accountType: 'individual' | 'organization';
+  organizationId: string | null;
 }
 
 export type AuthResult = {
@@ -61,6 +63,8 @@ type UserProfileRow = {
   memories_indexed: number | null;
   behavior_logging_consent: boolean | null;
   onboarding_completed: boolean | null;
+  account_type: 'individual' | 'organization' | null;
+  organization_id: string | null;
 };
 
 type DBResult<T> = {
@@ -166,6 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memoriesIndexed: 0,
         behaviorLoggingConsent: loadCachedProfile()?.behaviorLoggingConsent ?? true,
         onboardingCompleted: loadCachedProfile()?.onboardingCompleted ?? false,
+        accountType: loadCachedProfile()?.accountType || 'individual',
+        organizationId: loadCachedProfile()?.organizationId || null,
       };
     }
 
@@ -185,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
             supabase
               .from('user_profiles')
-              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
+              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
               .eq('user_id', authUser.id)
               .maybeSingle()
               .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -203,6 +209,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               memoriesIndexed: fetchResult.data.memories_indexed || 0,
               behaviorLoggingConsent: fetchResult.data.behavior_logging_consent ?? true,
               onboardingCompleted: fetchResult.data.onboarding_completed ?? false,
+              accountType: fetchResult.data.account_type || 'individual',
+              organizationId: fetchResult.data.organization_id || null,
             };
             saveCachedProfile(fresh);
             setUser(fresh); // M2: update live UI with fresh data (was only updating cache)
@@ -217,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
-          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
           .eq('user_id', authUser.id)
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -240,6 +248,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           memoriesIndexed: profile.memories_indexed || 0,
           behaviorLoggingConsent: profile.behavior_logging_consent ?? true,
           onboardingCompleted: profile.onboarding_completed ?? false,
+          accountType: profile.account_type || 'individual',
+          organizationId: profile.organization_id || null,
         };
         saveCachedProfile(result); // ← persist for instant load next time
         return result;
@@ -261,6 +271,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           memoriesIndexed: cached?.memoriesIndexed || 0,
           behaviorLoggingConsent: cached?.behaviorLoggingConsent ?? true,
           onboardingCompleted: cached?.onboardingCompleted ?? false,
+          accountType: cached?.accountType || 'individual',
+          organizationId: cached?.organizationId || null,
         };
       }
 
@@ -275,13 +287,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memories_indexed: 0,
         behavior_logging_consent: true,
         onboarding_completed: false,
+        account_type: 'individual',
+        organization_id: null,
       };
 
       const { data: inserted } = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
           .upsert(newProfile, { onConflict: 'user_id' })
-          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
         5000,
@@ -300,6 +314,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memoriesIndexed: 0,
         behaviorLoggingConsent: final.behavior_logging_consent ?? true,
         onboardingCompleted: final.onboarding_completed ?? false,
+        accountType: final.account_type || 'individual',
+        organizationId: final.organization_id || null,
       };
     } catch (err) {
       syncInProgressRef.current = false;
@@ -315,6 +331,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memoriesIndexed: 0,
         behaviorLoggingConsent: true,
         onboardingCompleted: false,
+        accountType: 'individual',
+        organizationId: null,
       };
     }
   }, [supabase]);
@@ -490,17 +508,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   }, [supabase]);
 
-  /**
-   * Updates mutable user profile fields.
-   * L4 note: Only `name` (and avatar initial if it's a single char) are writable here.
-   * Fields `plan`, `joinedDate`, `memoriesIndexed` are read-only — managed server-side.
-   */
   const updateUser = useCallback(async (updates: Partial<User>): Promise<AuthResult> => {
 
     if (!user) return { success: false, message: 'Not authenticated' };
 
     try {
-      const dbUpdates: { name?: string; avatar?: string; behavior_logging_consent?: boolean; onboarding_completed?: boolean } = {};
+      const dbUpdates: { 
+        name?: string; 
+        avatar?: string; 
+        behavior_logging_consent?: boolean; 
+        onboarding_completed?: boolean;
+        account_type?: 'individual' | 'organization';
+        organization_id?: string | null;
+      } = {};
       const authUpdates: { name?: string } = {};
 
       if (updates.name) {
@@ -514,6 +534,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (updates.onboardingCompleted !== undefined) {
         dbUpdates.onboarding_completed = updates.onboardingCompleted;
+      }
+
+      if (updates.accountType !== undefined) {
+        dbUpdates.account_type = updates.accountType;
+      }
+
+      if (updates.organizationId !== undefined) {
+        dbUpdates.organization_id = updates.organizationId;
       }
       
       // If current avatar is just an initial, update it to match the new name's initial
@@ -534,7 +562,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('user_profiles')
         .update(dbUpdates)
         .eq('user_id', user.id)
-        .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed')
+        .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
         .single();
 
       if (dbError) throw dbError;
@@ -549,6 +577,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           memoriesIndexed: confirmed.memories_indexed || prev.memoriesIndexed,
           behaviorLoggingConsent: confirmed.behavior_logging_consent ?? prev.behaviorLoggingConsent,
           onboardingCompleted: confirmed.onboarding_completed ?? prev.onboardingCompleted,
+          accountType: confirmed.account_type || prev.accountType,
+          organizationId: confirmed.organization_id || prev.organizationId,
         } : null);
       }
       

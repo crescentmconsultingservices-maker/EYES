@@ -82,3 +82,60 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Invitation ID is required' }, { status: 400 });
+    }
+
+    // Find the invitation
+    const { data: invitation, error: inviteErr } = await supabase
+      .from('organization_invitations')
+      .select('organization_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (inviteErr || !invitation) {
+      return NextResponse.json({ error: 'Invitation not found' }, { status: 404 });
+    }
+
+    // Verify user is owner/admin of that organization
+    const { data: membership, error: membershipErr } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', invitation.organization_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (membershipErr || !membership || !['owner', 'admin'].includes(membership.role)) {
+      return NextResponse.json({ error: 'Forbidden: Admin or Owner privileges required' }, { status: 403 });
+    }
+
+    // Delete the invitation
+    const { error: deleteErr } = await supabase
+      .from('organization_invitations')
+      .delete()
+      .eq('id', id);
+
+    if (deleteErr) {
+      console.error('Error deleting invitation:', deleteErr);
+      return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('Revoke Invite API Error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
