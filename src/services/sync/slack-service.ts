@@ -48,11 +48,28 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
       .eq('platform', 'slack')
       .maybeSingle();
 
-    const channelCursors = (currentStatus?.metadata?.channel_cursors || {}) as Record<string, string>;
+    // --- DATA LOCKDOWN GUARD ---
+    // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
+    const { data: activeAudit } = await supabase
+      .from('reputation_audits')
+      .select('id, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'analysis', 'generating'])
+      .maybeSingle();
+
+    if (activeAudit) {
+      return { 
+        status: 423, 
+        error: 'System Busy: Reputation Audit in progress.', 
+        detail: 'Ingestion is paused to ensure data snapshot integrity for your current audit.' 
+      }; // 423 Locked
+    }
+
+    const channelCursors = (currentStatus?.metadata?.channel_cursors || {}) as Record<string, string | { oldest?: string; newest?: string }>;
 
     // 2. Get Valid Token
     const accessToken = await getValidSlackToken(supabase, userId);
-    if (!accessToken) return { status: 404, error:  'No Slack token found'  };
+    if (!accessToken) return { status: 404, error: 'No Slack token found' };
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
@@ -107,21 +124,45 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
       .slice(0, channelLimit);
     const activeConversations = [...activeChannels, ...activeDMs];
     
-    // 4. Fetch History for each channel (using cursors for deep sync)
+    // 4. Fetch History for each channel (using cursors for deep sync and delta pagination)
     const historyPromises = activeConversations.map(async (channel) => {
-      // Use the stored timestamp (cursor) as the 'latest' parameter to pull OLDER messages
-      const latest = channelCursors[channel.id] || null;
+      const cursorVal = channelCursors[channel.id] || null;
+      let oldestCursor: string | null = null;
+      let newestCursor: string | null = null;
+
+      if (cursorVal) {
+        if (typeof cursorVal === 'object' && cursorVal !== null) {
+          oldestCursor = cursorVal.oldest || null;
+          newestCursor = cursorVal.newest || null;
+        } else {
+          // Legacy string cursor: treated as oldest for backfill history
+          oldestCursor = cursorVal;
+          newestCursor = cursorVal;
+        }
+      }
+
       const fetchUrl = new URL('https://slack.com/api/conversations.history');
       fetchUrl.searchParams.set('channel', channel.id);
       fetchUrl.searchParams.set('limit', messageLimit.toString());
-      if (latest) fetchUrl.searchParams.set('latest', latest);
+
+      if (mode === 'delta' && newestCursor) {
+        fetchUrl.searchParams.set('oldest', newestCursor);
+      } else if (mode === 'backfill' && oldestCursor) {
+        fetchUrl.searchParams.set('latest', oldestCursor);
+      }
 
       const resp = await fetch(fetchUrl.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
         cache: 'no-store',
       });
       const data = (await resp.json()) as SlackHistoryResponse;
-      return { channel, messages: data.ok ? (data.messages || []) : [], hasMore: Boolean(data.has_more) };
+      return { 
+        channel, 
+        messages: data.ok ? (data.messages || []) : [], 
+        hasMore: Boolean(data.has_more),
+        oldestCursor,
+        newestCursor
+      };
     });
 
     const histories = await Promise.all(historyPromises);
@@ -131,8 +172,11 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
     const updatedCursors = { ...channelCursors };
     let hasMoreOverall = false;
 
-    for (const { channel, messages, hasMore } of histories) {
+    for (const { channel, messages, hasMore, oldestCursor, newestCursor } of histories) {
       if (hasMore) hasMoreOverall = true;
+
+      let batchOldest: string | null = oldestCursor;
+      let batchNewest: string | null = newestCursor;
 
       for (const msg of messages) {
         if (!msg.text || msg.subtype === 'bot_message' || !msg.ts) continue;
@@ -168,10 +212,20 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
           }
         });
         
-        // Update the cursor for this channel to the oldest message in this batch
-        if (!updatedCursors[channel.id] || parseFloat(msg.ts) < parseFloat(updatedCursors[channel.id])) {
-          updatedCursors[channel.id] = msg.ts;
+        const tsVal = msg.ts;
+        if (!batchOldest || parseFloat(tsVal) < parseFloat(batchOldest)) {
+          batchOldest = tsVal;
         }
+        if (!batchNewest || parseFloat(tsVal) > parseFloat(batchNewest)) {
+          batchNewest = tsVal;
+        }
+      }
+
+      if (batchOldest || batchNewest) {
+        updatedCursors[channel.id] = {
+          oldest: batchOldest || undefined,
+          newest: batchNewest || undefined,
+        };
       }
     }
 

@@ -20,6 +20,23 @@ type CalendarEventsResponse = {
 export async function executeGoogleCalendarSync(actor: SyncActor, mode: string = 'delta'): Promise<SyncResult> {
   try { const { supabase, userId } = actor;
 
+    // --- DATA LOCKDOWN GUARD ---
+    // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
+    const { data: activeAudit } = await supabase
+      .from('reputation_audits')
+      .select('id, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'analysis', 'generating'])
+      .maybeSingle();
+
+    if (activeAudit) {
+      return { 
+        status: 423, 
+        error: 'System Busy: Reputation Audit in progress.', 
+        detail: 'Ingestion is paused to ensure data snapshot integrity for your current audit.' 
+      }; // 423 Locked
+    }
+
     // 1. Get existing sync status to find the cursor
     const { data: currentStatus } = await supabase
       .from('sync_status')

@@ -83,6 +83,23 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
   try {
     const { supabase, userId } = actor;
 
+    // --- DATA LOCKDOWN GUARD ---
+    // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
+    const { data: activeAudit } = await supabase
+      .from('reputation_audits')
+      .select('id, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'analysis', 'generating'])
+      .maybeSingle();
+
+    if (activeAudit) {
+      return { 
+        status: 423, 
+        error: 'System Busy: Reputation Audit in progress.', 
+        detail: 'Ingestion is paused to ensure data snapshot integrity for your current audit.' 
+      }; // 423 Locked
+    }
+
     // 1. Get existing sync status to find the cursor
     const { data: currentStatus } = await supabase
       .from('sync_status')
@@ -166,33 +183,39 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
       }
     }
 
-    const events = await Promise.all(allResults.map(async (item) => {
-      const title = extractTitle(item);
-      const pageContent = item.object === 'page'
-        ? await fetchNotionPageContent(accessToken, item.id)
-        : '';
-      const content = `${title}\n${pageContent}\n${item.url || ''}`.trim().slice(0, 12000);
-      const risk = await scoreNotionEvent({ title, content });
+    const events = [];
+    const CONCURRENCY_LIMIT = 5;
+    for (let i = 0; i < allResults.length; i += CONCURRENCY_LIMIT) {
+      const chunk = allResults.slice(i, i + CONCURRENCY_LIMIT);
+      const chunkEvents = await Promise.all(chunk.map(async (item) => {
+        const title = extractTitle(item);
+        const pageContent = item.object === 'page'
+          ? await fetchNotionPageContent(accessToken, item.id)
+          : '';
+        const content = `${title}\n${pageContent}\n${item.url || ''}`.trim().slice(0, 12000);
+        const risk = await scoreNotionEvent({ title, content });
 
-      return {
-        user_id: userId,
-        platform: 'notion',
-        platform_id: item.id,
-        event_type: item.object,
-        title,
-        content,
-        author: 'Notion',
-        timestamp: item.last_edited_time ? new Date(item.last_edited_time).toISOString() : new Date().toISOString(),
-        metadata: {
-          object: item.object,
-          url: item.url,
-          page_content_indexed: pageContent.length > 0,
-        },
-        is_flagged: risk.flagged,
-        flag_severity: risk.severity,
-        flag_reason: risk.reasons.join(', '),
-      };
-    }));
+        return {
+          user_id: userId,
+          platform: 'notion',
+          platform_id: item.id,
+          event_type: item.object,
+          title,
+          content,
+          author: 'Notion',
+          timestamp: item.last_edited_time ? new Date(item.last_edited_time).toISOString() : new Date().toISOString(),
+          metadata: {
+            object: item.object,
+            url: item.url,
+            page_content_indexed: pageContent.length > 0,
+          },
+          is_flagged: risk.flagged,
+          flag_severity: risk.severity,
+          flag_reason: risk.reasons.join(', '),
+        };
+      }));
+      events.push(...chunkEvents);
+    }
 
     await upsertRawEventsSafely(supabase, events);
 

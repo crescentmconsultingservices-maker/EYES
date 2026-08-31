@@ -5,8 +5,10 @@ import { getValidDiscordToken } from '@/services/auth/oauth';
 import { scoreDiscordEvent } from '@/utils/risk/scorer';
 
 type DiscordChannelCursor = {
-  before_id: string;
-  oldest_ts: string;
+  before_id?: string;
+  oldest_ts?: string;
+  after_id?: string;
+  newest_ts?: string;
 };
 
 type DiscordChannelCursorState = Record<string, string | DiscordChannelCursor>;
@@ -58,7 +60,7 @@ function readCursorEntry(value: string | DiscordChannelCursor | undefined): Disc
       oldest_ts: '',
     };
   }
-  if (!value.before_id) return null;
+  if (!value.before_id && !value.after_id) return null;
   return value;
 }
 
@@ -66,6 +68,23 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
   const { supabase, userId } = actor;
 
   try {
+    // --- DATA LOCKDOWN GUARD ---
+    // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
+    const { data: activeAudit } = await supabase
+      .from('reputation_audits')
+      .select('id, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'analysis', 'generating'])
+      .maybeSingle();
+
+    if (activeAudit) {
+      return { 
+        status: 423, 
+        error: 'System Busy: Reputation Audit in progress.', 
+        detail: 'Ingestion is paused to ensure data snapshot integrity for your current audit.' 
+      }; // 423 Locked
+    }
+
     // 1. Get existing sync status to retrieve channel cursors from metadata
     const { data: currentStatus } = await supabase
       .from('sync_status')
@@ -78,7 +97,7 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
 
     // 2. Get Valid Token
     const accessToken = await getValidDiscordToken(supabase, userId);
-    if (!accessToken) return { status: 404, error:  'No Discord token found or refresh failed'  };
+    if (!accessToken) return { status: 404, error: 'No Discord token found or refresh failed' };
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
@@ -122,11 +141,15 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
     const activeDMs = dmChannels.slice(0, dmLimit);
 
     const messagePromises = activeDMs.map(async (channel) => {
-      // Use the stored message ID as 'before' to pull OLDER messages
-      const beforeId = readCursorEntry(channelCursors[channel.id])?.before_id || null;
+      const cursor = readCursorEntry(channelCursors[channel.id]);
       const fetchUrl = new URL(`https://discord.com/api/v10/channels/${channel.id}/messages`);
       fetchUrl.searchParams.set('limit', messageLimit.toString());
-      if (beforeId) fetchUrl.searchParams.set('before', beforeId);
+      
+      if (mode === 'delta' && cursor?.after_id) {
+        fetchUrl.searchParams.set('after', cursor.after_id);
+      } else if (mode === 'backfill' && cursor?.before_id) {
+        fetchUrl.searchParams.set('before', cursor.before_id);
+      }
 
       const resp = await fetch(fetchUrl.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -163,12 +186,15 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
 
       for (const channel of textChannels) {
         const guildCursorKey = `guild:${guild.id}:channel:${channel.id}`;
-        const beforeId = readCursorEntry(channelCursors[guildCursorKey])?.before_id || null;
+        const cursor = readCursorEntry(channelCursors[guildCursorKey]);
 
         const messagesUrl = new URL(`https://discord.com/api/v10/channels/${channel.id}/messages`);
         messagesUrl.searchParams.set('limit', String(guildMessageLimit));
-        if (beforeId) {
-          messagesUrl.searchParams.set('before', beforeId);
+        
+        if (mode === 'delta' && cursor?.after_id) {
+          messagesUrl.searchParams.set('after', cursor.after_id);
+        } else if (mode === 'backfill' && cursor?.before_id) {
+          messagesUrl.searchParams.set('before', cursor.before_id);
         }
 
         const messagesResponse = await fetch(messagesUrl.toString(), {
@@ -259,14 +285,30 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
           metadata: { ...msg, channel_id: channel.id }
         });
 
-        // Update cursor using oldest timestamp observed, with corresponding before_id.
+        // Update cursor using oldest timestamp observed for backfill, and newest for delta.
         const existing = readCursorEntry(updatedCursors[channel.id]);
-        if (!existing || !existing.oldest_ts || new Date(msg.timestamp).getTime() < new Date(existing.oldest_ts).getTime()) {
-          updatedCursors[channel.id] = {
-            before_id: msg.id,
-            oldest_ts: msg.timestamp,
-          };
+        let nextBeforeId = existing?.before_id || msg.id;
+        let nextOldestTs = existing?.oldest_ts || msg.timestamp;
+        let nextAfterId = existing?.after_id || msg.id;
+        let nextNewestTs = existing?.newest_ts || msg.timestamp;
+
+        const currentMsgTime = new Date(msg.timestamp).getTime();
+
+        if (!existing?.oldest_ts || currentMsgTime < new Date(existing.oldest_ts).getTime()) {
+          nextBeforeId = msg.id;
+          nextOldestTs = msg.timestamp;
         }
+        if (!existing?.newest_ts || currentMsgTime > new Date(existing.newest_ts).getTime()) {
+          nextAfterId = msg.id;
+          nextNewestTs = msg.timestamp;
+        }
+
+        updatedCursors[channel.id] = {
+          before_id: nextBeforeId,
+          oldest_ts: nextOldestTs,
+          after_id: nextAfterId,
+          newest_ts: nextNewestTs,
+        };
       }
     }
 
@@ -305,12 +347,28 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
 
         const cursorKey = `guild:${guild.id}:channel:${channel.id}`;
         const existing = readCursorEntry(updatedCursors[cursorKey]);
-        if (!existing || !existing.oldest_ts || new Date(msg.timestamp).getTime() < new Date(existing.oldest_ts).getTime()) {
-          updatedCursors[cursorKey] = {
-            before_id: msg.id,
-            oldest_ts: msg.timestamp,
-          };
+        let nextBeforeId = existing?.before_id || msg.id;
+        let nextOldestTs = existing?.oldest_ts || msg.timestamp;
+        let nextAfterId = existing?.after_id || msg.id;
+        let nextNewestTs = existing?.newest_ts || msg.timestamp;
+
+        const currentMsgTime = new Date(msg.timestamp).getTime();
+
+        if (!existing?.oldest_ts || currentMsgTime < new Date(existing.oldest_ts).getTime()) {
+          nextBeforeId = msg.id;
+          nextOldestTs = msg.timestamp;
         }
+        if (!existing?.newest_ts || currentMsgTime > new Date(existing.newest_ts).getTime()) {
+          nextAfterId = msg.id;
+          nextNewestTs = msg.timestamp;
+        }
+
+        updatedCursors[cursorKey] = {
+          before_id: nextBeforeId,
+          oldest_ts: nextOldestTs,
+          after_id: nextAfterId,
+          newest_ts: nextNewestTs,
+        };
       }
     }
 

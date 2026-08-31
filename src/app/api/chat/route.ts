@@ -306,7 +306,12 @@ async function retrieveEvidence(
 
     // Fallback FTS/Keyword
     if (!rows || rows.length === 0 || !hasHighQualityEmbeddingMatches) {
-      const ftsQuery = q.trim().split(/\s+/).filter(Boolean).join(' & ');
+      const cleanTerms = q
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      const ftsQuery = cleanTerms.join(' & ');
       let ftsData: FtsMemoryRow[] | null = null;
       
       if (ftsQuery) {

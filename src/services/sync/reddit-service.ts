@@ -28,12 +28,30 @@ export async function executeRedditSync(actor: SyncActor, mode: string = 'delta'
   try {
     const { supabase, userId } = actor;
 
+    // --- DATA LOCKDOWN GUARD ---
+    // Prevent ingestion while an Audit is in progress to ensure snapshot integrity
+    const { data: activeAudit } = await supabase
+      .from('reputation_audits')
+      .select('id, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'analysis', 'generating'])
+      .maybeSingle();
+
+    if (activeAudit) {
+      return { 
+        status: 423, 
+        error: 'System Busy: Reputation Audit in progress.', 
+        detail: 'Ingestion is paused to ensure data snapshot integrity for your current audit.' 
+      }; // 423 Locked
+    }
+
     const { data: currentStatus } = await supabase
       .from('sync_status')
       .select('cursor, total_items')
       .eq('user_id', userId)
       .eq('platform', 'reddit')
       .maybeSingle();
+
 
     await upsertSyncStatusSafely(supabase, {
       user_id: userId,
