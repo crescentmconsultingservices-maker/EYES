@@ -41,6 +41,10 @@ CREATE INDEX IF NOT EXISTS idx_org_members_user_role ON public.organization_memb
 -- Enable RLS on public.memories
 ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist to avoid duplication errors
+DROP POLICY IF EXISTS "Users can view their own memories" ON public.memories;
+DROP POLICY IF EXISTS "Admins can view organization-scoped memories" ON public.memories;
+
 -- Policy A: Users can always read their own data (Personal or Organization)
 CREATE POLICY "Users can view their own memories" ON public.memories
 FOR SELECT
