@@ -57,6 +57,31 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
     new Map((events as RawEventUpsertRow[]).map((event) => [eventIdentityKey(event), event])).values()
   );
 
+  // Fetch organization shield settings
+  const orgIds = Array.from(new Set(dedupedEvents.filter(e => e.scope === 'organizational' && e.organization_id).map(e => e.organization_id as string)));
+  let orgShieldSettings: Record<string, boolean> = {};
+  if (orgIds.length > 0) {
+    const { data } = await supabase.from('organizations').select('id, privacy_shield_enabled').in('id', orgIds);
+    if (data) {
+      orgShieldSettings = data.reduce((acc: Record<string, boolean>, row: any) => {
+        acc[row.id] = row.privacy_shield_enabled;
+        return acc;
+      }, {} as Record<string, boolean>);
+    }
+  }
+
+  // Helper for consistent employee anonymization
+  const getAnonymizedAuthor = (author: string) => {
+    if (!author) return '[Employee]';
+    let hash = 0;
+    for (let i = 0; i < author.length; i++) {
+      hash = (hash << 5) - hash + author.charCodeAt(i);
+      hash |= 0;
+    }
+    const id = Math.abs(hash) % 1000;
+    return `[Employee_${id}]`;
+  };
+
   // Map RawEventUpsertRow fields to the memories table schema
   // Key difference: platform_id (raw_events) → source_id (memories)
   const memoryRows = dedupedEvents.map((event) => {
@@ -72,14 +97,32 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
       ? new Date(event.timestamp).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0];
 
+    let author = event.author;
+    let content = event.content;
+    let title = event.title;
+
+    const isOrg = event.scope === 'organizational' && event.organization_id;
+    const shieldActive = isOrg ? (orgShieldSettings[event.organization_id!] ?? true) : false;
+
+    if (shieldActive) {
+      author = getAnonymizedAuthor(event.author);
+
+      if (event.is_flagged) {
+        title = `⚠️ Leak Alert: ${event.title || 'Security Breach'}`;
+        content = `[Security Leak Detected] Severity: ${event.flag_severity || 'HIGH'}. Reason: ${event.flag_reason || 'Sensitive pattern matched'}. Raw content hidden under privacy shield.`;
+      } else {
+        content = `[Content Anonymized - Privacy Shield Active]`;
+      }
+    }
+
     return {
       user_id: event.user_id,
       platform: event.platform,
       source_id: event.platform_id,
       event_type: event.event_type,
-      title: event.title,
-      content: event.content,
-      author: event.author,
+      title: title,
+      content: content,
+      author: author,
       timestamp: event.timestamp,
       metadata: event.metadata,
       is_flagged: event.is_flagged,
