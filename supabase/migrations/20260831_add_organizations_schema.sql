@@ -67,6 +67,12 @@ USING (
 -- MULTI-TENANT SEARCH FUNCTION UPDATES
 -- ============================================================================
 
+-- Drop old functions first to prevent return type mismatch errors
+DROP FUNCTION IF EXISTS public.hybrid_search(text, vector, integer, uuid, timestamptz, timestamptz);
+DROP FUNCTION IF EXISTS public.hybrid_search(text, vector, integer, uuid);
+DROP FUNCTION IF EXISTS public.match_memories(vector, float, integer, uuid);
+DROP FUNCTION IF EXISTS public.match_memories(vector, double precision, integer, uuid);
+
 -- Recreate hybrid_search at 1024 dims with multi-tenant support
 CREATE OR REPLACE FUNCTION hybrid_search(
   query_text      TEXT,
