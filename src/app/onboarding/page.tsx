@@ -65,6 +65,8 @@ const ROLE_CONNECTORS: Record<string, { id: string, label: string, icon: string 
 export default function SandboxOnboarding() {
   const { supabase, updateUser } = useAuth();
   const [step, setStep] = useState(1);
+  const [accountType, setAccountType] = useState<'individual' | 'organization' | null>(null);
+  const [orgName, setOrgName] = useState('');
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
@@ -74,6 +76,10 @@ export default function SandboxOnboarding() {
   React.useEffect(() => {
     const savedStep = localStorage.getItem('onboarding_step');
     if (savedStep) setStep(parseInt(savedStep, 10));
+    const savedAccountType = localStorage.getItem('onboarding_account_type');
+    if (savedAccountType) setAccountType(savedAccountType as 'individual' | 'organization');
+    const savedOrgName = localStorage.getItem('onboarding_org_name');
+    if (savedOrgName) setOrgName(savedOrgName);
     const role = localStorage.getItem('onboarding_role');
     if (role) setSelectedRole(role);
     const goals = localStorage.getItem('onboarding_goals');
@@ -83,7 +89,7 @@ export default function SandboxOnboarding() {
 
     if (sessionStorage.getItem('eyes-post-connect')) {
        sessionStorage.removeItem('eyes-post-connect');
-       if (!savedStep || savedStep === '1') setStep(2);
+       if (!savedStep || savedStep === '1') setStep(3);
     }
     sessionStorage.setItem('eyes-is-onboarding', 'true');
     
@@ -100,6 +106,8 @@ export default function SandboxOnboarding() {
   }, [supabase]);
 
   React.useEffect(() => { localStorage.setItem('onboarding_step', step.toString()); }, [step]);
+  React.useEffect(() => { if (accountType) localStorage.setItem('onboarding_account_type', accountType); }, [accountType]);
+  React.useEffect(() => { localStorage.setItem('onboarding_org_name', orgName); }, [orgName]);
   React.useEffect(() => { if (selectedRole) localStorage.setItem('onboarding_role', selectedRole); }, [selectedRole]);
   React.useEffect(() => { localStorage.setItem('onboarding_goals', JSON.stringify(selectedGoals)); }, [selectedGoals]);
   React.useEffect(() => { if (selectedPersona) localStorage.setItem('onboarding_persona', selectedPersona); }, [selectedPersona]);
@@ -116,7 +124,7 @@ export default function SandboxOnboarding() {
   const router = useRouter();
 
   const handleNext = async () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep(step + 1);
     } else {
       try {
@@ -133,7 +141,13 @@ export default function SandboxOnboarding() {
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
           credentials: 'include',
-          body: JSON.stringify({ role: selectedRole, goals: selectedGoals, persona: selectedPersona })
+          body: JSON.stringify({ 
+            role: selectedRole, 
+            goals: selectedGoals, 
+            persona: selectedPersona,
+            accountType,
+            organizationName: accountType === 'organization' ? orgName : undefined
+          })
         });
         if (!res.ok) {
           const text = await res.text();
@@ -142,6 +156,8 @@ export default function SandboxOnboarding() {
         
         // Clear local caches
         localStorage.removeItem('onboarding_step');
+        localStorage.removeItem('onboarding_account_type');
+        localStorage.removeItem('onboarding_org_name');
         localStorage.removeItem('onboarding_role');
         localStorage.removeItem('onboarding_goals');
         localStorage.removeItem('onboarding_persona');
@@ -163,13 +179,14 @@ export default function SandboxOnboarding() {
   };
 
   const isNextDisabled = () => {
-    if (step === 1) return !selectedRole;
-    if (step === 3) return selectedGoals.length === 0;
-    if (step === 4) return !selectedPersona;
+    if (step === 1) return !accountType || (accountType === 'organization' && !orgName.trim());
+    if (step === 2) return !selectedRole;
+    if (step === 4) return selectedGoals.length === 0;
+    if (step === 5) return !selectedPersona;
     return false;
   };
 
-  const progress = (step / 4) * 100;
+  const progress = (step / 5) * 100;
 
   return (
     <div className={styles.container}>
@@ -179,7 +196,66 @@ export default function SandboxOnboarding() {
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
-              key="step1"
+              key="step1_account_type"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className={styles.header}>
+                <h1 className={styles.title}>Choose your Sanctum Type</h1>
+                <p className={styles.subtitle}>Select the environment you want to create.</p>
+              </div>
+
+              <div className={styles.personaGrid}>
+                <div
+                  className={`${styles.personaCard} ${accountType === 'individual' ? styles.selected : ''}`}
+                  onClick={() => setAccountType('individual')}
+                >
+                  <h3 className={styles.personaTitle}>👤 Individual</h3>
+                  <p className={styles.personaDesc}>Monitor your personal digital footprint, search private chats, files, and mail.</p>
+                </div>
+                <div
+                  className={`${styles.personaCard} ${accountType === 'organization' ? styles.selected : ''}`}
+                  onClick={() => setAccountType('organization')}
+                >
+                  <h3 className={styles.personaTitle}>🏢 Organization</h3>
+                  <p className={styles.personaDesc}>Secure team workspaces, audit company Slack & GitHub, and protect corporate IP.</p>
+                </div>
+              </div>
+
+              {accountType === 'organization' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+                >
+                  <label style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1D1C16' }}>Organization Name</label>
+                  <input
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder="e.g. Acme Corp"
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      border: '2px solid #EAEAEA',
+                      fontSize: '1rem',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease',
+                      backgroundColor: 'white',
+                      color: '#1D1C16'
+                    }}
+                  />
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div
+              key="step2_role"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -205,9 +281,9 @@ export default function SandboxOnboarding() {
             </motion.div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <motion.div
-              key="step2_connectors"
+              key="step3_connectors"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -248,9 +324,9 @@ export default function SandboxOnboarding() {
             </motion.div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <motion.div
-              key="step3_goals"
+              key="step4_goals"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -280,9 +356,9 @@ export default function SandboxOnboarding() {
             </motion.div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <motion.div
-              key="step4_persona"
+              key="step5_persona"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -323,7 +399,7 @@ export default function SandboxOnboarding() {
             onClick={handleNext}
             disabled={isNextDisabled() || isSubmitting}
           >
-            {isSubmitting ? 'Securing your sanctum...' : step === 4 ? 'Finish Setup' : 'Continue'}
+            {isSubmitting ? 'Securing your sanctum...' : step === 5 ? 'Finish Setup' : 'Continue'}
           </button>
         </div>
       </div>

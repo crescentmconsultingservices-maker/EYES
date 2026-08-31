@@ -27,10 +27,44 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { role, goals, persona } = body;
+    const { role, goals, persona, accountType, organizationName } = body;
 
     if (!role || !goals || !persona) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    let resolvedOrgId: string | null = null;
+
+    if (accountType === 'organization') {
+      if (!organizationName) {
+        return NextResponse.json({ error: 'Organization name is required for organization account type' }, { status: 400 });
+      }
+
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .insert({ name: organizationName })
+        .select('id')
+        .single();
+
+      if (orgError || !orgData) {
+        console.error('Error creating organization:', orgError);
+        return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
+      }
+
+      resolvedOrgId = orgData.id;
+
+      const { error: memberError } = await supabase
+        .from('organization_members')
+        .insert({
+          organization_id: resolvedOrgId,
+          user_id: user.id,
+          role: 'owner'
+        });
+
+      if (memberError) {
+        console.error('Error adding organization member:', memberError);
+        return NextResponse.json({ error: 'Failed to establish organization membership' }, { status: 500 });
+      }
     }
 
     const { error } = await supabase
@@ -39,6 +73,8 @@ export async function POST(request: Request) {
         role,
         goals,
         persona,
+        account_type: accountType || 'individual',
+        organization_id: resolvedOrgId,
         onboarding_completed: true,
         updated_at: new Date().toISOString()
       })

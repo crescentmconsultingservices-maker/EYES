@@ -26,6 +26,11 @@ ALTER TABLE public.oauth_tokens
 ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
 ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT 'personal' CHECK (scope IN ('personal', 'organizational'));
 
+-- Add Columns to user_profiles table
+ALTER TABLE public.user_profiles
+ADD COLUMN IF NOT EXISTS account_type TEXT DEFAULT 'individual' CHECK (account_type IN ('individual', 'organization')),
+ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL;
+
 -- Create Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_memories_org_scope ON public.memories (organization_id, scope);
 CREATE INDEX IF NOT EXISTS idx_org_members_user_role ON public.organization_members (user_id, role);
