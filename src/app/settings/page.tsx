@@ -208,6 +208,12 @@ export default function SettingsPage() {
     }
   };
 
+  const handleCopyLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedLink(url);
+    setTimeout(() => setCopiedLink(null), 3000);
+  };
+
   // Close custom select dropdown on click outside
   useEffect(() => {
     if (!isDropdownOpen) return;
