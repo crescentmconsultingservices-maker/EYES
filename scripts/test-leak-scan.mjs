@@ -69,7 +69,7 @@ async function runTest() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${CRON_SECRET}`
         },
-        body: JSON.stringify({ scan_id: scanId })
+        body: JSON.stringify({ scan_id: scanId, mode: 'poll' })
       });
 
       const detectData = await detectRes.json();

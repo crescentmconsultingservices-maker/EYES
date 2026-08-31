@@ -73,7 +73,7 @@ async function runMockTest() {
       const detectRes = await fetch(`${SERVER_URL}/api/revenue/detect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CRON_SECRET}` },
-        body: JSON.stringify({ scan_id: scanId })
+        body: JSON.stringify({ scan_id: scanId, mode: 'poll' })
       });
       const detectData = await detectRes.json();
       if (!detectRes.ok) throw new Error(`Detection failed: ${JSON.stringify(detectData)}`);

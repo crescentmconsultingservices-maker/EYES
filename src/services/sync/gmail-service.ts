@@ -3,7 +3,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidGoogleToken } from '@/services/auth/oauth';
 import { scoreGmailEvent } from '@/utils/risk/scorer';
-import { resolveSyncActor, type SyncActor, type SyncActorError } from '@/utils/sync/actor';
+import { type SyncActor } from '@/utils/sync/actor';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type GmailListResponse = {
@@ -162,60 +162,86 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
     }
 
     let allMessageIds: string[] = [];
-    let nextPageToken: string | undefined = isBackfill
-      ? (currentStatus?.cursor || undefined)
-      : undefined;
+    let nextPageToken: string | undefined = undefined;
     let hasMore = true;
 
-    // --- PAGINATION LOOP (with safety throttle) ---
-    while (allMessageIds.length < maxTotalResults && hasMore) {
-      // Check if we are running out of time in the serverless execution window
-      if (Date.now() - startTime > MAX_RUN_TIME) {
-        console.log(`[Gmail Sync] Approaching timeout (${Date.now() - startTime}ms). Pausing run.`);
-        break;
+    // Check if we have a serialized cursor state to resume from
+    let cursorState: { nextPageToken?: string | null; unprocessedIds?: string[] } | null = null;
+    if (currentStatus?.cursor) {
+      try {
+        if (currentStatus.cursor.startsWith('{')) {
+          cursorState = JSON.parse(currentStatus.cursor);
+        }
+      } catch (e) {
+        console.warn('[Gmail Sync] Failed to parse cursor JSON:', e);
       }
+    }
 
-      const fetchUrl = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
-      fetchUrl.searchParams.set('maxResults', String(maxResultsPerPage));
-      if (syncDepth === 'shallow') {
-        fetchUrl.searchParams.set('q', 'newer_than:30d');
-      } else if (syncDepth === 'balanced') {
-        fetchUrl.searchParams.set('q', 'newer_than:180d');
-      }
-      if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
-
-      const listResponse = await fetch(fetchUrl.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      });
-
-      if (!listResponse.ok) {
-        hasMore = false;
-        break;
-      }
-
-      const listBody = (await listResponse.json()) as { messages?: Array<{ id: string }>, nextPageToken?: string };
-      const pageIds = (listBody.messages ?? []).map((m) => m.id);
-      allMessageIds = [...allMessageIds, ...pageIds];
-
-      nextPageToken = listBody.nextPageToken;
-      if (!nextPageToken) {
-        hasMore = false;
-        break;
-      }
+    if (cursorState && Array.isArray(cursorState.unprocessedIds) && cursorState.unprocessedIds.length > 0) {
+      console.log(`[Gmail Sync] Resuming from cursor state with ${cursorState.unprocessedIds.length} unprocessed message IDs.`);
+      allMessageIds = cursorState.unprocessedIds;
+      nextPageToken = cursorState.nextPageToken || undefined;
+    } else {
+      nextPageToken = isBackfill
+        ? (currentStatus?.cursor || undefined)
+        : undefined;
       
-      await new Promise(resolve => setTimeout(resolve, 150));
+      if (currentStatus?.cursor && !cursorState) {
+        nextPageToken = currentStatus.cursor;
+      }
+
+      // --- PAGINATION LOOP (with safety throttle) ---
+      while (allMessageIds.length < maxTotalResults && hasMore) {
+        // Check if we are running out of time in the serverless execution window
+        if (Date.now() - startTime > MAX_RUN_TIME) {
+          console.log(`[Gmail Sync] Approaching timeout during pagination (${Date.now() - startTime}ms).`);
+          break;
+        }
+
+        const fetchUrl = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
+        fetchUrl.searchParams.set('maxResults', String(maxResultsPerPage));
+        if (syncDepth === 'shallow') {
+          fetchUrl.searchParams.set('q', 'newer_than:30d');
+        } else if (syncDepth === 'balanced') {
+          fetchUrl.searchParams.set('q', 'newer_than:180d');
+        }
+        if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
+
+        const listResponse = await fetch(fetchUrl.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        });
+
+        if (!listResponse.ok) {
+          hasMore = false;
+          break;
+        }
+
+        const listBody = (await listResponse.json()) as { messages?: Array<{ id: string }>, nextPageToken?: string };
+        const pageIds = (listBody.messages ?? []).map((m) => m.id);
+        allMessageIds = [...allMessageIds, ...pageIds];
+
+        nextPageToken = listBody.nextPageToken;
+        if (!nextPageToken) {
+          hasMore = false;
+          break;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
     }
 
     const messages: GmailMessageResponse[] = [];
     const chunkSize = 25; // 25 requests = 125 quota units (Safe limit is 250/sec)
+    let fetchCompletedCount = 0;
+    let fetchAborted = false;
 
     // --- RATE LIMIT SHIELD ---
     for (let i = 0; i < allMessageIds.length; i += chunkSize) {
       // Check if we are running out of time
       if (Date.now() - startTime > MAX_RUN_TIME) {
         console.log(`[Gmail Sync] Timeout safety triggered during message fetch (${Date.now() - startTime}ms). Saving progress.`);
-        hasMore = true; // Ensure we mark as syncing/hasMore to pick up the cursor later
+        fetchAborted = true;
         break;
       }
 
@@ -239,6 +265,7 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
           
           messages.push(...(chunkResponses.filter(Boolean) as GmailMessageResponse[]));
           success = true;
+          fetchCompletedCount += chunkIds.length;
           
           if (i + chunkSize < allMessageIds.length) {
             await new Promise(resolve => setTimeout(resolve, 800)); // Respect Google's 1-sec token bucket
@@ -249,10 +276,15 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
           console.warn(`[Gmail Sync] Rate limit hit. Backing off (Attempt ${attempt}/3)...`);
           if (attempt >= 3) {
             console.error('[Gmail Sync] Max retries hit. Saving progress and aborting run.');
+            fetchAborted = true;
             break; 
           }
           await new Promise(resolve => setTimeout(resolve, attempt * 2500)); // Exponential backoff: 2.5s, 5s
         }
+      }
+
+      if (fetchAborted) {
+        break;
       }
     }
 
@@ -374,16 +406,22 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 
+    const unprocessedIds = allMessageIds.slice(fetchCompletedCount);
+    const finalHasMore = unprocessedIds.length > 0 || Boolean(nextPageToken);
+    const nextCursor = finalHasMore
+      ? JSON.stringify({ nextPageToken: nextPageToken || null, unprocessedIds })
+      : null;
+
     await Promise.all([
       upsertSyncStatusSafely(supabase, {
         user_id: userId,
         platform: 'gmail',
-        status: hasMore ? 'syncing' : 'connected',
-        sync_progress: hasMore ? 50 : 100,
+        status: finalHasMore ? 'syncing' : 'connected',
+        sync_progress: finalHasMore ? 50 : 100,
         total_items: (currentStatus?.total_items || 0) + events.length,
         last_sync_at: new Date().toISOString(),
         next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
-        cursor: hasMore ? nextPageToken : null,
+        cursor: nextCursor,
         error_message: null,
       }),
       supabase.from('user_profiles').update({
@@ -396,7 +434,7 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
     return { status: 200, data: { 
       ok: true,
       syncedMessages: events.length,
-      hasMore,
+      hasMore: finalHasMore,
      } };
   } catch (error: unknown) {
     const detail = error instanceof Error ? error.message : String(error);

@@ -33,7 +33,7 @@ export async function detectScanAction(scanId: string) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${CRON_SECRET}`
     },
-    body: JSON.stringify({ scan_id: scanId }),
+    body: JSON.stringify({ scan_id: scanId, mode: 'poll' }),
     cache: 'no-store'
   });
 

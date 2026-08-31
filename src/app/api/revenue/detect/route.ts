@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { scan_id } = await req.json();
+    const { scan_id, mode } = await req.json();
     if (!scan_id) {
       return NextResponse.json({ error: 'Missing scan_id' }, { status: 400 });
     }
@@ -101,6 +101,7 @@ export async function POST(req: Request) {
     const hasMore = threads.length === 50;
 
     if (hasMore) {
+      if (mode !== 'poll') {
         // Enqueue next batch via QStash
         const { Client } = await import('@upstash/qstash');
         const qstashToken = process.env.QSTASH_TOKEN || 'dummy_token'; 
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
             'Authorization': `Bearer ${process.env.CRON_SECRET}`
           }
         });
+      }
     } else {
         // Mark scan as complete
         await supabase.from('leak_scans').update({ status: 'complete' }).eq('scan_id', scan_id);

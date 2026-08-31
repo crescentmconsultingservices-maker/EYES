@@ -1,4 +1,3 @@
-import { SupabaseClient } from '@supabase/supabase-js';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidGithubToken } from '@/services/auth/oauth';
 import { scoreGithubEvent } from '@/utils/risk/scorer';
@@ -40,7 +39,7 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
   // 1. Get existing sync status to find the current page cursor
   const { data: currentStatus } = await supabase
     .from('sync_status')
-    .select('cursor, total_items')
+    .select('cursor, total_items, last_sync_at')
     .eq('user_id', userId)
     .eq('platform', 'github')
     .maybeSingle();
@@ -70,8 +69,13 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
   });
 
   let allRepos: GitHubRepo[] = [];
-  let page = parseInt(currentStatus?.cursor || '1');
+  // For delta sync, always start from page 1 to verify recently updated repos first
+  let page = isBackfill ? parseInt(currentStatus?.cursor || '1') : 1;
   let hasMore = true;
+
+  const lastSyncTime = currentStatus?.last_sync_at ? new Date(currentStatus.last_sync_at).getTime() : 0;
+  // Apply a 5-minute clock-skew buffer for delta sync threshold
+  const safetyThreshold = lastSyncTime > 0 ? lastSyncTime - 5 * 60 * 1000 : 0;
 
   while (allRepos.length < maxTotal && hasMore) {
     const repoResponse = await fetch(`https://api.github.com/user/repos?sort=updated&per_page=${perPage}&page=${page}`, {
@@ -97,6 +101,23 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
     if (!repos || repos.length === 0) {
       hasMore = false;
       break;
+    }
+
+    if (!isBackfill && safetyThreshold > 0) {
+      const olderRepoFound = repos.some(repo => {
+        const updatedTime = new Date(repo.updated_at || repo.pushed_at || 0).getTime();
+        return updatedTime < safetyThreshold;
+      });
+
+      if (olderRepoFound) {
+        const newRepos = repos.filter(repo => {
+          const updatedTime = new Date(repo.updated_at || repo.pushed_at || 0).getTime();
+          return updatedTime >= safetyThreshold;
+        });
+        allRepos = [...allRepos, ...newRepos];
+        hasMore = false;
+        break;
+      }
     }
 
     allRepos = [...allRepos, ...repos];
