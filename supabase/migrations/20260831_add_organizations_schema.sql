@@ -3,8 +3,11 @@ CREATE TABLE IF NOT EXISTS public.organizations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     corporate_domain TEXT,
+    privacy_shield_enabled BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.organizations ADD COLUMN IF NOT EXISTS privacy_shield_enabled BOOLEAN DEFAULT TRUE;
 
 -- Create Organization Members Table
 CREATE TABLE IF NOT EXISTS public.organization_members (
