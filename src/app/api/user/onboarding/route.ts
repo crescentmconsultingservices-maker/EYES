@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    const token = authHeader?.replace('Bearer ', '')?.trim();
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;

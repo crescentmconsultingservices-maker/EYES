@@ -30,7 +30,7 @@ export async function GET(
 
       const authHeader = request.headers.get('Authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
+        const token = authHeader.split(' ')[1]?.trim();
         const res = await authClient.auth.getUser(token);
         user = res.data.user;
         authError = res.error;
