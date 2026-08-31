@@ -41,7 +41,7 @@ export async function classifyThread(
         'Authorization': `Bearer ${litellmKey}`
       },
       body: JSON.stringify({
-        model: "claude-haiku",
+        model: "auto-extract",
         messages: [
           { role: "system", content: LEAK_DETECTION_PROMPT },
           { role: "user", content: `Analyze this thread:\n\n${threadText}` }

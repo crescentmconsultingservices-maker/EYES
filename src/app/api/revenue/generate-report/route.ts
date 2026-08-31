@@ -1,30 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
 import { calculateValuation } from '@/core/valuation/calculator';
 
-// Helper to load templates (reads from TAGS folder directly to avoid moving files for now)
-function loadTemplate(filename: string): string {
-  try {
-    const templatePath = path.join(process.cwd(), 'TAGS', filename);
-    return fs.readFileSync(templatePath, 'utf-8');
-  } catch (e) {
-    console.error(`Failed to load template ${filename}:`, e);
-    return '';
-  }
-}
-
-// Simple template binding
-function bindTemplate(html: string, data: Record<string, any>): string {
-  let bound = html;
-  for (const [key, value] of Object.entries(data)) {
-    // Replace all instances of {{key}}
-    const regex = new RegExp(`{{${key}}}`, 'g');
-    bound = bound.replace(regex, value !== null && value !== undefined ? String(value) : '');
-  }
-  return bound;
-}
 
 export async function POST(req: Request) {
   try {
@@ -70,8 +47,10 @@ export async function POST(req: Request) {
     for (const leak of leaks) {
       if (!leak.evidence) continue;
 
-      const domain = leak.counterparty_domain || 'unknown_domain';
-      const existing = dedupedMap.get(domain);
+      // Deduplicate by domain if valid, otherwise preserve each unique leak separately
+      const domain = leak.counterparty_domain;
+      const dedupeKey = domain && domain !== 'unknown_domain' ? domain : `unknown_${leak.id}`;
+      const existing = dedupedMap.get(dedupeKey);
       
       const daysSilent = leak.days_silent || 0;
       
@@ -93,7 +72,7 @@ export async function POST(req: Request) {
 
       // Keep highest value/rank if duplicate domain
       if (!existing || leak._rank_score > existing._rank_score) {
-        dedupedMap.set(domain, leak);
+        dedupedMap.set(dedupeKey, leak);
       }
     }
 
@@ -126,6 +105,7 @@ export async function POST(req: Request) {
         total_threads_scanned: totalThreadsScanned || 0,
         threads_flagged: totalThreadsFlagged,
         total_gross_value_eur: totalGrossValue,
+        total_value_eur: totalGrossValue, // Added alias to support frontend UI expects
         total_recoverable_value_eur: totalRecoverableValue,
         oldest_leak_age_days: oldestLeakAge,
         counts: countsPerType
