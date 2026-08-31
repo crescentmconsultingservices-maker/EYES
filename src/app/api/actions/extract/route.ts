@@ -234,8 +234,7 @@ DO NOT use markdown or quotation marks.`;
     const { data: existing } = await supabase
       .from('action_queue')
       .select('memory_id, platform, title')
-      .eq('user_id', userId)
-      .eq('status', 'pending');
+      .eq('user_id', userId);
 
     const existingKeys = new Set(
       (existing ?? []).map((e: { memory_id: string; platform: string; title: string }) =>

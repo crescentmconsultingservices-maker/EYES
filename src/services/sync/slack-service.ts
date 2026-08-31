@@ -1,5 +1,5 @@
 import { SyncResult } from '@/services/sync/provider-registry';
-import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
+import { type SyncActor } from '@/utils/sync/actor';
 import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/upsert';
 import { getValidSlackToken } from '@/services/auth/oauth';
 import { scoreSlackEvent } from '@/utils/risk/scorer';
@@ -208,6 +208,16 @@ export async function executeSlackSync(actor: SyncActor, mode: string = 'delta')
      } };
   } catch (err) {
     console.error('Slack Sync Error:', err);
+    try {
+      await upsertSyncStatusSafely(actor.supabase, {
+        user_id: actor.userId,
+        platform: 'slack',
+        status: 'error',
+        error_message: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      });
+    } catch (dbErr) {
+      console.error('failed to update sync status on slack sync error:', dbErr);
+    }
     return { status: 500, error:  'Sync failed'  };
   }
 }

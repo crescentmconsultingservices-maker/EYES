@@ -2,7 +2,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { decryptToken } from '@/services/auth/tokens';
-import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
+import { type SyncActor } from '@/utils/sync/actor';
 import { scoreNotionEvent } from '@/utils/risk/scorer';
 
 type NotionSearchResult = {
@@ -223,6 +223,16 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
      } };
   } catch (error) {
     console.error('notion sync error:', error);
+    try {
+      await upsertSyncStatusSafely(actor.supabase, {
+        user_id: actor.userId,
+        platform: 'notion',
+        status: 'error',
+        error_message: error instanceof Error ? error.message.slice(0, 200) : String(error),
+      });
+    } catch (dbErr) {
+      console.error('failed to update sync status on notion sync error:', dbErr);
+    }
     return { status: 500, error:  'Unable to sync Notion data right now.'  };
   }
 }

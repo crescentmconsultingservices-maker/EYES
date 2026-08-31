@@ -3,7 +3,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 import { getValidRedditToken } from '@/services/auth/oauth';
 import { scoreRedditEvent } from '@/utils/risk/scorer';
-import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
+import { type SyncActor } from '@/utils/sync/actor';
 
 type RedditMe = { name: string };
 
@@ -183,6 +183,16 @@ export async function executeRedditSync(actor: SyncActor, mode: string = 'delta'
      } };
   } catch (error) {
     console.error('reddit sync error:', error);
+    try {
+      await upsertSyncStatusSafely(actor.supabase, {
+        user_id: actor.userId,
+        platform: 'reddit',
+        status: 'error',
+        error_message: error instanceof Error ? error.message.slice(0, 200) : String(error),
+      });
+    } catch (dbErr) {
+      console.error('failed to update sync status on reddit sync error:', dbErr);
+    }
     return { status: 500, error:  'Unable to sync Reddit data right now.'  };
   }
 }

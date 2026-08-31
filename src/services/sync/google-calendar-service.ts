@@ -2,7 +2,7 @@ import { SyncResult } from '@/services/sync/provider-registry';
 
 import { getValidGoogleToken } from '@/services/auth/oauth';
 import { upsertRawEventsSafely, upsertSyncStatusSafely } from '@/utils/supabase/upsert';
-import { resolveSyncActor, type SyncActor } from '@/utils/sync/actor';
+import { type SyncActor } from '@/utils/sync/actor';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type CalendarEventsResponse = {
@@ -153,6 +153,16 @@ export async function executeGoogleCalendarSync(actor: SyncActor, mode: string =
      } };
   } catch (error) {
     console.error('google-calendar sync error:', error);
+    try {
+      await upsertSyncStatusSafely(actor.supabase, {
+        user_id: actor.userId,
+        platform: 'google_calendar',
+        status: 'error',
+        error_message: error instanceof Error ? error.message.slice(0, 200) : String(error),
+      });
+    } catch (dbErr) {
+      console.error('failed to update sync status on google-calendar sync error:', dbErr);
+    }
     return { status: 500, error:  'Unable to sync Google Calendar data right now.'  };
   }
 }
