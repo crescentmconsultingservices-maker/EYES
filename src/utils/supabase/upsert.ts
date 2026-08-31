@@ -30,6 +30,8 @@ export type RawEventUpsertRow = {
   is_flagged: boolean;
   flag_severity: string | null;
   flag_reason: string | null;
+  organization_id?: string | null;
+  scope?: 'personal' | 'organizational';
 };
 
 export type SyncStatusUpsertRow = {
@@ -85,6 +87,8 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
       flag_reason: event.flag_reason,
       content_type: contentType,
       date_bucket: dateBucket,
+      organization_id: event.organization_id || null,
+      scope: event.scope || 'personal',
     };
   });
 

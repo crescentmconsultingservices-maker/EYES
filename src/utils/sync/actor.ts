@@ -7,6 +7,8 @@ export type SyncActor = {
   userEmail?: string;
   userName?: string;
   mode: 'session' | 'cron';
+  organizationId?: string | null;
+  scope?: 'personal' | 'organizational';
 };
 
 export type SyncActorError = {
