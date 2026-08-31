@@ -11,11 +11,24 @@ export async function GET() {
   }
 
   try {
-    // 1. Fetch recent un-dismissed alerts (Acute layer)
-    const { data: alerts, error } = await supabase
-      .from('alerts')
-      .select('*, memory:memories!source_memory_id(content, source_url)')
+    // Check if the user is operating within an organization context
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('account_type, organization_id')
       .eq('user_id', user.id)
+      .maybeSingle();
+
+    const isOrgMode = profile?.account_type === 'organization' && profile?.organization_id;
+
+    let queryBuilder = supabase
+      .from('alerts')
+      .select('*, memory:memories!source_memory_id(content, source_url)');
+
+    if (!isOrgMode) {
+      queryBuilder = queryBuilder.eq('user_id', user.id);
+    }
+
+    const { data: alerts, error } = await queryBuilder
       .eq('is_dismissed', false)
       .order('created_at', { ascending: false })
       .limit(20);

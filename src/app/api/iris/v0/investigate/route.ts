@@ -13,11 +13,24 @@ export async function POST(req: Request) {
     const { lens, query } = await req.json();
 
     // Query chronic graph edges matching lens category or search query
-    const { data: edges, error } = await supabase
-      .from('chronic_edges')
-      .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
+    // Check if the user is operating within an organization context
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('account_type, organization_id')
       .eq('user_id', user.id)
-      .limit(10);
+      .maybeSingle();
+
+    const isOrgMode = profile?.account_type === 'organization' && profile?.organization_id;
+
+    let queryBuilder = supabase
+      .from('chronic_edges')
+      .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)');
+
+    if (!isOrgMode) {
+      queryBuilder = queryBuilder.eq('user_id', user.id);
+    }
+
+    const { data: edges, error } = await queryBuilder.limit(10);
 
     if (error) {
       console.warn('Investigate API warning:', error.message);

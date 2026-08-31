@@ -14,10 +14,24 @@ export async function GET() {
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
     const ninetyDaysAgoIso = ninetyDaysAgo.toISOString();
 
-    const { data, error } = await supabase
-      .from('chronic_edges')
-      .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
+    // Check if the user is operating within an organization context
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('account_type, organization_id')
       .eq('user_id', user.id)
+      .maybeSingle();
+
+    const isOrgMode = profile?.account_type === 'organization' && profile?.organization_id;
+
+    let queryBuilder = supabase
+      .from('chronic_edges')
+      .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)');
+
+    if (!isOrgMode) {
+      queryBuilder = queryBuilder.eq('user_id', user.id);
+    }
+
+    const { data, error } = await queryBuilder
       .gte('valid_from', ninetyDaysAgoIso)
       .order('valid_from', { ascending: false })
       .limit(50);

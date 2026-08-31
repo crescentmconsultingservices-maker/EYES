@@ -17,46 +17,66 @@ export async function GET() {
     // We need to fetch edges with their head and tail nodes to render human-readable claims
     // We will do 4 parallel queries
 
-    // 1. Overnight Changes: any edges created/updated in the last 24h
-    const { data: changesData } = await supabase
+    // Check if the user is operating within an organization context
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('account_type, organization_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const isOrgMode = profile?.account_type === 'organization' && profile?.organization_id;
+
+    // Build base queries
+    const changesQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-      .eq('user_id', user.id)
       .gte('updated_at', yesterdayIso)
       .order('updated_at', { ascending: false })
       .limit(5);
 
-    // 2. Open Commitments: relation_label = 'commitment', valid_to is null
-    const { data: commitmentsData } = await supabase
+    const commitmentsQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-      .eq('user_id', user.id)
       .eq('relation_label', 'commitment')
       .is('valid_to', null)
       .order('valid_from', { ascending: false })
       .limit(10);
 
-    // 3. Slipping: relation_label = 'delayed_on', valid_to is null
-    const { data: slippingData } = await supabase
+    const slippingQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-      .eq('user_id', user.id)
       .eq('relation_label', 'delayed_on')
       .is('valid_to', null)
       .order('valid_from', { ascending: false })
       .limit(10);
 
-    // 4. On the horizon: items with valid_from in the future, or expected_on
-    // For v0, let's look for expected_on relations or valid_from > now
     const nowIso = new Date().toISOString();
-    const { data: horizonData } = await supabase
+    const horizonQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-      .eq('user_id', user.id)
       .is('valid_to', null)
       .gt('valid_from', nowIso)
       .order('valid_from', { ascending: true })
       .limit(5);
+
+    if (!isOrgMode) {
+      changesQuery.eq('user_id', user.id);
+      commitmentsQuery.eq('user_id', user.id);
+      slippingQuery.eq('user_id', user.id);
+      horizonQuery.eq('user_id', user.id);
+    }
+
+    const [changesRes, commitmentsRes, slippingRes, horizonRes] = await Promise.all([
+      changesQuery,
+      commitmentsQuery,
+      slippingQuery,
+      horizonQuery
+    ]);
+
+    const changesData = changesRes.data;
+    const commitmentsData = commitmentsRes.data;
+    const slippingData = slippingRes.data;
+    const horizonData = horizonRes.data;
 
     const allEdges = [
       ...(changesData || []),

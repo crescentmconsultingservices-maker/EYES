@@ -148,35 +148,48 @@ ${evidenceText || 'No records found.'}`;
 
     // 4. Fetch intent specific graph data if an intent was detected
     let intentData: any[] = [];
-    if (intent === 'commitment') {
-      const { data } = await supabase
+    
+    // Check if the user is operating within an organization context
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('account_type, organization_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const isOrgMode = profile?.account_type === 'organization' && profile?.organization_id;
+
+    if (intent && intent !== 'none') {
+      let baseQuery = supabase
         .from('chronic_edges')
-        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-        .eq('user_id', user.id)
-        .eq('relation_label', 'commitment')
-        .is('valid_to', null)
-        .order('valid_from', { ascending: false })
-        .limit(5);
-      intentData = data || [];
-    } else if (intent === 'slippage') {
-      const { data } = await supabase
-        .from('chronic_edges')
-        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-        .eq('user_id', user.id)
-        .eq('relation_label', 'delayed_on')
-        .is('valid_to', null)
-        .order('valid_from', { ascending: false })
-        .limit(5);
-      intentData = data || [];
-    } else if (intent === 'change') {
-      const { data } = await supabase
-        .from('chronic_edges')
-        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-        .eq('user_id', user.id)
-        .not('valid_to', 'is', null)
-        .order('valid_to', { ascending: false })
-        .limit(5);
-      intentData = data || [];
+        .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)');
+
+      // Standard user profiles are restricted to their own entries at the application layer.
+      // Organization accounts rely on RLS policies to query company-wide scoped nodes and edges safely.
+      if (!isOrgMode) {
+        baseQuery = baseQuery.eq('user_id', user.id);
+      }
+
+      if (intent === 'commitment') {
+        const { data } = await baseQuery
+          .eq('relation_label', 'commitment')
+          .is('valid_to', null)
+          .order('valid_from', { ascending: false })
+          .limit(5);
+        intentData = data || [];
+      } else if (intent === 'slippage') {
+        const { data } = await baseQuery
+          .eq('relation_label', 'delayed_on')
+          .is('valid_to', null)
+          .order('valid_from', { ascending: false })
+          .limit(5);
+        intentData = data || [];
+      } else if (intent === 'change') {
+        const { data } = await baseQuery
+          .not('valid_to', 'is', null)
+          .order('valid_to', { ascending: false })
+          .limit(5);
+        intentData = data || [];
+      }
     }
 
     // 5. Return the strict IRIS API v0 Schema

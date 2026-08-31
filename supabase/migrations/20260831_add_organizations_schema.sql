@@ -185,3 +185,83 @@ $$;
 -- Grant execution
 GRANT EXECUTE ON FUNCTION hybrid_search TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION match_memories TO authenticated, service_role;
+
+-- ============================================================================
+-- COGNITIVE GRAPH MULTI-TENANCY RLS
+-- ============================================================================
+
+-- Enable RLS on chronic_nodes and chronic_edges
+ALTER TABLE public.chronic_nodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chronic_edges ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies to avoid duplicates
+DROP POLICY IF EXISTS "Users can view their own chronic nodes" ON public.chronic_nodes;
+DROP POLICY IF EXISTS "Admins can view organization chronic nodes" ON public.chronic_nodes;
+DROP POLICY IF EXISTS "Users can view their own chronic edges" ON public.chronic_edges;
+DROP POLICY IF EXISTS "Admins can view organization-scoped chronic edges" ON public.chronic_edges;
+
+-- Create policies for chronic_nodes
+CREATE POLICY "Users can view their own chronic nodes" ON public.chronic_nodes
+FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Admins can view organization chronic nodes" ON public.chronic_nodes
+FOR SELECT USING (
+  user_id IN (
+    SELECT user_id 
+    FROM public.organization_members 
+    WHERE organization_id IN (
+      SELECT organization_id 
+      FROM public.organization_members 
+      WHERE user_id = auth.uid() 
+        AND role IN ('owner', 'admin')
+    )
+  )
+);
+
+-- Create policies for chronic_edges
+CREATE POLICY "Users can view their own chronic edges" ON public.chronic_edges
+FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Admins can view organization-scoped chronic edges" ON public.chronic_edges
+FOR SELECT USING (
+  source_memory_id IN (
+    SELECT id FROM public.memories 
+    WHERE scope = 'organizational' 
+      AND organization_id IN (
+        SELECT organization_id 
+        FROM public.organization_members 
+        WHERE user_id = auth.uid() 
+          AND role IN ('owner', 'admin')
+      )
+  )
+);
+
+-- ============================================================================
+-- ALERTS MULTI-TENANCY RLS
+-- ============================================================================
+
+-- Enable RLS on alerts
+ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing alerts policies to avoid duplicates
+DROP POLICY IF EXISTS "Users can only see their own alerts" ON public.alerts;
+DROP POLICY IF EXISTS "Users can view their own alerts" ON public.alerts;
+DROP POLICY IF EXISTS "Admins can view organization-scoped alerts" ON public.alerts;
+
+-- Create policies for alerts
+CREATE POLICY "Users can view their own alerts" ON public.alerts
+FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Admins can view organization-scoped alerts" ON public.alerts
+FOR SELECT USING (
+  source_memory_id IN (
+    SELECT id FROM public.memories 
+    WHERE scope = 'organizational' 
+      AND organization_id IN (
+        SELECT organization_id 
+        FROM public.organization_members 
+        WHERE user_id = auth.uid() 
+          AND role IN ('owner', 'admin')
+      )
+  )
+);
