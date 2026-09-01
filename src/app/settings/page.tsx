@@ -124,19 +124,32 @@ export default function SettingsPage() {
     }
   }, [activeTab, user]);
 
+  const safeParseJson = async (res: Response) => {
+    try {
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch {
+      return {};
+    }
+  };
+
   const fetchOrgDetails = async () => {
     setIsFetchingOrg(true);
     setOrgError(null);
     try {
       const res = await fetch('/api/organization/details');
+      const data = await safeParseJson(res);
       if (res.ok) {
-        const data = await res.json();
         setOrgDetails(data);
-        setOrgName(data.organization.name);
-        setPrivacyShield(data.organization.privacy_shield_enabled);
+        if (data.organization?.name) setOrgName(data.organization.name);
+        if (typeof data.organization?.privacy_shield_enabled === 'boolean') setPrivacyShield(data.organization.privacy_shield_enabled);
       } else {
-        const data = await res.json();
-        setOrgError(data.error || 'Failed to fetch organization details');
+        if (res.status === 404) {
+          setOrgDetails(null);
+          setOrgError(null);
+        } else {
+          setOrgError(data.error || 'Failed to fetch organization details');
+        }
       }
     } catch {
       setOrgError('Network error fetching organization details');
@@ -155,7 +168,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newOrgName })
       });
-      const data = await res.json();
+      const data = await safeParseJson(res);
       if (res.ok && data.success) {
         setNewOrgName('');
         updateUser({ accountType: 'organization', organizationId: data.organization.id });
@@ -180,12 +193,11 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: orgName, privacyShieldEnabled: privacyShield })
       });
+      const data = await safeParseJson(res);
       if (res.ok) {
-        const data = await res.json();
         setOrgDetails(prev => prev ? { ...prev, organization: data.organization } : null);
         setOrgSaveStatus('Organization settings saved successfully!');
       } else {
-        const data = await res.json();
         setOrgSaveStatus(data.error || 'Failed to save settings.');
       }
     } catch {
@@ -206,7 +218,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: inviteEmail, role: inviteRole })
       });
-      const data = await res.json();
+      const data = await safeParseJson(res);
       if (res.ok && data.success) {
         setInviteStatus(`Invitation generated: ${data.inviteUrl}`);
         setInviteEmail('');
@@ -226,10 +238,10 @@ export default function SettingsPage() {
       const res = await fetch(`/api/organization/invite?id=${id}`, {
         method: 'DELETE'
       });
+      const data = await safeParseJson(res);
       if (res.ok) {
         fetchOrgDetails();
       } else {
-        const data = await res.json();
         alert(data.error || 'Failed to revoke invitation');
       }
     } catch {
