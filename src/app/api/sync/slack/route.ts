@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { resolveSyncActor } from '@/utils/sync/actor';
+import { resolveSyncActor, type SyncActor, type SyncActorError } from '@/utils/sync/actor';
 import { executeSlackSync } from '@/services/sync/slack-service';
+import { upsertSyncStatusSafely } from '@/utils/supabase/upsert';
 
 export async function POST(request: Request) {
+  let actor: SyncActor | SyncActorError | null = null;
   try {
-    const actor = await resolveSyncActor(request);
+    actor = await resolveSyncActor(request);
     if ('status' in actor) {
       return NextResponse.json({ error: actor.error }, { status: actor.status });
     }
@@ -20,7 +22,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result.data);
   } catch (error: unknown) {
+    const detail = error instanceof Error ? error.message : String(error);
     console.error('slack sync wrapper error:', error);
-    return NextResponse.json({ error: 'Unable to sync slack data right now.' }, { status: 500 });
+
+    if (actor && 'supabase' in actor) {
+      await upsertSyncStatusSafely(actor.supabase, {
+        user_id: actor.userId,
+        platform: 'slack',
+        status: 'error',
+        error_message: detail.slice(0, 200)
+      });
+    }
+
+    return NextResponse.json(
+      { error: 'Unable to sync Slack data right now.', detail },
+      { status: 500 }
+    );
   }
 }

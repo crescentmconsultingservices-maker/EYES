@@ -154,7 +154,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings' | 'communications' | 'tasks'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings' | 'communications' | 'tasks' | 'gmail' | 'slack' | 'linear' | 'gcal'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedAction, setEditedAction] = useState<ActionItem | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -393,10 +393,16 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   };
 
   const filtered = actions.filter(a => {
-    if (activeFilter === 'priority') return a.confidence >= 80;
-    if (activeFilter === 'meetings') return a.action_type === 'CALENDAR';
-    if (activeFilter === 'communications') return ['gmail', 'slack', 'discord'].includes(a.platform.toLowerCase());
-    if (activeFilter === 'tasks') return ['github', 'linear', 'trello'].includes(a.platform.toLowerCase());
+    const p = a.platform.toLowerCase();
+    const confVal = a.confidence <= 1 ? Math.round(a.confidence * 100) : a.confidence;
+    if (activeFilter === 'priority') return confVal >= 80;
+    if (activeFilter === 'meetings') return a.action_type === 'CALENDAR' || a.action_type === 'REMINDER';
+    if (activeFilter === 'communications') return ['gmail', 'slack', 'discord'].includes(p);
+    if (activeFilter === 'tasks') return ['github', 'linear', 'trello'].includes(p);
+    if (activeFilter === 'gmail') return p === 'gmail';
+    if (activeFilter === 'slack') return p === 'slack';
+    if (activeFilter === 'linear') return p === 'linear';
+    if (activeFilter === 'gcal') return p === 'google-calendar' || p === 'gcal' || a.action_type === 'CALENDAR';
     return true;
   });
 
@@ -431,11 +437,14 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
               {filtered.length} PENDING ACTIONS
               {refreshing && <span style={{ marginLeft: 8, opacity: 0.6 }}>● scanning</span>}
             </span>
-            <div className={styles.filterChips}>
+            <div className={styles.filterChips} style={{ gap: '6px', flexWrap: 'wrap' }}>
               <button className={activeFilter === 'all' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('all')}>All</button>
-              <button className={activeFilter === 'priority' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('priority')}>Priority</button>
-              <button className={activeFilter === 'communications' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('communications')}>Communications</button>
-              <button className={activeFilter === 'meetings' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('meetings')}>Meetings</button>
+              <button className={activeFilter === 'priority' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('priority')}>⚡ Priority</button>
+              <button className={activeFilter === 'gmail' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('gmail')}>📧 Gmail</button>
+              <button className={activeFilter === 'slack' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('slack')}>💬 Slack</button>
+              <button className={activeFilter === 'linear' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('linear')}>🔷 Linear</button>
+              <button className={activeFilter === 'gcal' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('gcal')}>📅 Calendar</button>
+              <button className={activeFilter === 'communications' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('communications')}>Comms</button>
               <button className={activeFilter === 'tasks' ? styles.chipActive : styles.chip} onClick={() => setActiveFilter('tasks')}>Tasks</button>
             </div>
           </div>
@@ -516,7 +525,29 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                               {action.title}
                             </h4>
                           )}
-                          <span className={styles.confidence}>{action.confidence}% CONFIDENCE</span>
+                          {(() => {
+                            const confVal = action.confidence <= 1 ? Math.round(action.confidence * 100) : action.confidence;
+                            const badgeColor = confVal >= 80 ? 'rgba(16, 185, 129, 0.12)' : confVal >= 60 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(100, 116, 139, 0.12)';
+                            const textColor = confVal >= 80 ? '#10b981' : confVal >= 60 ? '#f59e0b' : '#94a3b8';
+                            const borderColor = confVal >= 80 ? 'rgba(16, 185, 129, 0.3)' : confVal >= 60 ? 'rgba(245, 158, 11, 0.3)' : 'rgba(100, 116, 139, 0.3)';
+                            return (
+                              <span
+                                className={styles.confidence}
+                                style={{
+                                  background: badgeColor,
+                                  color: textColor,
+                                  border: `1px solid ${borderColor}`,
+                                  borderRadius: '12px',
+                                  padding: '2px 8px',
+                                  fontSize: '0.68rem',
+                                  fontWeight: '700',
+                                  letterSpacing: '0.05em'
+                                }}
+                              >
+                                {confVal}% CONFIDENCE
+                              </span>
+                            );
+                          })()}
                         </div>
                         
                         {isExpanded && (

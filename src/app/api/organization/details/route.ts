@@ -40,7 +40,13 @@ export async function GET(request: Request) {
       .select('id, user_id, role, joined_at')
       .eq('organization_id', orgId);
 
-    let membersWithProfile = [];
+    let membersWithProfile: Array<{
+      id: string;
+      user_id: string;
+      role: 'owner' | 'admin' | 'member';
+      joined_at: string;
+      profile: { name: string; avatar: string };
+    }> = [];
     if (members && members.length > 0) {
       const userIds = members.map(m => m.user_id);
       const { data: profiles, error: profilesErr } = await supabase
@@ -136,3 +142,69 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { name, corporateDomain } = await request.json();
+
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: 'Organization name is required' }, { status: 400 });
+    }
+
+    // 1. Create Organization
+    const { data: newOrg, error: createErr } = await supabase
+      .from('organizations')
+      .insert({
+        name: name.trim(),
+        corporate_domain: corporateDomain?.trim() || null,
+        privacy_shield_enabled: true,
+      })
+      .select()
+      .single();
+
+    if (createErr || !newOrg) {
+      console.error('Error creating organization:', createErr);
+      return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
+    }
+
+    // 2. Add current user as Owner
+    const { error: memberErr } = await supabase
+      .from('organization_members')
+      .insert({
+        organization_id: newOrg.id,
+        user_id: user.id,
+        role: 'owner',
+      });
+
+    if (memberErr) {
+      console.error('Error adding owner member:', memberErr);
+      return NextResponse.json({ error: 'Failed to assign owner privileges' }, { status: 500 });
+    }
+
+    // 3. Update user profile
+    await supabase
+      .from('user_profiles')
+      .update({
+        account_type: 'organization',
+        organization_id: newOrg.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id);
+
+    return NextResponse.json({
+      success: true,
+      organization: newOrg,
+    });
+  } catch (err) {
+    console.error('Organization Create API Error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+

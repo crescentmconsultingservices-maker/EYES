@@ -235,6 +235,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
         },
       },
+      {
+        name: "get_pending_actions",
+        description: "Retrieve all pending action items in the user's Action Queue (e.g. email replies, Linear tickets, calendar events).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            limit: { type: "number", description: "Maximum number of pending actions to retrieve (default: 10)" },
+          },
+        },
+      },
+      {
+        name: "approve_action",
+        description: "Approve and execute a pending action item from the Action Queue (e.g. send an email reply, create a Linear ticket, create a calendar event).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            actionId: { type: "string", description: "The unique UUID of the action item in the queue" },
+            customTitle: { type: "string", description: "Optional custom title overwrite before execution" },
+            customSuggestedAction: { type: "string", description: "Optional custom reply/action text overwrite before execution" },
+          },
+          required: ["actionId"],
+        },
+      },
     ],
   };
 });
@@ -401,6 +424,114 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const errMsg = err instanceof Error ? err.message : String(err);
       return {
         content: [{ type: "text", text: `Error fetching memories: ${errMsg}` }],
+        isError: true,
+      };
+    }
+  }
+
+  if (request.params.name === "get_pending_actions") {
+    const { limit = 10 } = request.params.arguments as { limit?: number };
+    try {
+      const userId = process.env.MCP_DEFAULT_USER_ID;
+      if (!userId) throw new Error("MCP_DEFAULT_USER_ID not configured.");
+
+      const { data, error } = await supabase
+        .from('action_queue')
+        .select('id, title, description, suggested_action, action_type, platform, confidence, created_at')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(Math.min(limit, 50));
+
+      if (error) throw error;
+
+      interface ActionQueueRow {
+        id: string;
+        title: string;
+        description: string | null;
+        suggested_action: string | null;
+        action_type: string;
+        platform: string;
+        confidence: number | null;
+        created_at: string;
+      }
+
+      const text = (!data || data.length === 0)
+        ? 'No pending actions in queue.'
+        : (data as ActionQueueRow[]).map(a =>
+            `• ID: ${a.id}\n  Type: [${a.action_type}] (${a.platform})\n  Title: ${a.title}\n  Suggested Action: ${a.suggested_action ?? 'N/A'}\n  Confidence: ${a.confidence ? Math.round(a.confidence * 100) + '%' : 'N/A'}`
+          ).join('\n\n');
+
+      return {
+        content: [{ type: "text", text }],
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{ type: "text", text: `Error fetching pending actions: ${errMsg}` }],
+        isError: true,
+      };
+    }
+  }
+
+  if (request.params.name === "approve_action") {
+    const { actionId, customTitle, customSuggestedAction } = request.params.arguments as {
+      actionId: string;
+      customTitle?: string;
+      customSuggestedAction?: string;
+    };
+    try {
+      const userId = process.env.MCP_DEFAULT_USER_ID;
+      if (!userId) throw new Error("MCP_DEFAULT_USER_ID not configured.");
+
+      // 1. Check action exists and is pending
+      const { data: action, error: fetchErr } = await supabase
+        .from('action_queue')
+        .select('*')
+        .eq('id', actionId)
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (fetchErr || !action) {
+        throw new Error(`Action item ${actionId} not found or not in pending state.`);
+      }
+
+      // 2. Mark as approved/executed in action_queue table
+      const updates: Record<string, unknown> = {
+        status: 'executed',
+        executed_at: new Date().toISOString(),
+      };
+      if (customTitle) updates.title = customTitle;
+      if (customSuggestedAction) updates.suggested_action = customSuggestedAction;
+
+      const { error: updateErr } = await supabase
+        .from('action_queue')
+        .update(updates)
+        .eq('id', actionId)
+        .eq('user_id', userId);
+
+      if (updateErr) throw updateErr;
+
+      // 3. Log to action_sent_log
+      await supabase
+        .from('action_sent_log')
+        .insert({
+          user_id: userId,
+          action_id: actionId,
+          platform: action.platform || 'mcp',
+          recipient: 'mcp-approved',
+          subject: customTitle || action.title,
+          body: customSuggestedAction || action.suggested_action || '',
+        });
+
+      return {
+        content: [{ type: "text", text: `Successfully approved and executed action ${actionId} (${action.action_type || 'ACTION'}).` }],
+      };
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{ type: "text", text: `Error approving action: ${errMsg}` }],
         isError: true,
       };
     }

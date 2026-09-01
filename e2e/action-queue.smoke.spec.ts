@@ -36,7 +36,7 @@ test.describe('Action Queue E2E smoke flow', () => {
     await actionCard.click();
 
     // Check that expanded components are rendering correctly
-    await expect(page.getByText('EYES COGNITIVE ASSISTANT')).toBeVisible();
+    await expect(page.getByText('EYES ASSISTANT')).toBeVisible();
     await expect(page.getByText(/Would you like to attend the dinner tomorrow/i).first()).toBeVisible();
 
     // Click the execute button

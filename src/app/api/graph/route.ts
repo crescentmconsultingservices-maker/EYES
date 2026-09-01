@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    // In a real app, we'd get the user_id from the session. 
-    // Since we know the test user is thomasshelby251890@gmail.com, we can hardcode for testing, 
-    // or allow a query param.
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || '4d2f3e3c-b834-43fc-852a-c3cdbb535b68'; // Default to Thomas Shelby if none provided
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    const [edgesRes, corrRes] = await Promise.all([
-      supabase
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId') || user?.id || '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
+
+    const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const adminClient = adminUrl && adminKey ? createAdminClient(adminUrl, adminKey) : supabase;
+
+    const [edgesRes, corrRes, clustersRes] = await Promise.all([
+      adminClient
         .from('chronic_edges')
         .select(`
           id, 
@@ -26,11 +28,16 @@ export async function GET(request: Request) {
         `)
         .eq('user_id', userId)
         .is('valid_to', null)
-        .limit(100),
-      supabase
+        .limit(150),
+      adminClient
         .from('entity_correlations')
         .select('entity_id, entity_name')
+        .eq('user_id', userId),
+      adminClient
+        .from('cognitive_clusters')
+        .select('id, cluster_label, cluster_description, characteristics, occurrence_count')
         .eq('user_id', userId)
+        .eq('is_current', true)
     ]);
 
     if (edgesRes.error) {
@@ -38,22 +45,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch graph data' }, { status: 500 });
     }
 
-    const edges = edgesRes.data;
-    const correlations = corrRes.data;
+    const edges = edgesRes.data || [];
+    const correlations = corrRes.data || [];
+    const clusters = clustersRes.data || [];
 
-    // Process into React Flow format
+    // Process into React Flow & 3D Graph format
     const entityMap = new Map<string, string>();
-    if (correlations) {
-      correlations.forEach(c => {
-        entityMap.set(c.entity_id, c.entity_name);
-      });
-    }
+    correlations.forEach(c => {
+      entityMap.set(c.entity_id, c.entity_name);
+    });
 
     const nodesMap = new Map<string, any>();
     const flowEdges: any[] = [];
 
-    // Always add the central User node if there are edges
-    if (edges && edges.length > 0) {
+    // Always add the central User node if there are edges or clusters
+    if (edges.length > 0 || clusters.length > 0) {
       nodesMap.set('User', {
         id: 'User',
         data: { label: 'You (The User)' },
@@ -62,8 +68,32 @@ export async function GET(request: Request) {
       });
     }
 
-    edges?.forEach((edge: any) => {
-      // Normalize heads/tails with deduplication map
+    // Add Cognitive Cluster Hub Nodes from batch_leiden.py
+    clusters.forEach((cls: any) => {
+      const clusterNodeId = `cluster-${cls.id}`;
+      nodesMap.set(clusterNodeId, {
+        id: clusterNodeId,
+        data: {
+          label: `🧠 ${cls.cluster_label}`,
+          description: cls.cluster_description,
+          occurrenceCount: cls.occurrence_count
+        },
+        position: { x: 0, y: 0 },
+        type: 'clusterHub',
+      });
+
+      // Tie Cluster Hub to User node
+      flowEdges.push({
+        id: `user-cluster-${cls.id}`,
+        source: 'User',
+        target: clusterNodeId,
+        label: 'COGNITIVE_CLUSTER',
+        type: 'smoothstep',
+        data: { confidence: 0.95 }
+      });
+    });
+
+    edges.forEach((edge: any) => {
       const rawSourceId = edge.head?.id || 'User';
       const rawSourceLabel = edge.head?.name || 'You (The User)';
       
@@ -76,7 +106,6 @@ export async function GET(request: Request) {
       const targetId = entityMap.get(rawTargetId) || rawTargetId;
       const targetLabel = entityMap.get(rawTargetId) || rawTargetLabel;
 
-      // Add Source Node if not exists
       if (!nodesMap.has(sourceId)) {
         nodesMap.set(sourceId, {
           id: sourceId,
@@ -86,7 +115,6 @@ export async function GET(request: Request) {
         });
       }
 
-      // Add Target Node if not exists
       if (!nodesMap.has(targetId)) {
         nodesMap.set(targetId, {
           id: targetId,
@@ -96,7 +124,6 @@ export async function GET(request: Request) {
         });
       }
 
-      // Add Edge
       flowEdges.push({
         id: edge.id,
         source: sourceId,
@@ -112,7 +139,11 @@ export async function GET(request: Request) {
 
     const flowNodes = Array.from(nodesMap.values());
 
-    return NextResponse.json({ nodes: flowNodes, edges: flowEdges });
+    return NextResponse.json({
+      nodes: flowNodes,
+      edges: flowEdges,
+      clusters: clusters
+    });
   } catch (error) {
     console.error('Error in graph API:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

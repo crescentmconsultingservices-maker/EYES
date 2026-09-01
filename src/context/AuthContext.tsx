@@ -314,7 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memoriesIndexed: 0,
         behaviorLoggingConsent: final.behavior_logging_consent ?? true,
         onboardingCompleted: final.onboarding_completed ?? false,
-        accountType: final.account_type || 'individual',
+        accountType: (final.account_type as 'individual' | 'organization') || 'individual',
         organizationId: final.organization_id || null,
       };
     } catch (err) {

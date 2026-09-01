@@ -97,13 +97,20 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
     total_records_routed_to_llm = 0
 
     try:
-        # 1. Predict entities and try local extraction via Modal cloud engine
+        # 1. Predict entities and try extraction via Modal cloud engine (if configured)
         entities = []
         relations = []
-        try:
-            raise Exception("Bypassing Modal crash-loop to speed up test")
-        except Exception as modal_err:
-            print(f"[Relationship Engine] Modal Cloud Error: {modal_err}. Falling back to LLM.")
+        modal_url = os.environ.get("MODAL_WEBHOOK_URL") or os.environ.get("MODAL_GLINER_URL")
+        if modal_url:
+            try:
+                async with httpx.AsyncClient(timeout=3.0) as client:
+                    m_res = await client.post(modal_url, json={"text": request.text, "labels": labels_to_use})
+                    if m_res.status_code == 200:
+                        m_data = m_res.json()
+                        entities = m_data.get("entities", [])
+                        relations = m_data.get("relations", [])
+            except Exception as modal_err:
+                print(f"[Relationship Engine] Modal Cloud Call Failed/Skipped: {modal_err}. Falling back to LiteLLM.")
 
         # 2B. Fallback to LiteLLM (Gemini) only if local extraction yielded nothing
         if not relations:

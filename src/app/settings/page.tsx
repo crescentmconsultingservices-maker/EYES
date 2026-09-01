@@ -114,8 +114,12 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
+  const [newOrgName, setNewOrgName] = useState('');
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [createOrgError, setCreateOrgError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (activeTab === 'organization' && user?.organizationId) {
+    if (activeTab === 'organization') {
       fetchOrgDetails();
     }
   }, [activeTab, user]);
@@ -138,6 +142,31 @@ export default function SettingsPage() {
       setOrgError('Network error fetching organization details');
     } finally {
       setIsFetchingOrg(false);
+    }
+  };
+
+  const handleCreateOrg = async () => {
+    if (!newOrgName.trim() || isCreatingOrg) return;
+    setIsCreatingOrg(true);
+    setCreateOrgError(null);
+    try {
+      const res = await fetch('/api/organization/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newOrgName })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNewOrgName('');
+        updateUser({ accountType: 'organization', organizationId: data.organization.id });
+        fetchOrgDetails();
+      } else {
+        setCreateOrgError(data.error || 'Failed to create organization');
+      }
+    } catch {
+      setCreateOrgError('Error creating organization space');
+    } finally {
+      setIsCreatingOrg(false);
     }
   };
 
@@ -357,14 +386,12 @@ export default function SettingsPage() {
               >
                 Feedback & Support
               </button>
-              {user?.accountType === 'organization' && (
-                <button 
-                  className={`${styles.tabBtn} ${activeTab === 'organization' ? styles.tabActive : ''}`}
-                  onClick={() => setActiveTab('organization')}
-                >
-                  Organization Space
-                </button>
-              )}
+              <button 
+                className={`${styles.tabBtn} ${activeTab === 'organization' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('organization')}
+              >
+                Organization Space
+              </button>
             </div>
 
             {/* Tab Content */}
@@ -951,6 +978,38 @@ export default function SettingsPage() {
                         )}
                       </div>
 
+                    </div>
+                  ) : orgError || !orgDetails ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '28px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px 0' }}>Initialize Organization Space</h4>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                          Upgrade your account to a multi-tenant B2B workspace. Collaborate with team members, share memory pools, and enforce corporate privacy shields.
+                        </p>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Company or Organization Name (e.g. Acme Corp)" 
+                          value={newOrgName} 
+                          onChange={(e) => setNewOrgName(e.target.value)}
+                          className={styles.input}
+                          style={{ flex: 1 }}
+                        />
+                        <button 
+                          className={styles.saveBtn} 
+                          onClick={handleCreateOrg}
+                          disabled={isCreatingOrg || !newOrgName.trim()}
+                          style={{ height: '46px', whiteSpace: 'nowrap' }}
+                        >
+                          {isCreatingOrg ? 'Creating Space...' : 'Create Workspace'}
+                        </button>
+                      </div>
+
+                      {createOrgError && (
+                        <p style={{ color: 'var(--accent-red, #ef4444)', fontSize: '12px', margin: 0 }}>{createOrgError}</p>
+                      )}
                     </div>
                   ) : (
                     <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-secondary)' }}>
