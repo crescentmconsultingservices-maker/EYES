@@ -12,12 +12,42 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Resolve user IDs context (personal user or all organization members)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('organization_id, account_type')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let orgId = profile?.organization_id;
+    if (!orgId) {
+      const { data: memberRecord } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (memberRecord?.organization_id) orgId = memberRecord.organization_id;
+    }
+
+    let userIds = [user.id];
+
+    if (orgId) {
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select('user_id')
+        .eq('organization_id', orgId);
+
+      if (orgMembers && orgMembers.length > 0) {
+        userIds = Array.from(new Set([user.id, ...orgMembers.map(m => m.user_id)]));
+      }
+    }
+
     // Run queries
     const [actionsRes, logRes, recentRes, platformRes] = await Promise.all([
       supabase
         .from('action_queue')
         .select('*')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .eq('status', 'pending')
         .order('confidence', { ascending: false })
         .order('extracted_at', { ascending: false })
@@ -26,14 +56,15 @@ export async function GET() {
       supabase
         .from('action_extraction_log')
         .select('last_run_at, memory_count')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
+        .order('last_run_at', { ascending: false })
         .maybeSingle(),
 
       // Last 5 approved or dismissed actions for the "Recently Handled" log
       supabase
         .from('action_queue')
         .select('id, platform, title, status, executed_at, extracted_at')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .in('status', ['approved', 'dismissed', 'executed'])
         .order('executed_at', { ascending: false })
         .limit(5),
@@ -42,7 +73,7 @@ export async function GET() {
       supabase
         .from('memories')
         .select('platform')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .in('platform', ['gmail', 'google-calendar', 'github', 'linear', 'trello', 'slack', 'notion', 'discord'])
         .limit(5000),
     ]);

@@ -41,7 +41,22 @@ export default function KnowledgeGraph({ userId, width, height }: { userId?: str
           // --- ARTIFICIAL SPRAWLING WEB GENERATOR ---
           // The database has separate disconnected clusters. 
           // To make it look like a sprawling, branching tree (like the repo), we artificially tie them together randomly.
-          if (nodes.length > 0) {
+          if (nodes.length === 0) {
+            // Default cognitive neural orbit nodes when vault is fresh
+            nodes.push(
+              { id: 'User', name: 'You (Central Mind)' },
+              { id: 'c1', name: '🧠 Strategic Communications' },
+              { id: 'c2', name: '⚡ Action Commitments' },
+              { id: 'c3', name: '📁 Product Architecture' },
+              { id: 'c4', name: '📊 Operational Intelligence' }
+            );
+            links.push(
+              { source: 'User', target: 'c1' },
+              { source: 'User', target: 'c2' },
+              { source: 'User', target: 'c3' },
+              { source: 'User', target: 'c4' }
+            );
+          } else {
             const connectedSet = new Set([nodes[0].id]);
             
             // 1. Tie disconnected clusters to a random node in the connected set to branch outwards

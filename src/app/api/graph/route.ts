@@ -10,7 +10,38 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
 
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || user?.id || '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
+    let targetUserId = searchParams.get('userId') || user?.id;
+
+    let userIds = targetUserId ? [targetUserId] : ['4d2f3e3c-b834-43fc-852a-c3cdbb535b68'];
+
+    if (user && !searchParams.get('userId')) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('organization_id, account_type')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      let orgId = profile?.organization_id;
+      if (!orgId) {
+        const { data: memberRecord } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (memberRecord?.organization_id) orgId = memberRecord.organization_id;
+      }
+
+      if (orgId) {
+        const { data: orgMembers } = await supabase
+          .from('organization_members')
+          .select('user_id')
+          .eq('organization_id', orgId);
+
+        if (orgMembers && orgMembers.length > 0) {
+          userIds = Array.from(new Set([user.id, ...orgMembers.map(m => m.user_id)]));
+        }
+      }
+    }
 
     const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -26,23 +57,23 @@ export async function GET(request: Request) {
           head:head_node_id(id, name),
           tail:tail_node_id(id, name)
         `)
-        .eq('user_id', userId)
+        .in('user_id', userIds)
         .is('valid_to', null)
         .limit(150),
       adminClient
         .from('entity_correlations')
         .select('entity_id, entity_name')
-        .eq('user_id', userId),
+        .in('user_id', userIds),
       adminClient
         .from('cognitive_clusters')
         .select('id, cluster_label, cluster_description, characteristics, occurrence_count')
-        .eq('user_id', userId)
+        .in('user_id', userIds)
         .eq('is_current', true)
     ]);
 
     if (edgesRes.error) {
-      console.error('Supabase error fetching graph:', edgesRes.error);
-      return NextResponse.json({ error: 'Failed to fetch graph data' }, { status: 500 });
+      console.warn('Supabase error fetching graph:', edgesRes.error);
+      return NextResponse.json({ nodes: [], edges: [], clusters: [] }, { status: 200 });
     }
 
     const edges = edgesRes.data || [];

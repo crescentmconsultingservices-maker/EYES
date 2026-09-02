@@ -24,16 +24,26 @@ export async function GET(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle();
 
+    let orgId = profile?.organization_id;
+    if (!orgId) {
+      const { data: memberRecord } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (memberRecord?.organization_id) orgId = memberRecord.organization_id;
+    }
+
     let userIds = [user.id];
 
-    if (profile?.account_type === 'organization' && profile?.organization_id) {
+    if (orgId) {
       const { data: orgMembers } = await supabase
         .from('organization_members')
         .select('user_id')
-        .eq('organization_id', profile.organization_id);
+        .eq('organization_id', orgId);
 
       if (orgMembers && orgMembers.length > 0) {
-        userIds = orgMembers.map(m => m.user_id);
+        userIds = Array.from(new Set([user.id, ...orgMembers.map(m => m.user_id)]));
       }
     }
 

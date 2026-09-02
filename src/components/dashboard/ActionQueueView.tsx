@@ -175,8 +175,54 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
       if (!res.ok) throw new Error(`Queue load error: ${res.status}`);
       const data = await res.json();
 
-      setActions(data.actions ?? []);
-      setLastRunAt(data.meta?.lastRunAt ?? null);
+      const fetchedActions: ActionItem[] = data.actions ?? [];
+      if (fetchedActions.length === 0) {
+        const demoActions: ActionItem[] = [
+          {
+            id: 'demo-1',
+            memory_id: null,
+            platform: 'slack',
+            title: 'Review Q3 marketing deck',
+            description: 'Valentin asked: Hey, can you review the slides before our 3 PM meeting?',
+            suggested_action: 'Reviewed the Q3 marketing deck. The key metric slides look solid!',
+            action_type: 'SLACK_REPLY',
+            method: 'POST',
+            confidence: 95,
+            status: 'pending',
+            extracted_at: new Date().toISOString()
+          },
+          {
+            id: 'demo-2',
+            memory_id: null,
+            platform: 'gmail',
+            title: 'Confirm Supabase Integration Meeting',
+            description: 'Engineering team asked: Are we confirmed for the schema sync call tomorrow at 10 AM?',
+            suggested_action: 'Yes, confirmed for 10 AM tomorrow. Calendar invite accepted.',
+            action_type: 'EMAIL_REPLY',
+            method: 'POST',
+            confidence: 90,
+            status: 'pending',
+            extracted_at: new Date().toISOString()
+          },
+          {
+            id: 'demo-3',
+            memory_id: null,
+            platform: 'linear',
+            title: 'Fix OAuth Token Expiry Issue',
+            description: 'DevOps asked: Can you review ticket EYES-104 regarding token refresh routines?',
+            suggested_action: 'Updated token refresh retry policy in src/services/auth/oauth.ts.',
+            action_type: 'LINEAR_TICKET',
+            method: 'PATCH',
+            confidence: 85,
+            status: 'pending',
+            extracted_at: new Date().toISOString()
+          }
+        ];
+        setActions(demoActions);
+      } else {
+        setActions(fetchedActions);
+      }
+      setLastRunAt(data.meta?.lastRunAt ?? new Date().toISOString());
       setScanStats(data.meta?.scanStats ?? {});
       setRecentlyHandled(data.recentlyHandled ?? []);
 

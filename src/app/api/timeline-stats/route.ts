@@ -10,6 +10,36 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Resolve user IDs context (personal user or all organization members)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('organization_id, account_type')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let orgId = profile?.organization_id;
+    if (!orgId) {
+      const { data: memberRecord } = await supabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (memberRecord?.organization_id) orgId = memberRecord.organization_id;
+    }
+
+    let userIds = [user.id];
+
+    if (orgId) {
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select('user_id')
+        .eq('organization_id', orgId);
+
+      if (orgMembers && orgMembers.length > 0) {
+        userIds = Array.from(new Set([user.id, ...orgMembers.map(m => m.user_id)]));
+      }
+    }
+
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: 9 }, (_, i) => currentYear - (8 - i));
 
@@ -20,7 +50,7 @@ export async function GET() {
       const { count, error } = await supabase
         .from('memories')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .gte('timestamp', start)
         .lte('timestamp', end);
 
