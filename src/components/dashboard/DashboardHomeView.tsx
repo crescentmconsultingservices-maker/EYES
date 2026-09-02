@@ -211,6 +211,50 @@ export function DashboardHomeView({ platforms, syncStatus }: DashboardHomeViewPr
       </div>
 
 
+      {/* Connected Sources Active List */}
+      {platforms.filter(p => p.connected).length > 0 && (
+        <div className={`${styles.readinessSection} stagger-2`} style={{ marginBottom: '36px' }}>
+          <h3 className={styles.subHeader} style={{ color: '#22c55e', marginBottom: '16px' }}>● CONNECTED SOURCES ({platforms.filter(p => p.connected).length})</h3>
+          <div className={styles.readinessGrid}>
+            {platforms.filter(p => p.connected).map(p => {
+              const isSyncing = p.status === 'syncing';
+              const isError = p.status === 'error';
+              const config = ALL_POSSIBLE_PLATFORMS.find(ap => ap.id === p.id);
+              return (
+                <div 
+                  key={p.id} 
+                  className={`${styles.readinessCard} ${styles.connectedCard}`} 
+                  style={{ 
+                    border: '1.5px solid rgba(34, 197, 94, 0.4)', 
+                    background: 'var(--bg-secondary)',
+                    boxShadow: '0 4px 16px rgba(34, 197, 94, 0.08)'
+                  }}
+                >
+                  <div className={styles.cardHeader}>
+                    <div 
+                      className={styles.readinessIcon} 
+                      style={{ 
+                        backgroundColor: 'rgba(34, 197, 94, 0.15)', 
+                        border: '1px solid rgba(34, 197, 94, 0.3)' 
+                      }}
+                    >
+                      {config?.icon ? React.cloneElement(config.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
+                    </div>
+                    <div className={styles.readinessInfo}>
+                      <strong>{p.name}</strong>
+                      <span className={isError ? styles.errorStatusText : (isSyncing ? styles.syncStatusText : styles.readyStatusText)}>
+                        {isError ? 'Error' : (isSyncing ? 'Syncing...' : 'Connected')}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: '#22c55e', fontWeight: 800, letterSpacing: '1px' }}>✓ ACTIVE</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Discovery Hub Layout */}
       <div className={`${styles.readinessSection} stagger-3`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap', gap: '16px' }}>
