@@ -17,11 +17,31 @@ export async function GET(req: NextRequest) {
     const cursor = searchParams.get('cursor');        // ISO timestamp of last item
     const platform = searchParams.get('platform');    // optional platform filter
 
+    // Resolve user IDs context (personal user or all organization members)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('organization_id, account_type')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let userIds = [user.id];
+
+    if (profile?.account_type === 'organization' && profile?.organization_id) {
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select('user_id')
+        .eq('organization_id', profile.organization_id);
+
+      if (orgMembers && orgMembers.length > 0) {
+        userIds = orgMembers.map(m => m.user_id);
+      }
+    }
+
     // ── Build query ────────────────────────────────────────────────────────────
     let query = supabase
       .from('memories')
       .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity, flag_reason')
-      .eq('user_id', user.id)
+      .in('user_id', userIds)
       .not('content', 'is', null)
       .order('timestamp', { ascending: false })
       .limit(PAGE_SIZE);

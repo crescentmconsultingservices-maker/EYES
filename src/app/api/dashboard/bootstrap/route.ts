@@ -215,23 +215,43 @@ export async function GET() {
       );
     }
 
+    // Resolve user IDs context (personal user or all organization members)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('organization_id, account_type')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    let userIds = [user.id];
+
+    if (profile?.account_type === 'organization' && profile?.organization_id) {
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select('user_id')
+        .eq('organization_id', profile.organization_id);
+
+      if (orgMembers && orgMembers.length > 0) {
+        userIds = orgMembers.map(m => m.user_id);
+      }
+    }
+
     const [syncStatusResult, rawEventsResult, memoriesCountResult] = await Promise.all([
       supabase
         .from('sync_status')
         .select('platform,status,sync_progress,total_items,last_sync_at,error_message')
-        .eq('user_id', user.id),
+        .in('user_id', userIds),
       // Only fetch flagged items for the dashboard summary — the feed now paginates itself via /api/memories.
       supabase
         .from('memories')
         .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity, flag_reason')
-        .eq('user_id', user.id)
+        .in('user_id', userIds)
         .eq('is_flagged', true)
         .order('timestamp', { ascending: false })
         .limit(50),
       supabase
         .from('memories')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id),
+        .in('user_id', userIds),
     ]);
 
     if (syncStatusResult.error) throw syncStatusResult.error;
