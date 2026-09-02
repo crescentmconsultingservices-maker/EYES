@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
   try {
@@ -7,9 +8,10 @@ export async function POST(request: Request) {
     const token = authHeader?.replace('Bearer ', '')?.trim();
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    // Auth verification client using user session token
+    const authClient = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseServiceKey, {
       cookies: {
         getAll() { return []; },
         setAll() {}
@@ -19,12 +21,17 @@ export async function POST(request: Request) {
       }
     });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token);
 
     if (authError || !user) {
       console.error('Onboarding Auth Error:', authError);
       return NextResponse.json({ error: 'Unauthorized user session' }, { status: 401 });
     }
+
+    // Admin Supabase client (service role key bypasses RLS policies & prevents RLS infinite recursion)
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    });
 
     const body = await request.json();
     const { role, goals, persona, accountType, organizationName, existingOrgId, corporateDomain } = body;
@@ -40,7 +47,7 @@ export async function POST(request: Request) {
         // User joined an existing registered organization
         resolvedOrgId = existingOrgId;
 
-        const { error: memberError } = await supabase
+        const { error: memberError } = await adminSupabase
           .from('organization_members')
           .upsert({
             organization_id: resolvedOrgId,
@@ -63,7 +70,7 @@ export async function POST(request: Request) {
 
         // Check if organization with corporate_domain already exists
         if (trimmedDomain) {
-          const { data: existingDomainOrg } = await supabase
+          const { data: existingDomainOrg } = await adminSupabase
             .from('organizations')
             .select('id')
             .eq('corporate_domain', trimmedDomain)
@@ -76,7 +83,7 @@ export async function POST(request: Request) {
 
         // If not found by domain, insert new organization
         if (!resolvedOrgId) {
-          const { data: orgData, error: orgError } = await supabase
+          const { data: orgData, error: orgError } = await adminSupabase
             .from('organizations')
             .insert({ 
               name: trimmedName,
@@ -95,7 +102,7 @@ export async function POST(request: Request) {
         }
 
         // Assign user as owner/member in organization_members
-        const { error: memberError } = await supabase
+        const { error: memberError } = await adminSupabase
           .from('organization_members')
           .upsert({
             organization_id: resolvedOrgId,
@@ -110,10 +117,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Upsert user profile to ensure missing profile records are safely initialized
+    // Upsert user profile using admin client (bypasses RLS & initializes missing profile records)
     const fallbackName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
 
-    const { error: profileError } = await supabase
+    const { error: profileError } = await adminSupabase
       .from('user_profiles')
       .upsert({
         user_id: user.id,

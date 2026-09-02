@@ -158,8 +158,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Organization name is required' }, { status: 400 });
     }
 
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+
     // 1. Create Organization
-    const { data: newOrg, error: createErr } = await supabase
+    const { data: newOrg, error: createErr } = await adminSupabase
       .from('organizations')
       .insert({
         name: name.trim(),
@@ -175,13 +182,13 @@ export async function POST(request: Request) {
     }
 
     // 2. Add current user as Owner
-    const { error: memberErr } = await supabase
+    const { error: memberErr } = await adminSupabase
       .from('organization_members')
-      .insert({
+      .upsert({
         organization_id: newOrg.id,
         user_id: user.id,
         role: 'owner',
-      });
+      }, { onConflict: 'organization_id,user_id' });
 
     if (memberErr) {
       console.error('Error adding owner member:', memberErr);
