@@ -169,9 +169,25 @@ export default function SettingsPage() {
         body: JSON.stringify({ name: newOrgName })
       });
       const data = await safeParseJson(res);
-      if (res.ok && data.success) {
+      if (res.ok && data.success && data.organization) {
+        const createdOrg = data.organization;
         setNewOrgName('');
-        updateUser({ accountType: 'organization', organizationId: data.organization.id });
+        setOrgName(createdOrg.name);
+        setPrivacyShield(createdOrg.privacy_shield_enabled ?? true);
+        setOrgDetails({
+          organization: createdOrg,
+          members: [
+            {
+              id: 'owner-member',
+              user_id: user?.id || '',
+              role: 'owner',
+              joined_at: new Date().toISOString(),
+              profile: { name: user?.name || 'Workspace Owner', avatar: '' }
+            }
+          ],
+          invitations: []
+        });
+        updateUser({ accountType: 'organization', organizationId: createdOrg.id });
         fetchOrgDetails();
       } else {
         setCreateOrgError(data.error || 'Failed to create organization');
