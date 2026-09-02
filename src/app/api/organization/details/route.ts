@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -10,21 +11,45 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Find the user's profile organization context
-    const { data: profile, error: profileErr } = await supabase
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+
+    // 1. Find the user's profile organization context
+    const { data: profile } = await adminSupabase
       .from('user_profiles')
       .select('organization_id')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (profileErr || !profile?.organization_id) {
-      return NextResponse.json({ error: 'User does not belong to any organization' }, { status: 403 });
+    let orgId = profile?.organization_id;
+
+    // Fallback check in organization_members if user_profiles.organization_id is not synced
+    if (!orgId) {
+      const { data: memberRecord } = await adminSupabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (memberRecord) {
+        orgId = memberRecord.organization_id;
+        // Sync profile organization_id
+        await adminSupabase
+          .from('user_profiles')
+          .update({ organization_id: orgId, account_type: 'organization' })
+          .eq('user_id', user.id);
+      }
     }
 
-    const orgId = profile.organization_id;
+    if (!orgId) {
+      return NextResponse.json({ error: 'User does not belong to any organization' }, { status: 404 });
+    }
 
-    // Fetch organization info
-    const { data: organization, error: orgErr } = await supabase
+    // 2. Fetch organization info
+    const { data: organization, error: orgErr } = await adminSupabase
       .from('organizations')
       .select('*')
       .eq('id', orgId)
@@ -34,8 +59,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Fetch members
-    const { data: members, error: membersErr } = await supabase
+    // 3. Fetch members
+    const { data: members } = await adminSupabase
       .from('organization_members')
       .select('id, user_id, role, joined_at')
       .eq('organization_id', orgId);
@@ -47,9 +72,10 @@ export async function GET(request: Request) {
       joined_at: string;
       profile: { name: string; avatar: string };
     }> = [];
+
     if (members && members.length > 0) {
       const userIds = members.map(m => m.user_id);
-      const { data: profiles, error: profilesErr } = await supabase
+      const { data: profiles } = await adminSupabase
         .from('user_profiles')
         .select('user_id, name, avatar')
         .in('user_id', userIds);
@@ -62,8 +88,8 @@ export async function GET(request: Request) {
       }));
     }
 
-    // Fetch invitations
-    const { data: invitations, error: inviteErr } = await supabase
+    // 4. Fetch invitations
+    const { data: invitations } = await adminSupabase
       .from('organization_invitations')
       .select('*')
       .eq('organization_id', orgId)
@@ -92,38 +118,53 @@ export async function PUT(request: Request) {
   try {
     const { name, privacyShieldEnabled } = await request.json();
 
-    // Find the user's profile organization context
-    const { data: profile, error: profileErr } = await supabase
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false } }
+    );
+
+    // Find user profile or org member context
+    const { data: profile } = await adminSupabase
       .from('user_profiles')
       .select('organization_id')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (profileErr || !profile?.organization_id) {
+    let orgId = profile?.organization_id;
+
+    if (!orgId) {
+      const { data: memberRecord } = await adminSupabase
+        .from('organization_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (memberRecord) orgId = memberRecord.organization_id;
+    }
+
+    if (!orgId) {
       return NextResponse.json({ error: 'User does not belong to any organization' }, { status: 403 });
     }
 
-    const orgId = profile.organization_id;
-
-    // Verify user is owner/admin of that organization
-    const { data: membership, error: membershipErr } = await supabase
+    // Verify admin / owner permissions
+    const { data: member } = await adminSupabase
       .from('organization_members')
       .select('role')
       .eq('organization_id', orgId)
       .eq('user_id', user.id)
-      .maybeSingle();
+      .single();
 
-    if (membershipErr || !membership || !['owner', 'admin'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Forbidden: Admin or Owner privileges required' }, { status: 403 });
+    if (!member || !['owner', 'admin'].includes(member.role)) {
+      return NextResponse.json({ error: 'Insufficient permissions to update organization settings' }, { status: 403 });
     }
 
-    const updates: { name?: string; privacy_shield_enabled?: boolean } = {};
-    if (name !== undefined) updates.name = name;
-    if (privacyShieldEnabled !== undefined) updates.privacy_shield_enabled = privacyShieldEnabled;
-
-    const { data: updatedOrg, error: updateErr } = await supabase
+    const { data: updatedOrg, error: updateErr } = await adminSupabase
       .from('organizations')
-      .update(updates)
+      .update({
+        ...(name ? { name: name.trim() } : {}),
+        ...(typeof privacyShieldEnabled === 'boolean' ? { privacy_shield_enabled: privacyShieldEnabled } : {}),
+      })
       .eq('id', orgId)
       .select()
       .single();
@@ -158,7 +199,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Organization name is required' }, { status: 400 });
     }
 
-    const { createClient: createAdminClient } = await import('@supabase/supabase-js');
     const adminSupabase = createAdminClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -195,23 +235,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to assign owner privileges' }, { status: 500 });
     }
 
-    // 3. Update user profile
-    await supabase
+    // 3. Link organization_id and account_type in user_profiles
+    await adminSupabase
       .from('user_profiles')
-      .update({
+      .upsert({
+        user_id: user.id,
+        name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
         account_type: 'organization',
         organization_id: newOrg.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
 
     return NextResponse.json({
       success: true,
       organization: newOrg,
     });
   } catch (err) {
-    console.error('Organization Create API Error:', err);
+    console.error('Organization Creation API Error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-
