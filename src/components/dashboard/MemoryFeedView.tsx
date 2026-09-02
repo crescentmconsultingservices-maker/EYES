@@ -52,6 +52,7 @@ export function MemoryFeedView({
       const res = await fetch(`/api/memories?${params.toString()}`);
       if (!res.ok) return;
 
+      const data = await res.json();
       let newItems: FeedItem[] = data.items ?? [];
       if (newItems.length === 0 && replace) {
         newItems = [
@@ -63,7 +64,9 @@ export function MemoryFeedView({
             timestamp: new Date().toISOString(),
             author: 'Valentin',
             event_type: 'Message',
-            is_flagged: false
+            is_flagged: false,
+            flag_severity: null,
+            flag_reason: null
           },
           {
             id: 'mem-demo-2',
@@ -73,7 +76,9 @@ export function MemoryFeedView({
             timestamp: new Date(Date.now() - 3600000).toISOString(),
             author: 'Engineering',
             event_type: 'Email',
-            is_flagged: false
+            is_flagged: false,
+            flag_severity: null,
+            flag_reason: null
           },
           {
             id: 'mem-demo-3',
@@ -83,7 +88,9 @@ export function MemoryFeedView({
             timestamp: new Date(Date.now() - 7200000).toISOString(),
             author: 'GitHub Bot',
             event_type: 'Pull Request',
-            is_flagged: false
+            is_flagged: false,
+            flag_severity: null,
+            flag_reason: null
           }
         ];
       }
