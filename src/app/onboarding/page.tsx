@@ -232,9 +232,9 @@ export default function SandboxOnboarding() {
 
         // Smooth transition driven organically by AuthContext state
         await updateUser({ onboardingCompleted: true });
-      } catch (err) {
+      } catch (err: any) {
         console.error('Save failed:', err);
-        alert(`Failed to save preferences. See console for details.`);
+        alert(err?.message || 'Failed to save preferences. Please check your network connection and try again.');
         setIsSubmitting(false);
       }
     }

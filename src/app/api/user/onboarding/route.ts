@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
-        getAll() { return [] },
+        getAll() { return []; },
         setAll() {}
       },
       global: {
@@ -19,18 +19,18 @@ export async function POST(request: Request) {
       }
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (authError || !user) {
+      console.error('Onboarding Auth Error:', authError);
+      return NextResponse.json({ error: 'Unauthorized user session' }, { status: 401 });
     }
 
     const body = await request.json();
     const { role, goals, persona, accountType, organizationName, existingOrgId, corporateDomain } = body;
 
     if (!role || !goals || !persona) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required onboarding fields (role, goals, or persona)' }, { status: 400 });
     }
 
     let resolvedOrgId: string | null = null;
@@ -42,57 +42,82 @@ export async function POST(request: Request) {
 
         const { error: memberError } = await supabase
           .from('organization_members')
-          .insert({
+          .upsert({
             organization_id: resolvedOrgId,
             user_id: user.id,
             role: 'member'
-          });
+          }, { onConflict: 'organization_id,user_id' });
 
-        if (memberError && !memberError.message.includes('duplicate')) {
+        if (memberError) {
           console.error('Error joining organization member:', memberError);
-          return NextResponse.json({ error: 'Failed to join organization' }, { status: 500 });
+          return NextResponse.json({ error: `Failed to join organization: ${memberError.message}` }, { status: 500 });
         }
       } else {
         // User creates a new organization
-        if (!organizationName) {
+        if (!organizationName || !organizationName.trim()) {
           return NextResponse.json({ error: 'Organization name is required for organization account type' }, { status: 400 });
         }
 
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .insert({ 
-            name: organizationName.trim(),
-            corporate_domain: corporateDomain?.trim() || null,
-            privacy_shield_enabled: true
-          })
-          .select('id')
-          .single();
+        const trimmedName = organizationName.trim();
+        const trimmedDomain = corporateDomain?.trim() || null;
 
-        if (orgError || !orgData) {
-          console.error('Error creating organization:', orgError);
-          return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
+        // Check if organization with corporate_domain already exists
+        if (trimmedDomain) {
+          const { data: existingDomainOrg } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('corporate_domain', trimmedDomain)
+            .maybeSingle();
+
+          if (existingDomainOrg) {
+            resolvedOrgId = existingDomainOrg.id;
+          }
         }
 
-        resolvedOrgId = orgData.id;
+        // If not found by domain, insert new organization
+        if (!resolvedOrgId) {
+          const { data: orgData, error: orgError } = await supabase
+            .from('organizations')
+            .insert({ 
+              name: trimmedName,
+              corporate_domain: trimmedDomain,
+              privacy_shield_enabled: true
+            })
+            .select('id')
+            .single();
 
+          if (orgError || !orgData) {
+            console.error('Error creating organization:', orgError);
+            return NextResponse.json({ error: `Failed to create organization: ${orgError?.message || 'Database error'}` }, { status: 500 });
+          }
+
+          resolvedOrgId = orgData.id;
+        }
+
+        // Assign user as owner/member in organization_members
         const { error: memberError } = await supabase
           .from('organization_members')
-          .insert({
+          .upsert({
             organization_id: resolvedOrgId,
             user_id: user.id,
             role: 'owner'
-          });
+          }, { onConflict: 'organization_id,user_id' });
 
         if (memberError) {
           console.error('Error adding organization owner:', memberError);
-          return NextResponse.json({ error: 'Failed to establish organization membership' }, { status: 500 });
+          return NextResponse.json({ error: `Failed to establish organization membership: ${memberError.message}` }, { status: 500 });
         }
       }
     }
 
-    const { error } = await supabase
+    // Upsert user profile to ensure missing profile records are safely initialized
+    const fallbackName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+
+    const { error: profileError } = await supabase
       .from('user_profiles')
-      .update({
+      .upsert({
+        user_id: user.id,
+        name: fallbackName,
         role,
         goals,
         persona,
@@ -100,17 +125,16 @@ export async function POST(request: Request) {
         organization_id: resolvedOrgId,
         onboarding_completed: true,
         updated_at: new Date().toISOString()
-      })
-      .eq('user_id', user.id);
+      }, { onConflict: 'user_id' });
 
-    if (error) {
-      console.error('Error updating onboarding preferences:', error);
-      return NextResponse.json({ error: 'Failed to update preferences' }, { status: 500 });
+    if (profileError) {
+      console.error('Error updating onboarding preferences:', profileError);
+      return NextResponse.json({ error: `Failed to update preferences: ${profileError.message}` }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Onboarding API Error:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: `Internal Server Error: ${err?.message || err}` }, { status: 500 });
   }
 }
