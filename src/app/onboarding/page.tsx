@@ -381,7 +381,7 @@ export default function SandboxOnboarding() {
                               {s.logo ? (
                                 <img src={s.logo} alt={s.name} style={{ width: '20px', height: '20px', borderRadius: '4px' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
                               ) : (
-                                🏢
+                                <span>🏢</span>
                               )}
                               <div>
                                 <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1D1C16' }}>{s.name}</div>
