@@ -138,15 +138,13 @@ function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[], actua
   };
 }
 
-function mapPlatforms(syncRows: SyncStatusRow[]): PlatformStatus[] {
+function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }[] = []): PlatformStatus[] {
   const uniquePlatforms: Record<string, PlatformStatus> = {};
 
   for (const row of syncRows) {
     // Normalise the DB underscore format to the hyphen format used in ALL_POSSIBLE_PLATFORMS.
-    // Without this, 'google_calendar' from the DB never matches 'google-calendar' in the
-    // connector hub filter, causing it to appear in both the hub AND managed connections.
-    const id = row.platform.startsWith('google_') ? row.platform.replace(/_/g, '-') : row.platform;
-    const name = platformLabelMap[row.platform] ?? row.platform;
+    const id = row.platform.replace(/_/g, '-');
+    const name = platformLabelMap[row.platform] ?? platformLabelMap[id] ?? row.platform;
     const status = (row.status ?? 'idle') as PlatformStatus['status'];
     const items = row.total_items ?? 0;
     const errorMessage = row.error_message;
@@ -175,6 +173,21 @@ function mapPlatforms(syncRows: SyncStatusRow[]): PlatformStatus[] {
         status: prioritizedStatus,
         items: Math.max(existing.items, items),
         errorMessage: existing.errorMessage || errorMessage,
+      };
+    }
+  }
+
+  for (const row of oauthRows) {
+    const id = row.platform.replace(/_/g, '-');
+    if (!uniquePlatforms[id]) {
+      const name = platformLabelMap[row.platform] ?? platformLabelMap[id] ?? row.platform;
+      uniquePlatforms[id] = {
+        id,
+        name,
+        connected: true,
+        status: 'connected',
+        items: 0,
+        errorMessage: null,
       };
     }
   }
@@ -235,7 +248,11 @@ export async function GET() {
       }
     }
 
-    const [syncStatusResult, rawEventsResult, memoriesCountResult] = await Promise.all([
+    const [oauthTokensResult, syncStatusResult, rawEventsResult, memoriesCountResult] = await Promise.all([
+      supabase
+        .from('oauth_tokens')
+        .select('platform')
+        .in('user_id', userIds),
       supabase
         .from('sync_status')
         .select('platform,status,sync_progress,total_items,last_sync_at,error_message')
@@ -257,6 +274,7 @@ export async function GET() {
     if (syncStatusResult.error) throw syncStatusResult.error;
     if (rawEventsResult.error) throw rawEventsResult.error;
 
+    const oauthRows = (oauthTokensResult.data ?? []) as { platform: string }[];
     const syncRows = (syncStatusResult.data ?? []) as SyncStatusRow[];
     const rawRows = (rawEventsResult.data ?? []) as RawEventRow[];
     const flaggedRows = rawRows.filter((row) => Boolean(row.is_flagged));
@@ -269,7 +287,7 @@ export async function GET() {
     const response = NextResponse.json(
       {
         summary: mapSummary(syncRows, flaggedRows, memoriesIndexed),
-        platforms: mapPlatforms(syncRows),
+        platforms: mapPlatforms(syncRows, oauthRows),
         feedEvents: [],   // Feed now self-paginates via /api/memories — kept for backward compat
         syncStatus: { isSyncing, activeSyncs, memoriesIndexed },
       },
