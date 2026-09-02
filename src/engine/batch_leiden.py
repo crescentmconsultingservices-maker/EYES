@@ -22,6 +22,29 @@ supabase: Client = create_client(supabase_url, supabase_key)
 
 import sys
 
+def fetch_all_active_edges(user_id: str, batch_size: int = 1000):
+    """
+    Paginated streaming fetch of active edges for a user to handle large graphs (>10,000 edges)
+    without hitting Supabase default 1,000 item payload caps or memory bottlenecks.
+    """
+    all_edges = []
+    offset = 0
+    while True:
+        res = (
+            supabase.table("chronic_edges")
+            .select("head_node_id, tail_node_id, confidence, user_id")
+            .eq("user_id", user_id)
+            .is_("valid_to", "null")
+            .range(offset, offset + batch_size - 1)
+            .execute()
+        )
+        data = res.data or []
+        all_edges.extend(data)
+        if len(data) < batch_size:
+            break
+        offset += batch_size
+    return all_edges
+
 def run_leiden_clustering(user_id: str):
     """
     Phase 4.B: Leiden Community Detection
@@ -30,22 +53,21 @@ def run_leiden_clustering(user_id: str):
     """
     print(f"Starting Nightly Leiden Community Detection for user {user_id[:8]}...")
 
-    # 1. Fetch the graph — scoped to this user ONLY
-    res = supabase.table("chronic_edges").select("*").eq("user_id", user_id).is_("valid_to", "null").execute()
-    edges = res.data
+    # 1. Fetch the graph in paginated chunks — scoped to this user ONLY
+    edges = fetch_all_active_edges(user_id)
     
     if not edges:
         print("Graph is empty. Skipping clustering.")
         return
         
-    print(f"Loaded {len(edges)} active edges from the Knowledge Graph.")
+    print(f"Loaded {len(edges)} active edges from the Knowledge Graph across paginated batches.")
     
-    # 2. Build NetworkX Graph
+    # 2. Build NetworkX Graph iteratively
     G = nx.Graph()
     for e in edges:
-        G.add_edge(e['head_node_id'], e['tail_node_id'], weight=e['confidence'])
+        G.add_edge(e['head_node_id'], e['tail_node_id'], weight=e.get('confidence', 1.0))
         
-    print(f"Built network with {G.number_of_nodes()} nodes.")
+    print(f"Built network with {G.number_of_nodes()} nodes and {G.number_of_edges()} edges.")
     
     # 3. Run Leiden Algorithm
     print("Executing Leiden algorithm for community detection...")
@@ -62,27 +84,17 @@ def run_leiden_clustering(user_id: str):
     
     # 4. Save to Database
     clusters_to_insert = []
-    # Preserve per-user scoping: each edge carries its own user_id
-    # Do NOT use edges[0]['user_id'] — that operated on an arbitrary user.
-    user_id_for_edge = lambda e: e.get('user_id', 'unknown')
     
     for i, comm in enumerate(communities):
         if len(comm) < 2:
             continue  # Skip trivial clusters
 
         cluster_id = str(uuid.uuid4())
-        # Determine the user_id for this community (majority vote on edge user_ids)
-        community_nodes = set(comm)
-        edge_user_ids = [
-            user_id_for_edge(e) for e in edges
-            if e['head_node_id'] in community_nodes or e['tail_node_id'] in community_nodes
-        ]
-        uid = max(set(edge_user_ids), key=edge_user_ids.count) if edge_user_ids else 'unknown'
         label = f"Emerging Pattern #{i+1}"
 
         clusters_to_insert.append({
             "id": cluster_id,
-            "user_id": uid,
+            "user_id": user_id,
             "cluster_id": cluster_id,
             "cluster_label": label,
             "cluster_description": f"Automatically grouped cluster containing {len(comm)} entities.",
@@ -93,15 +105,16 @@ def run_leiden_clustering(user_id: str):
         })
         
     if clusters_to_insert:
-        # Group clusters by user_id so we replace cleanly per user
-        from itertools import groupby
-        clusters_to_insert.sort(key=lambda x: x['user_id'])
-        for uid, group in groupby(clusters_to_insert, key=lambda x: x['user_id']):
-            user_clusters = list(group)
-            # Replace old clusters for this specific user to avoid duplication bloat
-            supabase.table("cognitive_clusters").delete().eq("user_id", uid).execute()
-            supabase.table("cognitive_clusters").insert(user_clusters).execute()
-        print(f"Successfully saved {len(clusters_to_insert)} clusters to Supabase across {len(set(c['user_id'] for c in clusters_to_insert))} user(s).")
+        # Cleanly replace old clusters for this specific user
+        supabase.table("cognitive_clusters").delete().eq("user_id", user_id).execute()
+        
+        # Batch insert in 500-item chunks to avoid Supabase payload limits
+        chunk_size = 500
+        for i in range(0, len(clusters_to_insert), chunk_size):
+            chunk = clusters_to_insert[i:i + chunk_size]
+            supabase.table("cognitive_clusters").insert(chunk).execute()
+
+        print(f"Successfully saved {len(clusters_to_insert)} clusters to Supabase for user {user_id[:8]}.")
         print("The Mindmap UI and User can now review and name these clusters.")
     else:
         print("No significant clusters found.")

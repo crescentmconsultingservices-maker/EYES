@@ -62,16 +62,80 @@ const ROLE_CONNECTORS: Record<string, { id: string, label: string, icon: string 
   ]
 };
 
+const ORGANIZATION_CONNECTORS = [
+  { id: 'slack', label: 'Slack Workspace', icon: '💬' },
+  { id: 'github', label: 'GitHub Organization', icon: '🐙' },
+  { id: 'google', label: 'Google Workspace', icon: '📧' },
+  { id: 'notion', label: 'Notion Workspace', icon: '📓' },
+  { id: 'discord', label: 'Discord Server', icon: '🎮' },
+];
+
 export default function SandboxOnboarding() {
   const { supabase, updateUser } = useAuth();
   const [step, setStep] = useState(1);
   const [accountType, setAccountType] = useState<'individual' | 'organization' | null>(null);
   const [orgName, setOrgName] = useState('');
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [corporateDomain, setCorporateDomain] = useState<string | null>(null);
+  const [detectedOrgInfo, setDetectedOrgInfo] = useState<{
+    isPublicEmail: boolean;
+    detectedDomain: string | null;
+    existingOrg: { id: string; name: string; domain?: string; logo?: string } | null;
+    suggestedName: string | null;
+    logo?: string;
+  } | null>(null);
+  const [suggestions, setSuggestions] = useState<Array<{ id?: string; name: string; domain?: string; logo?: string; isRegistered: boolean }>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<string | null>(null);
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch Domain Detection on Mount
+  React.useEffect(() => {
+    const checkDomain = async () => {
+      try {
+        const res = await fetch('/api/organization/detect');
+        if (res.ok) {
+          const data = await res.json();
+          setDetectedOrgInfo(data);
+          if (data.existingOrg) {
+            setSelectedOrgId(data.existingOrg.id);
+            setOrgName(data.existingOrg.name);
+            if (data.existingOrg.domain) setCorporateDomain(data.existingOrg.domain);
+          } else if (data.suggestedName) {
+            setOrgName(data.suggestedName);
+            if (data.detectedDomain) setCorporateDomain(data.detectedDomain);
+          }
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    };
+    checkDomain();
+  }, []);
+
+  // Handle Autocomplete Search
+  const handleOrgSearch = async (val: string) => {
+    setOrgName(val);
+    setSelectedOrgId(null);
+    if (!val.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    setShowSuggestions(true);
+    try {
+      const res = await fetch(`/api/organization/detect?q=${encodeURIComponent(val)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestions(data.suggestions || []);
+      }
+    } catch {
+      setSuggestions([]);
+    }
+  };
 
   React.useEffect(() => {
     const savedStep = localStorage.getItem('onboarding_step');
@@ -146,7 +210,9 @@ export default function SandboxOnboarding() {
             goals: selectedGoals, 
             persona: selectedPersona,
             accountType,
-            organizationName: accountType === 'organization' ? orgName : undefined
+            organizationName: accountType === 'organization' ? orgName : undefined,
+            existingOrgId: accountType === 'organization' ? selectedOrgId : undefined,
+            corporateDomain: accountType === 'organization' ? corporateDomain : undefined
           })
         });
         if (!res.ok) {
@@ -228,26 +294,108 @@ export default function SandboxOnboarding() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+                  style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', position: 'relative' }}
                 >
+                  {detectedOrgInfo?.existingOrg && (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: 'rgba(99, 102, 241, 0.08)',
+                      border: '1px solid #6366f1',
+                      borderRadius: '10px',
+                      color: '#1D1C16',
+                      fontSize: '13.5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div>
+                        <strong>Team Workspace Found!</strong>
+                        <div style={{ fontSize: '12px', color: '#555' }}>
+                          Join <strong>{detectedOrgInfo.existingOrg.name}</strong> ({detectedOrgInfo.existingOrg.domain})
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#6366f1', background: '#fff', padding: '4px 8px', borderRadius: '6px' }}>
+                        AUTO-DETECTED
+                      </span>
+                    </div>
+                  )}
+
                   <label style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1D1C16' }}>Organization Name</label>
-                  <input
-                    type="text"
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                    placeholder="e.g. Acme Corp"
-                    style={{
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      border: '2px solid #EAEAEA',
-                      fontSize: '1rem',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      transition: 'border-color 0.2s ease',
-                      backgroundColor: 'white',
-                      color: '#1D1C16'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      value={orgName}
+                      onChange={(e) => handleOrgSearch(e.target.value)}
+                      onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+                      placeholder="Type or search company (e.g. Stripe, Acme Corp)"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '8px',
+                        border: '2px solid #EAEAEA',
+                        fontSize: '1rem',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        transition: 'border-color 0.2s ease',
+                        backgroundColor: 'white',
+                        color: '#1D1C16'
+                      }}
+                    />
+
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: '4px',
+                        background: '#ffffff',
+                        border: '1px solid #EAEAEA',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                        zIndex: 50,
+                        maxHeight: '220px',
+                        overflowY: 'auto'
+                      }}>
+                        {suggestions.map((s, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              setOrgName(s.name);
+                              if (s.id) setSelectedOrgId(s.id);
+                              if (s.domain) setCorporateDomain(s.domain);
+                              setShowSuggestions(false);
+                            }}
+                            style={{
+                              padding: '10px 14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              cursor: 'pointer',
+                              borderBottom: idx < suggestions.length - 1 ? '1px solid #f3f4f6' : 'none',
+                              backgroundColor: '#fff'
+                            }}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {s.logo ? (
+                                <img src={s.logo} alt={s.name} style={{ width: '20px', height: '20px', borderRadius: '4px' }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+                              ) : (
+                                🏢
+                              )}
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#1D1C16' }}>{s.name}</div>
+                                {s.domain && <div style={{ fontSize: '11px', color: '#666' }}>{s.domain}</div>}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10px', fontWeight: 600, color: s.isRegistered ? '#10b981' : '#6b7280' }}>
+                              {s.isRegistered ? 'REGISTERED' : 'SUGGESTED'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </motion.div>
@@ -290,12 +438,21 @@ export default function SandboxOnboarding() {
               transition={{ duration: 0.3 }}
             >
               <div className={styles.header}>
-                <h1 className={styles.title}>Connect your main tools</h1>
-                <p className={styles.subtitle}>Let&apos;s start indexing your digital life securely in the background.</p>
+                <h1 className={styles.title}>
+                  {accountType === 'organization' ? 'Connect Organization Tools' : 'Connect your main tools'}
+                </h1>
+                <p className={styles.subtitle}>
+                  {accountType === 'organization'
+                    ? 'Connect enterprise-wide workspace tools to build your team memory pool.'
+                    : "Let's start indexing your digital life securely in the background."}
+                </p>
               </div>
 
               <div className={styles.grid}>
-                {selectedRole && ROLE_CONNECTORS[selectedRole]?.map(conn => {
+                {(accountType === 'organization'
+                  ? ORGANIZATION_CONNECTORS
+                  : (selectedRole && ROLE_CONNECTORS[selectedRole]) || ORGANIZATION_CONNECTORS
+                ).map(conn => {
                   const isConnected = connectedPlatforms.includes(conn.id);
                   return (
                   <button

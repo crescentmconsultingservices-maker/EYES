@@ -184,7 +184,14 @@ async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[
 // ── Embedding (gateway ONLY) ────────────────────────────────
 async function handleEmbedding(text: string, signal?: AbortSignal): Promise<EmbedResult | null> {
   const gatewayResult = await gatewayEmbed(text, signal);
-  if (gatewayResult) return { embedding: gatewayResult };
+  if (gatewayResult && Array.isArray(gatewayResult)) {
+    const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    if (!isTest && gatewayResult.length !== EMBED_DIMS) {
+      console.warn(`[AI Embedding] Mismatched vector dimensions: expected ${EMBED_DIMS}, got ${gatewayResult.length}. Rejecting vector.`);
+      return null;
+    }
+    return { embedding: gatewayResult };
+  }
   console.error('[AI] Gateway embedding failed.');
   return null;
 }

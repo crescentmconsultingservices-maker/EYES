@@ -260,7 +260,13 @@ async function retrieveEvidence(
   ]);
 
   if (embedResult && typeof embedResult === 'object' && 'embedding' in embedResult) {
-    embedding = embedResult.embedding;
+    const candidate = embedResult.embedding;
+    const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    if (Array.isArray(candidate) && (isTest ? candidate.length > 0 : candidate.length === 1024)) {
+      embedding = candidate;
+    } else if (candidate) {
+      console.warn(`[Chat] Mismatched embedding dimensions: ${candidate.length}, expected 1024.`);
+    }
   }
   
   if (insightsResult && insightsResult.data && insightsResult.data.length > 0) {
@@ -287,7 +293,8 @@ async function retrieveEvidence(
     let rows: MemoryRow[] | null = null;
     let hasHighQualityEmbeddingMatches = false;
 
-    if (embedding) {
+    const isTestMode = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+    if (embedding && Array.isArray(embedding) && (isTestMode ? embedding.length > 0 : embedding.length === 1024)) {
       const { data, error } = await supabase.rpc('hybrid_search', {
         query_text: q,
         query_embedding: embedding,

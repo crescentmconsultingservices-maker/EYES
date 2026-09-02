@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { role, goals, persona, accountType, organizationName } = body;
+    const { role, goals, persona, accountType, organizationName, existingOrgId, corporateDomain } = body;
 
     if (!role || !goals || !persona) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -36,34 +36,57 @@ export async function POST(request: Request) {
     let resolvedOrgId: string | null = null;
 
     if (accountType === 'organization') {
-      if (!organizationName) {
-        return NextResponse.json({ error: 'Organization name is required for organization account type' }, { status: 400 });
-      }
+      if (existingOrgId) {
+        // User joined an existing registered organization
+        resolvedOrgId = existingOrgId;
 
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ name: organizationName })
-        .select('id')
-        .single();
+        const { error: memberError } = await supabase
+          .from('organization_members')
+          .insert({
+            organization_id: resolvedOrgId,
+            user_id: user.id,
+            role: 'member'
+          });
 
-      if (orgError || !orgData) {
-        console.error('Error creating organization:', orgError);
-        return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
-      }
+        if (memberError && !memberError.message.includes('duplicate')) {
+          console.error('Error joining organization member:', memberError);
+          return NextResponse.json({ error: 'Failed to join organization' }, { status: 500 });
+        }
+      } else {
+        // User creates a new organization
+        if (!organizationName) {
+          return NextResponse.json({ error: 'Organization name is required for organization account type' }, { status: 400 });
+        }
 
-      resolvedOrgId = orgData.id;
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .insert({ 
+            name: organizationName.trim(),
+            corporate_domain: corporateDomain?.trim() || null,
+            privacy_shield_enabled: true
+          })
+          .select('id')
+          .single();
 
-      const { error: memberError } = await supabase
-        .from('organization_members')
-        .insert({
-          organization_id: resolvedOrgId,
-          user_id: user.id,
-          role: 'owner'
-        });
+        if (orgError || !orgData) {
+          console.error('Error creating organization:', orgError);
+          return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
+        }
 
-      if (memberError) {
-        console.error('Error adding organization member:', memberError);
-        return NextResponse.json({ error: 'Failed to establish organization membership' }, { status: 500 });
+        resolvedOrgId = orgData.id;
+
+        const { error: memberError } = await supabase
+          .from('organization_members')
+          .insert({
+            organization_id: resolvedOrgId,
+            user_id: user.id,
+            role: 'owner'
+          });
+
+        if (memberError) {
+          console.error('Error adding organization owner:', memberError);
+          return NextResponse.json({ error: 'Failed to establish organization membership' }, { status: 500 });
+        }
       }
     }
 

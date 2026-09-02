@@ -140,7 +140,6 @@ export async function runPlatformSyncDirect(
   platform: string,
   userId: string
 ): Promise<PlatformOutcome> {
-  void supabase;
   const routePlatform = toSyncRoutePlatform(platform);
   const startedAt = Date.now();
 
@@ -148,13 +147,19 @@ export async function runPlatformSyncDirect(
     // --- Dynamic Provider Registry (New Architecture) ---
     const { syncProviders } = await import('@/services/sync/provider-registry');
     
+    // Normalize platform key to match provider registry (e.g. google-calendar -> google_calendar)
+    const normalizedKey = platform.replace(/-/g, '_');
+    const providerKey = syncProviders[normalizedKey] ? normalizedKey : syncProviders[platform] ? platform : null;
+
     // Check if the platform has been migrated to the new registry
-    if (syncProviders[platform] || syncProviders[routePlatform]) {
-      const providerKey = syncProviders[routePlatform] ? routePlatform : platform;
+    if (providerKey && syncProviders[providerKey]) {
       const provider = syncProviders[providerKey];
       
-      const { createAdminClient } = await import('@/utils/supabase/server');
-      const adminClient = await createAdminClient();
+      let adminClient = supabase;
+      if (!adminClient) {
+        const { createAdminClient } = await import('@/utils/supabase/admin');
+        adminClient = createAdminClient();
+      }
       
       const result = await provider.executeSync({
         supabase: adminClient,
@@ -162,13 +167,22 @@ export async function runPlatformSyncDirect(
         mode: 'cron'
       }, 'delta');
       
-      if (result.status !== 200) throw new Error(result.error);
+      if (result.status < 200 || result.status >= 300) {
+        return {
+          platform,
+          routePlatform,
+          success: false,
+          status: result.status,
+          durationMs: Date.now() - startedAt,
+          error: result.error || result.detail || `Sync failed with status ${result.status}`,
+        };
+      }
       
       return {
         platform,
         routePlatform,
         success: true,
-        status: 200,
+        status: result.status || 200,
         durationMs: Date.now() - startedAt,
       };
     }
