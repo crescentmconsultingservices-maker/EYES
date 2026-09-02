@@ -18,13 +18,9 @@ function HomeInner() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSystemBooting, setIsSystemBooting] = useState(true);
 
-  // Redirect organization users directly to IRIS (/iris), and admin users to admin funnel analytics.
+  // Redirect admin users immediately to admin funnel analytics.
   useEffect(() => {
     if (!isLoading && user) {
-      if (user.accountType === 'organization' || (user as any).account_type === 'organization') {
-        router.replace('/iris');
-        return;
-      }
       fetch('/api/admin/funnel?period=24h', { method: 'GET' })
         .then(res => { if (res.ok) router.replace('/admin/funnel'); })
         .catch(() => {}); // non-admins get 403, silently ignored
