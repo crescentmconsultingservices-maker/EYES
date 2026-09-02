@@ -231,7 +231,12 @@ export default function SandboxOnboarding() {
         sessionStorage.removeItem('eyes-is-onboarding');
 
         // Smooth transition driven organically by AuthContext state
-        await updateUser({ onboardingCompleted: true });
+        await updateUser({ onboardingCompleted: true, accountType: accountType || undefined });
+        if (accountType === 'organization') {
+          router.replace('/iris');
+        } else {
+          router.replace('/');
+        }
       } catch (err: any) {
         console.error('Save failed:', err);
         alert(err?.message || 'Failed to save preferences. Please check your network connection and try again.');
