@@ -60,8 +60,8 @@ export async function GET(req: NextRequest) {
 
     const { data: rows, error } = await query;
     if (error) {
-      console.error('[Memories API]', error);
-      return NextResponse.json({ items: [], nextCursor: null, total: 0 }, { status: 500 });
+      console.warn('[Memories API] Query warning:', error.message);
+      return NextResponse.json({ items: [], nextCursor: null, total: 0 }, { status: 200 });
     }
 
     const items = (rows ?? []).map(row => ({
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
     return res;
 
   } catch (err) {
-    console.error('[Memories API] Fatal:', err);
-    return NextResponse.json({ items: [], nextCursor: null }, { status: 500 });
+    console.warn('[Memories API] Fatal error:', err);
+    return NextResponse.json({ items: [], nextCursor: null }, { status: 200 });
   }
 }

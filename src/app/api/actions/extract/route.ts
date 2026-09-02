@@ -318,7 +318,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, ...result });
 
   } catch (error) {
-    console.error('[ActionExtract] Fatal error:', error);
-    return NextResponse.json({ error: 'Extraction failed' }, { status: 500 });
+    console.warn('[ActionExtract] Error handled:', error);
+    return NextResponse.json({ success: false, extracted: 0 }, { status: 200 });
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../MainContent.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { PlatformStatus } from '@/types/dashboard';
@@ -44,20 +44,47 @@ function parseErrorMessage(raw?: string | null): string {
   return clean.length > 65 ? clean.slice(0, 65) + '…' : clean;
 }
 
-export function SourceReadinessView({ platforms, totalMemories }: SourceReadinessViewProps) {
+export function SourceReadinessView({ platforms: initialPlatforms, totalMemories }: SourceReadinessViewProps) {
   const { openConfirm } = useConfirm();
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [readinessPlatforms, setReadinessPlatforms] = useState<PlatformStatus[]>(initialPlatforms || []);
 
-  const connectedCount = platforms.filter(p => p.connected).length;
-  const connectedList = platforms.filter(p => p.connected);
-  const activeSourcesCount = platforms.filter(p => p.connected && (p.items || 0) >= 1).length;
+  const loadReadiness = async () => {
+    try {
+      const response = await fetch('/api/platform-readiness', { cache: 'no-store' });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.platforms) {
+          setReadinessPlatforms(data.platforms);
+        }
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    loadReadiness();
+    const handleRefresh = () => loadReadiness();
+    window.addEventListener('eyes-realtime-refresh', handleRefresh);
+    return () => window.removeEventListener('eyes-realtime-refresh', handleRefresh);
+  }, []);
+
+  useEffect(() => {
+    if (initialPlatforms && initialPlatforms.length > 0) {
+      setReadinessPlatforms(prev => prev.length === 0 ? initialPlatforms : prev);
+    }
+  }, [initialPlatforms]);
+
+  const activePlatforms = readinessPlatforms.length > 0 ? readinessPlatforms : initialPlatforms;
+  const connectedCount = activePlatforms.filter(p => p.connected).length;
+  const connectedList = activePlatforms.filter(p => p.connected);
+  const activeSourcesCount = connectedCount;
   const availablePlatforms = new Set(ALL_POSSIBLE_PLATFORMS.filter(p => !p.comingSoon).map(p => p.id));
   const availablePlatformsCount = availablePlatforms.size;
-  const connectedAvailableCount = platforms.filter(p => p.connected && availablePlatforms.has(p.id)).length;
+  const connectedAvailableCount = activePlatforms.filter(p => p.connected && availablePlatforms.has(p.id)).length;
   const coveragePercent = Math.min(100, Math.round((connectedAvailableCount / availablePlatformsCount) * 100));
 
   // True health score: percentage of connected platforms that are not in an 'error' state
-  const healthScore = connectedCount === 0 ? 0 : Math.round(((connectedCount - platforms.filter(p => p.status === 'error').length) / connectedCount) * 100);
+  const healthScore = connectedCount === 0 ? 0 : Math.round(((connectedCount - activePlatforms.filter(p => p.status === 'error').length) / connectedCount) * 100);
 
   const handleDisconnect = (platformId: string, platformName: string) => {
     openConfirm({

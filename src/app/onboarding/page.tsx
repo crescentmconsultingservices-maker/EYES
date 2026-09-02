@@ -160,7 +160,7 @@ export default function SandboxOnboarding() {
     const fetchConnections = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
-      const { data } = await supabase.from('auth_tokens').select('platform').eq('user_id', session.user.id);
+      const { data } = await supabase.from('oauth_tokens').select('platform').eq('user_id', session.user.id);
       if (data) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setConnectedPlatforms(data.map((d: any) => d.platform));
