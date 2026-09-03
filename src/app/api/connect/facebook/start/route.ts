@@ -42,15 +42,10 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('redirect_uri', callbackUrl);
   authUrl.searchParams.set('state', state);
   
-  // Facebook/Meta Scopes for reading user profile, pages, and instagram data
+  // Standard Meta Scopes allowed in Development mode without App Review
   const scopes = [
     'public_profile',
-    'email',
-    'pages_show_list',
-    'pages_read_engagement',
-    'pages_manage_posts',
-    'instagram_basic',
-    'instagram_manage_messages'
+    'email'
   ].join(',');
   
   authUrl.searchParams.set('scope', scopes);
