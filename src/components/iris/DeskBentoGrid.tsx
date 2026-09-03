@@ -146,33 +146,63 @@ export default function DeskBentoGrid() {
     };
   }, []);
 
+  const [nowPriorities, setNowPriorities] = useState<any[]>([]);
+  const [changedOvernight, setChangedOvernight] = useState<any[]>([]);
+  const [slippingItems, setSlippingItems] = useState<any[]>([]);
+  const [todayTimeline, setTodayTimeline] = useState<any[]>([]);
+  const [briefText, setBriefText] = useState<string>('');
+
+  useEffect(() => {
+    async function loadLiveData() {
+      try {
+        // Fetch top priorities from action queue
+        const actRes = await fetch('/api/actions/queue');
+        if (actRes.ok) {
+          const actData = await actRes.json();
+          const items = (actData.items || []).slice(0, 3).map((a: any, idx: number) => ({
+            id: a.id || idx,
+            title: a.title || a.action || 'Pending Action',
+            sub: a.description || a.context || 'Extracted from user memory stream',
+            tag: a.priority ? `${a.priority} PRIORITY` : 'ACTION REQUIRED',
+          }));
+          setNowPriorities(items);
+        }
+
+        // Fetch recent memories for overnight changes
+        const memRes = await fetch('/api/memories?limit=5');
+        if (memRes.ok) {
+          const memData = await memRes.json();
+          const items = (memData.items || []).slice(0, 3).map((m: any, idx: number) => ({
+            id: m.id || idx,
+            title: m.title || 'Memory Index',
+            sub: m.content ? (m.content.length > 80 ? m.content.substring(0, 80) + '...' : m.content) : 'Memory record logged',
+            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent',
+          }));
+          setChangedOvernight(items);
+
+          // Build timeline items from latest memories
+          const timelineItems = (memData.items || []).slice(0, 5).map((m: any) => ({
+            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+            label: m.title || 'Memory Event',
+            status: 'verified',
+          }));
+          setTodayTimeline(timelineItems);
+        }
+
+        // Fetch flagged/slipping items
+        const statsRes = await fetch('/api/timeline-stats');
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setSlippingItems([]);
+        }
+      } catch (err) {
+        console.warn('Failed loading live IRIS data:', err);
+      }
+    }
+    loadLiveData();
+  }, []);
+
   const barHeights = [22, 45, 68, 35, 80, 52, 90, 42, 75, 30, 95, 60, 40, 85, 48, 70, 32, 88, 55, 38, 25];
-
-  // Mock data for Widgets strictly adhering to IRIS UI Specification (§05 - Surface 1)
-  const nowPriorities = [
-    { id: 1, title: 'Finalize Series B Pitch Deck', sub: 'Updated with Q3 revenue growth metrics & burn rate analysis', tag: 'HIGH PRIORITY', tagBg: '#fef3c7', tagColor: '#7a2a0e' },
-    { id: 2, title: 'VP of Engineering Candidate Interview', sub: 'Final round technical leadership review scheduled for 15:00', tag: 'DUE SOON', tagBg: '#fef3c7', tagColor: '#7a2a0e' },
-    { id: 3, title: 'Q4 Product Roadmap Alignment', sub: 'Scope locking with engineering leads on IRIS voice duplex engine', tag: 'STRATEGIC', tagBg: '#f0d9cd', tagColor: '#7a2a0e' },
-  ];
-
-  const changedOvernight = [
-    { id: 1, title: 'Revenue Leak Scan completed', sub: '3 potential churn risks identified ($14.2k MRR at risk)', time: '04:12' },
-    { id: 2, title: 'GitHub Commit Velocity +24%', sub: '7 core features merged to production main branch', time: '02:45' },
-    { id: 3, title: 'Security Compliance Audit Pass', sub: 'SOC2 readiness score upgraded to 94%', time: '01:30' },
-  ];
-
-  const slippingItems = [
-    { id: 1, title: 'SaaS Contract Renewal Review', delayNote: "hasn't moved since the 11th — still current?", time: '3 days stagnant' },
-    { id: 2, title: 'SOC2 Vendor Evidence Upload', delayNote: "delayed on vendor response — check in required?", time: '5 days stagnant' },
-  ];
-
-  const todayTimeline = [
-    { time: '08:30', label: 'Synthesis pass completed', status: 'verified' },
-    { time: '10:00', label: 'Executive Standup & Roadmap', status: 'current' },
-    { time: '12:15', label: 'Series B Deck Update', status: 'pending' },
-    { time: '15:00', label: 'VP Eng Candidate Interview', status: 'pending' },
-    { time: '17:30', label: 'Engineering Sync', status: 'pending' },
-  ];
 
   const userName = user?.name ? user.name.split(' ')[0] : (user?.email ? user.email.split('@')[0] : 'Founder');
 

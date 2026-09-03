@@ -10,16 +10,19 @@ export default function ActiveTasksDrawer({ isOpen, onClose }: { isOpen: boolean
   const [tasks, setTasks] = useState<any[]>([]);
 
   useEffect(() => {
-    // Mock task to demonstrate phone approval handoff
     if (isOpen) {
-      setTasks([
-        {
-          id: 'task_123',
-          name: 'Investigate Churn & Draft Emails',
-          status: 'waiting_for_approval',
-          data: { churnRate: '4.2%', affectedUsers: 154 }
-        }
-      ]);
+      fetch('/api/actions/queue')
+        .then(res => res.ok ? res.json() : { items: [] })
+        .then(data => {
+          const formatted = (data.items || []).map((item: any) => ({
+            id: item.id,
+            name: item.title || item.action || 'Pending Action',
+            status: item.status || 'waiting_for_approval',
+            data: { context: item.context }
+          }));
+          setTasks(formatted);
+        })
+        .catch(() => setTasks([]));
     }
   }, [isOpen]);
 
