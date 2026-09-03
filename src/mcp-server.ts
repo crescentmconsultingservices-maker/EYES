@@ -117,6 +117,15 @@ async function getValidGoogleToken(
     }
   }
 
+  const refreshToken = decryptToken(tokenRow.refresh_token);
+  if (!refreshToken) {
+    try {
+      return decryptToken(tokenRow.access_token);
+    } catch {
+      return null;
+    }
+  }
+
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -124,7 +133,7 @@ async function getValidGoogleToken(
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        refresh_token: decryptToken(tokenRow.refresh_token),
+        refresh_token: refreshToken,
         grant_type: 'refresh_token',
       }),
     });
