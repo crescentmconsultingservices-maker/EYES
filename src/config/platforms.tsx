@@ -54,6 +54,9 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'webflow',         name: 'Webflow',         icon: <WebflowIconOfficial />,  category: 'Development',  description: 'Sync site settings, forms, and CMS data.',                 color: '#4353FF', comingSoon: true },
 
   // ─── Social ───────────────────────────────────────────────────────────────
+  { id: 'facebook',        name: 'Facebook & Meta', icon: <MetaIconOfficial />,     category: 'Social',       description: 'Sync your Facebook Page Messenger DMs and posts.',          color: '#0081FB' },
+  { id: 'whatsapp',        name: 'WhatsApp Business',icon: <WhatsAppIconOfficial />, category: 'Social',      description: 'Sync business chat messages and customer conversations.',   color: '#25D366' },
+  { id: 'instagram',       name: 'Instagram',       icon: <InstagramIconOfficial />,category: 'Social',       description: 'Sync Instagram Direct Messages (DMs) and post comments.',   color: '#E4405F' },
   { id: 'discord',         name: 'Discord',         icon: <DiscordIconOfficial />,  category: 'Social',       description: 'Connect servers and private messaging history.',            color: '#5865f2' },
   { id: 'twitter',         name: 'Twitter (X)',     icon: <XIconOfficial />,        category: 'Social',       description: 'Sync your tweets, mentions, and social footprint.',         color: 'var(--text-primary)' },
   // { id: 'reddit',          name: 'Reddit',          icon: <RedditIconOfficial />,   category: 'Social',       description: 'Index your posts, comments, and saved content.',            color: '#FF4500', comingSoon: true },
