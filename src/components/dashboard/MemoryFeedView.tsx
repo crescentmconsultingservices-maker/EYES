@@ -53,47 +53,7 @@ export function MemoryFeedView({
       if (!res.ok) return;
 
       const data = await res.json();
-      let newItems: FeedItem[] = data.items ?? [];
-      if (newItems.length === 0 && replace) {
-        newItems = [
-          {
-            id: 'mem-demo-1',
-            platform: 'slack',
-            title: 'Q3 Product Strategy Sync',
-            content: 'Team aligned on launching the EYES Neural OS memory vault. Key deliverable is real-time connectivity across all 38 connectors.',
-            timestamp: new Date().toISOString(),
-            author: 'Valentin',
-            event_type: 'Message',
-            is_flagged: false,
-            flag_severity: null,
-            flag_reason: null
-          },
-          {
-            id: 'mem-demo-2',
-            platform: 'gmail',
-            title: 'Supabase OAuth Integration Status',
-            content: 'OAuth tokens table configured with RLS policy and user_id scoping for organization members.',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            author: 'Engineering',
-            event_type: 'Email',
-            is_flagged: false,
-            flag_severity: null,
-            flag_reason: null
-          },
-          {
-            id: 'mem-demo-3',
-            platform: 'github',
-            title: 'Merged PR #104: Neural Memory Engine',
-            content: 'Successfully resolved cross-tenant visibility and dynamic platform readiness reporting.',
-            timestamp: new Date(Date.now() - 7200000).toISOString(),
-            author: 'GitHub Bot',
-            event_type: 'Pull Request',
-            is_flagged: false,
-            flag_severity: null,
-            flag_reason: null
-          }
-        ];
-      }
+      const newItems: FeedItem[] = data.items ?? [];
       const nc: string | null = data.nextCursor ?? null;
 
       setItems(prev => replace ? newItems : [...prev, ...newItems]);

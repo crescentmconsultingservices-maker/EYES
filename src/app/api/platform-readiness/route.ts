@@ -294,25 +294,7 @@ export async function GET() {
       return NextResponse.json({ platforms: [] }, { status: 200 });
     }
 
-    // Resolve user IDs context (personal user or all organization members)
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('organization_id, account_type')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    let userIds = [user.id];
-
-    if (profile?.account_type === 'organization' && profile?.organization_id) {
-      const { data: orgMembers } = await supabase
-        .from('organization_members')
-        .select('user_id')
-        .eq('organization_id', profile.organization_id);
-
-      if (orgMembers && orgMembers.length > 0) {
-        userIds = orgMembers.map(m => m.user_id);
-      }
-    }
+    const userIds = [user.id];
 
     // Fetch both OAuth tokens and Sync Status in parallel
     const [{ data: tokens }, { data: syncRows }] = await Promise.all([

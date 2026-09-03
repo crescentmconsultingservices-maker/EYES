@@ -12,36 +12,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let targetUserId = searchParams.get('userId') || user?.id;
 
-    let userIds = targetUserId ? [targetUserId] : ['4d2f3e3c-b834-43fc-852a-c3cdbb535b68'];
-
-    if (user && !searchParams.get('userId')) {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('organization_id, account_type')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      let orgId = profile?.organization_id;
-      if (!orgId) {
-        const { data: memberRecord } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (memberRecord?.organization_id) orgId = memberRecord.organization_id;
-      }
-
-      if (orgId) {
-        const { data: orgMembers } = await supabase
-          .from('organization_members')
-          .select('user_id')
-          .eq('organization_id', orgId);
-
-        if (orgMembers && orgMembers.length > 0) {
-          userIds = Array.from(new Set([user.id, ...orgMembers.map(m => m.user_id)]));
-        }
-      }
-    }
+    let userIds = targetUserId ? [targetUserId] : (user ? [user.id] : []);
 
     const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
