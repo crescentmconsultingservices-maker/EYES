@@ -33,7 +33,10 @@ import {
   GoogleMeetIcon,
   GoogleChatIcon,
   GoogleMapsIcon,
-  YouTubeIconOfficial
+  YouTubeIconOfficial,
+  MetaIconOfficial,
+  WhatsAppIconOfficial,
+  InstagramIconOfficial
 } from '../components/common/icons/PlatformIcons';
 
 export const ALL_POSSIBLE_PLATFORMS = [
