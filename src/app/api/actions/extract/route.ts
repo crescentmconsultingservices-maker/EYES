@@ -46,7 +46,7 @@ export async function extractForUser(userId: string, supabase: SupabaseClient, f
   // Fetch actionable memories — prioritized, noise-filtered
   const { data: memories, error } = await supabase
     .from('memories')
-    .select('id, platform, event_type, title, content, timestamp, author')
+    .select('id, platform, event_type, title, content, timestamp, author, organization_id, scope')
     .eq('user_id', userId)
     .in('platform', ACTIONABLE_PLATFORMS)
     .not('content', 'is', null)
@@ -54,6 +54,8 @@ export async function extractForUser(userId: string, supabase: SupabaseClient, f
     .limit(40);
 
   if (error) throw error;
+
+  const memoryMap = new Map((memories || []).map((m: any) => [m.id, m]));
 
   const memoryContext = (memories && memories.length > 0)
     ? memories.map((m: { platform: string; id: string; title?: string; content?: string }) =>
@@ -244,19 +246,24 @@ DO NOT use markdown or quotation marks.`;
 
     const toInsert = extractedActions
       .filter(a => !existingKeys.has(`${a.memoryId}:${a.platform}:${a.title}`))
-      .map(a => ({
-        user_id: userId,
-        memory_id: (a.memoryId as string) ?? null,
-        platform: (a.platform as string) ?? 'unknown',
-        title: (a.title as string) ?? 'Untitled Action',
-        description: (a.description as string) ?? null,
-        suggested_action: (a.suggestedAction as string) ?? null,
-        action_type: (a.actionType as string) ?? 'REMINDER',
-        method: (a.method as string) ?? 'POST',
-        confidence: typeof a.confidence === 'number' ? Math.min(100, Math.max(0, a.confidence)) : 80,
-        status: 'pending',
-        extracted_at: new Date().toISOString(),
-      }));
+      .map(a => {
+        const mem = memoryMap.get(a.memoryId);
+        return {
+          user_id: userId,
+          organization_id: mem?.organization_id || null,
+          scope: mem?.scope || 'personal',
+          memory_id: (a.memoryId as string) ?? null,
+          platform: (a.platform as string) ?? 'unknown',
+          title: (a.title as string) ?? 'Untitled Action',
+          description: (a.description as string) ?? null,
+          suggested_action: (a.suggestedAction as string) ?? null,
+          action_type: (a.actionType as string) ?? 'REMINDER',
+          method: (a.method as string) ?? 'POST',
+          confidence: typeof a.confidence === 'number' ? Math.min(100, Math.max(0, a.confidence)) : 80,
+          status: 'pending',
+          extracted_at: new Date().toISOString(),
+        };
+      });
 
     if (toInsert.length > 0) {
       const { error: insertError } = await supabase.from('action_queue').insert(toInsert);

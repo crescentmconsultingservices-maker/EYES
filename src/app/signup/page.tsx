@@ -227,7 +227,13 @@ export default function SignupPage() {
       const result = await signup(name, email, password);
 
       if (result.success) {
-        router.push("/");
+        const pendingToken = sessionStorage.getItem('pending_invite_token');
+        if (pendingToken) {
+          sessionStorage.removeItem('pending_invite_token');
+          router.push(`/invite?token=${pendingToken}`);
+        } else {
+          router.push("/");
+        }
       } else {
         setError(result.message || "Identity creation failed. Please check your data.");
         setIsLoading(false);

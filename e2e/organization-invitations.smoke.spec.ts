@@ -71,7 +71,7 @@ test.describe('Organization Invitations E2E Flow', () => {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
             success: true,
-            inviteUrl: `http://localhost:3000/signup?invite=generated-token-999`,
+            inviteUrl: `http://localhost:3000/invite?token=generated-token-999`,
             invitation: {
               id: 'inv-999',
               token: 'generated-token-999',
@@ -110,7 +110,7 @@ test.describe('Organization Invitations E2E Flow', () => {
     expect(inviteResult.data.success).toBe(true);
     expect(inviteResult.data.invitation.email).toBe('new-colleague@company.com');
     expect(inviteResult.data.invitation.role).toBe('admin');
-    expect(inviteResult.data.inviteUrl).toContain('signup?invite=generated-token-999');
+    expect(inviteResult.data.inviteUrl).toContain('invite?token=generated-token-999');
 
     // 2. Revoke Invitation via DELETE
     const revokeResult = await page.evaluate(async () => {

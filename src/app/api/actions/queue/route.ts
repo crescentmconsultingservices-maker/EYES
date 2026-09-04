@@ -150,6 +150,8 @@ export async function GET() {
   }
 }
 
+import { ActionQueuePatchSchema, validateBody } from '@/lib/validations';
+
 /**
  * PATCH /api/actions/queue
  * Updates action status (dismiss / approve / executed / failed)
@@ -160,13 +162,17 @@ export async function PATCH(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { id, status, ...updates } = await request.json() as {
-      id: string;
-      status: 'pending' | 'approved' | 'dismissed' | 'executed' | 'failed';
-      [key: string]: unknown;
-    };
-
-    if (!id || !status) return NextResponse.json({ error: 'id and status required' }, { status: 400 });
+    const rawBody = await request.json();
+    const validation = validateBody(ActionQueuePatchSchema, rawBody);
+    
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+    
+    const { id, status } = validation.data;
+    
+    // We still extract 'updates' if there are other allowed fields dynamically sent (like 'notes' or 'result')
+    const updates = rawBody as Record<string, unknown>;
 
     const ALLOWED_PATCH_FIELDS = new Set(['notes', 'result']);
     const safeUpdates = Object.fromEntries(Object.entries(updates).filter(([k]) => ALLOWED_PATCH_FIELDS.has(k)));

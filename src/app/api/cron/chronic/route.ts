@@ -16,26 +16,30 @@ export async function GET(request: Request) {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 2. Get all distinct active users from chronic_edges
-    const { data: users, error } = await supabase
+    // 2. Fetch all unique combinations of user, organization, and scope
+    const { data: scopes, error } = await supabase
       .from('chronic_edges')
-      .select('user_id')
+      .select('user_id, organization_id, scope')
       .is('valid_to', null);
 
     if (error) throw error;
-    if (!users || users.length === 0) {
+    if (!scopes || scopes.length === 0) {
       return NextResponse.json({ status: 'no_active_users' });
     }
 
-    // Deduplicate user IDs
-    const uniqueUsers = Array.from(new Set(users.map(u => u.user_id)));
+    // Deduplicate combinations
+    const uniqueScopes = Array.from(new Set(scopes.map(s => JSON.stringify({ 
+      user_id: s.user_id, 
+      organization_id: s.organization_id, 
+      scope: s.scope 
+    })))).map(s => JSON.parse(s));
     
     const CHRONIC_ENGINE_URL = process.env.CHRONIC_ENGINE_URL || 'http://127.0.0.1:8000';
     const CHRONIC_ENGINE_SECRET = process.env.CHRONIC_ENGINE_SECRET || '';
 
-    // 3. Fire the Python Engine endpoints for each user
+    // 3. Fire the Python Engine endpoints for each combination
     const results = await Promise.allSettled(
-      uniqueUsers.map(async (userId) => {
+      uniqueScopes.map(async (scopeData) => {
         const headers = {
           'Content-Type': 'application/json',
           ...(CHRONIC_ENGINE_SECRET && { 'X-Engine-Secret': CHRONIC_ENGINE_SECRET })
@@ -45,17 +49,17 @@ export async function GET(request: Request) {
         const dedupeRes = await fetch(`${CHRONIC_ENGINE_URL}/cron/dedupe`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ user_id: userId })
+          body: JSON.stringify(scopeData)
         });
 
         // Fire Decay (Phase 4)
         const decayRes = await fetch(`${CHRONIC_ENGINE_URL}/cron/decay`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ user_id: userId })
+          body: JSON.stringify(scopeData)
         });
 
-        return { userId, dedupeOk: dedupeRes.ok, decayOk: decayRes.ok };
+        return { ...scopeData, dedupeOk: dedupeRes.ok, decayOk: decayRes.ok };
       })
     );
 

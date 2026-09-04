@@ -50,7 +50,8 @@
     "remark-gfm": "^4.0.1",
     "resend": "^6.12.3",
     "three-spritetext": "^1.10.0",
-    "umap-js": "^1.4.0"
+    "umap-js": "^1.4.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

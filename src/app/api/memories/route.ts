@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { MemoriesQuerySchema } from '@/lib/validations';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,16 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const cursor = searchParams.get('cursor');        // ISO timestamp of last item
-    const platform = searchParams.get('platform');    // optional platform filter
+    const parseResult = MemoriesQuerySchema.safeParse({
+      cursor: searchParams.get('cursor'),
+      platform: searchParams.get('platform')
+    });
+    
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
+    }
+    
+    const { cursor, platform } = parseResult.data;
 
     const userIds = [user.id];
 

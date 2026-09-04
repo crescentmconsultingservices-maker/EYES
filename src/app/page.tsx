@@ -17,12 +17,18 @@ function HomeInner() {
   const { user, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSystemBooting, setIsSystemBooting] = useState(true);
+  const [isAdminRedirecting, setIsAdminRedirecting] = useState(false);
 
   // Redirect admin users immediately to admin funnel analytics.
   useEffect(() => {
     if (!isLoading && user) {
       fetch('/api/admin/funnel?period=24h', { method: 'GET' })
-        .then(res => { if (res.ok) router.replace('/admin/funnel'); })
+        .then(res => {
+          if (res.ok) {
+            setIsAdminRedirecting(true);
+            router.replace('/admin/funnel');
+          }
+        })
         .catch(() => {}); // non-admins get 403, silently ignored
     }
   }, [user, isLoading, router]);
@@ -94,13 +100,8 @@ function HomeInner() {
     );
   }
 
-  // isAdmin drives the loading screen below; the useEffect above handles the actual redirect.
-  // We optimistically show the redirect screen only if the API confirmed admin on a prior render;
-  // for first render we fall through to the dashboard which is harmless — the useEffect fires quickly.
-  const isAdmin = false; // resolved server-side via /api/admin/funnel check in useEffect
-
   // Show clean transition screen for admins while redirecting
-  if (isAdmin) {
+  if (isAdminRedirecting) {
     return (
       <div style={{
         background: '#080808',

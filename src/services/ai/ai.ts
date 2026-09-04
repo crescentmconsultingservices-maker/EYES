@@ -121,6 +121,15 @@ Best,
   return MOCK_CHAT_FIXTURE;
 }
 
+// ── Retry helper ─────────────────────────────────────────────────────────────
+const GATEWAY_MAX_RETRIES = 3;
+const GATEWAY_RETRY_DELAYS = [500, 1000, 2000]; // ms — exponential backoff
+
+async function retryDelay(attemptIndex: number): Promise<void> {
+  const ms = GATEWAY_RETRY_DELAYS[Math.min(attemptIndex, GATEWAY_RETRY_DELAYS.length - 1)];
+  return new Promise(r => setTimeout(r, ms));
+}
+
 // ── Gateway call (K1 — single OpenAI-compatible client) ──────────────────────
 async function gatewayChat(
   alias: string,
@@ -131,54 +140,72 @@ async function gatewayChat(
   const base = getGatewayBase();
   const key = getGatewayKey();
   if (!base || !key) return null;
-  try {
-    const res = await fetch(`${base}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({ model: alias, messages, max_tokens: maxTokens, temperature: 0.1 }),
-      signal, // thread AbortSignal through for cancellation on timeout
-    });
-    if (!res.ok) {
-      console.warn(`[AI Gateway] ${alias} returned ${res.status}`);
-      return null;
+
+  for (let attempt = 0; attempt < GATEWAY_MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${base}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({ model: alias, messages, max_tokens: maxTokens, temperature: 0.1 }),
+        signal,
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return body?.choices?.[0]?.message?.content ?? null;
+      }
+      // Don't retry on 4xx client errors (except 429 rate-limit)
+      if (res.status < 500 && res.status !== 429) {
+        console.warn(`[AI Gateway] ${alias} returned ${res.status} — not retriable.`);
+        return null;
+      }
+      console.warn(`[AI Gateway] ${alias} returned ${res.status} — retry ${attempt + 1}/${GATEWAY_MAX_RETRIES}`);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return null; // Clean cancellation — no retry
+      console.warn(`[AI Gateway] fetch failed (attempt ${attempt + 1}):`, err instanceof Error ? err.message : err);
     }
-    const body = await res.json();
-    return body?.choices?.[0]?.message?.content ?? null;
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') return null; // Clean cancellation
-    console.warn('[AI Gateway] fetch failed:', err instanceof Error ? err.message : err);
-    return null;
+    if (attempt < GATEWAY_MAX_RETRIES - 1) await retryDelay(attempt);
   }
+  console.error(`[AI Gateway] ${alias} exhausted ${GATEWAY_MAX_RETRIES} retries.`);
+  return null;
 }
 
 async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[] | null> {
   const base = getGatewayBase();
   const key = getGatewayKey();
   if (!base || !key) return null;
-  try {
-    const res = await fetch(`${base}/embeddings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: ALIAS_EMBED,
-        input: text.slice(0, 8000),
-        dimensions: 1024,
-      }),
-      signal, // thread AbortSignal through for cancellation on timeout
-    });
-    if (!res.ok) return null;
-    const body = await res.json();
-    return body?.data?.[0]?.embedding ?? null;
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') return null; // Clean cancellation
-    return null;
+
+  for (let attempt = 0; attempt < GATEWAY_MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${base}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: ALIAS_EMBED,
+          input: text.slice(0, 8000),
+          dimensions: 1024,
+        }),
+        signal,
+      });
+      if (res.ok) {
+        const body = await res.json();
+        return body?.data?.[0]?.embedding ?? null;
+      }
+      if (res.status < 500 && res.status !== 429) return null; // Non-retriable
+      console.warn(`[AI Embed] Gateway returned ${res.status} — retry ${attempt + 1}/${GATEWAY_MAX_RETRIES}`);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return null;
+      console.warn(`[AI Embed] fetch failed (attempt ${attempt + 1}):`, err instanceof Error ? err.message : err);
+    }
+    if (attempt < GATEWAY_MAX_RETRIES - 1) await retryDelay(attempt);
   }
+  console.error(`[AI Embed] Exhausted ${GATEWAY_MAX_RETRIES} retries.`);
+  return null;
 }
 
 // ── Embedding (gateway ONLY) ────────────────────────────────

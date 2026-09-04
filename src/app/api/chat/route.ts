@@ -477,19 +477,18 @@ async function storeNote(
 }
 
 const CHAT_TIMEOUT_MS = 60_000;
+import { ChatRequestSchema, validateBody } from '@/lib/validations';
 
 async function handleChat(request: Request): Promise<Response> {
   try {
-    const body = await request.json();
-    const message: string = (body.message || '').slice(0, MAX_MESSAGE_LENGTH);
-    const history: unknown = body.history;
-    const threadId: string | null = body.threadId || null;
-    const prevSummary: string = body.summary || '';
-
-    if (!message.trim()) return NextResponse.json({ error: 'No message provided' }, { status: 400 });
-    if (body.message && body.message.length > MAX_MESSAGE_LENGTH) {
-      console.warn(`[Chat] Message truncated from ${body.message.length} to ${MAX_MESSAGE_LENGTH} chars.`);
+    const rawBody = await request.json();
+    const validation = validateBody(ChatRequestSchema, rawBody);
+    
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+    
+    const { message, history, threadId, summary: prevSummary } = validation.data;
 
     const supabase = await createClient();
     const { data: { user }, error: authErr } = await supabase.auth.getUser();

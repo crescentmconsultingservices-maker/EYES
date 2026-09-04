@@ -8,8 +8,9 @@ import EyesLogo from '../common/EyesLogo';
 
 export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const router = useRouter();
-  const { user, logout, theme } = useAuth();
+  const { user, logout, theme, updateUser } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSwitchingScope, setIsSwitchingScope] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
 
@@ -47,6 +48,38 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
           <MenuIcon />
         </button>
       </div>
+
+      {user?.organizationId && (
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', padding: '4px', border: '1px solid rgba(255,255,255,0.1)', alignItems: 'center' }}>
+          <button 
+            disabled={isSwitchingScope}
+            onClick={async () => {
+              if (user.accountType === 'individual') return;
+              setIsSwitchingScope(true);
+              await updateUser({ accountType: 'individual' });
+              setIsSwitchingScope(false);
+              // Force reload to refetch intelligence data within correct RLS context
+              window.location.reload();
+            }}
+            style={{ padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, background: user.accountType === 'individual' ? 'rgba(255,255,255,0.1)' : 'transparent', color: user.accountType === 'individual' ? '#fff' : '#888', border: 'none', cursor: isSwitchingScope ? 'not-allowed' : 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            👤 Personal
+          </button>
+          <button 
+            disabled={isSwitchingScope}
+            onClick={async () => {
+              if (user.accountType === 'organization') return;
+              setIsSwitchingScope(true);
+              await updateUser({ accountType: 'organization' });
+              setIsSwitchingScope(false);
+              window.location.reload();
+            }}
+            style={{ padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, background: user.accountType === 'organization' ? 'var(--accent-primary, #6366f1)' : 'transparent', color: user.accountType === 'organization' ? '#fff' : '#888', border: 'none', cursor: isSwitchingScope ? 'not-allowed' : 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            🏢 Organization
+          </button>
+        </div>
+      )}
 
       <div className={styles.right}>
         <div className={styles.userMenuContainer} ref={menuRef}>

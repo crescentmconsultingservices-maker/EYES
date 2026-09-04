@@ -184,18 +184,20 @@ export async function batchMoveToDeadLetters(
       return { moved: 0, failed: failedCount };
     }
 
-    // Delete from active queue
+    // Delete from active queue — batch via Promise.allSettled instead of sequential loop
     const deleteKeys = entries.map(e => ({ user_id: e.user_id, platform: e.platform }));
-    let deletedCount = 0;
-
-    for (const { user_id, platform } of deleteKeys) {
-      const { error: deleteError } = await supabase
+    const deletePromises = deleteKeys.map(({ user_id, platform }) =>
+      supabase
         .from('sync_retry_queue')
         .delete()
         .eq('user_id', user_id)
-        .eq('platform', platform);
+        .eq('platform', platform)
+    );
 
-      if (!deleteError) {
+    const deleteResults = await Promise.allSettled(deletePromises);
+    let deletedCount = 0;
+    for (const result of deleteResults) {
+      if (result.status === 'fulfilled' && !result.value.error) {
         deletedCount++;
       }
     }

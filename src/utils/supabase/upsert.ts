@@ -287,8 +287,8 @@ export async function fireEntityExtraction(supabase: SupabaseClient, events: Raw
               const headLabel = headEntity ? headEntity.label : 'other';
               const tailLabel = tailEntity ? tailEntity.label : 'other';
 
-              const headNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.head, headLabel);
-              const tailNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.tail, tailLabel);
+              const headNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.head, headLabel, event.organization_id, event.scope);
+              const tailNodeId = await getOrCreateNodeId(supabase, event.user_id, rel.tail, tailLabel, event.organization_id, event.scope);
 
               const recordId = event.platform_id || 'manual';
               // Phase 2: Anchor receipts to the exact text span
@@ -299,6 +299,8 @@ export async function fireEntityExtraction(supabase: SupabaseClient, events: Raw
               // Phase 2: Insert the edge with full bi-temporal schema and receipts
               const { error: edgeError } = await supabase.from('chronic_edges').insert({
                 user_id: event.user_id,
+                organization_id: event.organization_id || null,
+                scope: event.scope || 'personal',
                 head_node_id: headNodeId,
                 tail_node_id: tailNodeId,
                 relation_label: rel.label,

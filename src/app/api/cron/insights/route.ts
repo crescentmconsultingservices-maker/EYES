@@ -37,10 +37,14 @@ type MemoryRow = {
   title: string | null;
   content: string;
   timestamp: string;
+  organization_id: string | null;
+  scope: string;
 };
 
 type InsightRow = {
   user_id: string;
+  organization_id: string | null;
+  scope: string;
   kind: 'theme' | 'loop' | 'drift' | 'entity_link' | 'observation';
   title: string;
   body: string;
@@ -60,7 +64,7 @@ async function processUser(
   // Fetch recent memories (last 30 days)
   const { data: recentMemories } = await supabase
     .from('memories')
-    .select('id, platform, title, content, timestamp')
+    .select('id, platform, title, content, timestamp, organization_id, scope')
     .eq('user_id', userId)
     .gte('timestamp', thirtyDaysAgo)
     .order('timestamp', { ascending: false })
@@ -70,6 +74,8 @@ async function processUser(
     console.log(`[Insights] User ${userId.slice(0, 8)}: too few records (${recentMemories?.length ?? 0}), skipping.`);
     return { observations: 0, loops: 0 };
   }
+
+  const memoryMap = new Map<string, MemoryRow>((recentMemories as MemoryRow[]).map(m => [m.id, m]));
 
   // Mark all previous insights as not current before regenerating
   await supabase.from('insights').update({ is_current: false }).eq('user_id', userId);
@@ -106,8 +112,11 @@ async function processUser(
     const daySpan  = (latest.getTime() - earliest.getTime()) / (1000 * 60 * 60 * 24);
     if (daySpan < 30) continue;
 
+    const primaryMem = memoryMap.get(data.ids[0]);
     insightsToInsert.push({
       user_id: userId,
+      organization_id: primaryMem?.organization_id || null,
+      scope: primaryMem?.scope || 'personal',
       kind: 'loop',
       title: `Recurring theme: "${theme}"`,
       body: `The topic "${theme}" appears ${data.ids.length} times across your records over ${Math.round(daySpan)} days.`,
@@ -145,8 +154,12 @@ async function processUser(
           if (o.priority === 'HIGH') strength = 0.9;
           else if (o.priority === 'LOW') strength = 0.3;
 
+          const primaryRef = (o.source_reference && o.source_reference.length > 0) ? memoryMap.get(o.source_reference[0]) : null;
+
           insightsToInsert.push({
             user_id: userId,
+            organization_id: primaryRef?.organization_id || null,
+            scope: primaryRef?.scope || 'personal',
             kind: 'observation',
             title: o.summary.slice(0, 100),
             body: o.summary,

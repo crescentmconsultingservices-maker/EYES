@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { InviteAcceptSchema, validateBody } from '@/lib/validations';
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -10,11 +11,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { token } = await request.json();
-
-    if (!token) {
-      return NextResponse.json({ error: 'Invitation token is required' }, { status: 400 });
+    const rawBody = await request.json();
+    const validation = validateBody(InviteAcceptSchema, rawBody);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+    const { token } = validation.data;
 
     // Find and validate the invitation token
     const { data: invitation, error: inviteErr } = await supabase

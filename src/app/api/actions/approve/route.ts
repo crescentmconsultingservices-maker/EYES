@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { ActionApproveSchema, validateBody } from '@/lib/validations';
 
 /**
  * POST /api/actions/approve
@@ -20,17 +21,13 @@ export async function POST(req: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // ── Parse body ────────────────────────────────────────────────────────────
-    const body = await req.json() as {
-      id: string;
-      title?: string;
-      suggested_action?: string;
-      [key: string]: unknown;
-    };
-
-    if (!body.id) {
-      return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    // ── Parse & validate body ─────────────────────────────────────────────────
+    const rawBody = await req.json();
+    const validation = validateBody(ActionApproveSchema, rawBody);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+    const body = validation.data;
 
     // ── Step 1: Verify ownership ──────────────────────────────────────────────
     const { data: action, error: fetchError } = await supabase

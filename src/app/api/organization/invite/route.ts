@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
     // Build the invite URL
     const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const inviteUrl = `${baseUrl}/signup?invite=${token}`;
+    const inviteUrl = `${baseUrl}/invite?token=${token}`;
 
     return NextResponse.json({
       success: true,

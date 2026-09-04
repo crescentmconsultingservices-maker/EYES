@@ -8,7 +8,9 @@ export async function getOrCreateNodeId(
   supabase: SupabaseClient,
   userId: string,
   name: string,
-  label: string
+  label: string,
+  organizationId: string | null = null,
+  scope: string = 'personal'
 ): Promise<string> {
   const cleanName = name.trim();
   const cleanLabel = label.trim().toLowerCase();
@@ -36,6 +38,8 @@ export async function getOrCreateNodeId(
         label: cleanLabel,
         attributes: {},
         updated_at: new Date().toISOString(),
+        organization_id: organizationId,
+        scope: scope,
       },
       { onConflict: 'user_id,label,name' }
     )
