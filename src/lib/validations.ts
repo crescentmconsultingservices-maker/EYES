@@ -35,7 +35,7 @@ export type MemoriesQueryInput = z.infer<typeof MemoriesQuerySchema>;
 
 // ── /api/organization/invite/accept ──────────────────────────────────────────
 export const InviteAcceptSchema = z.object({
-  token: z.string().uuid('Invitation token must be a valid UUID'),
+  token: z.string().min(10, 'Invitation token is invalid'),
 });
 export type InviteAcceptInput = z.infer<typeof InviteAcceptSchema>;
 
