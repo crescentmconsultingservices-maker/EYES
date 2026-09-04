@@ -10,7 +10,7 @@ export default function InviteAcceptPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const { user, isLoading: isAuthLoading, updateUser } = useAuth();
+  const { user, isLoading: isAuthLoading, updateUser, supabase } = useAuth();
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export default function InviteAcceptPage() {
     setError(null);
 
     try {
-      const { data: { session } } = await (window as any)._supabaseClient.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       
       const res = await fetch('/api/organization/invite/accept', {
         method: 'POST',
