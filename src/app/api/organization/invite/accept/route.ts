@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { InviteAcceptSchema, validateBody } from '@/lib/validations';
+
+function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -18,8 +27,10 @@ export async function POST(request: Request) {
     }
     const { token } = validation.data;
 
+    const adminSupabase = getAdminClient();
+
     // Find and validate the invitation token
-    const { data: invitation, error: inviteErr } = await supabase
+    const { data: invitation, error: inviteErr } = await adminSupabase
       .from('organization_invitations')
       .select('*')
       .eq('token', token)
@@ -39,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     // Establish organization membership
-    const { error: memberErr } = await supabase
+    const { error: memberErr } = await adminSupabase
       .from('organization_members')
       .insert({
         organization_id: invitation.organization_id,
@@ -50,6 +61,8 @@ export async function POST(request: Request) {
     if (memberErr) {
       // Check if they are already a member
       if (memberErr.code === '23505') { // unique violation
+        // Clean up invitation since they are already a member
+        await adminSupabase.from('organization_invitations').delete().eq('id', invitation.id);
         return NextResponse.json({ error: 'You are already a member of this organization' }, { status: 400 });
       }
       console.error('Error adding organization member:', memberErr);
@@ -57,7 +70,7 @@ export async function POST(request: Request) {
     }
 
     // Update user profile account type and organization mapping
-    const { error: profileErr } = await supabase
+    const { error: profileErr } = await adminSupabase
       .from('user_profiles')
       .update({
         account_type: 'organization',
@@ -71,14 +84,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to update user profile organization link' }, { status: 500 });
     }
 
-    // Mark invitation as accepted
-    await supabase
+    // Delete the consumed invitation so it no longer appears in pending list
+    await adminSupabase
       .from('organization_invitations')
-      .update({ accepted_at: new Date().toISOString() })
+      .delete()
       .eq('id', invitation.id);
 
     // Fetch organization name for IRIS briefing
-    const { data: orgData } = await supabase
+    const { data: orgData } = await adminSupabase
       .from('organizations')
       .select('name')
       .eq('id', invitation.organization_id)

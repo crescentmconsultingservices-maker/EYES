@@ -1299,11 +1299,11 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Pending Invitations list */}
-                        {orgDetails.invitations.length > 0 && (
+                        {orgDetails.invitations.filter(i => !i.accepted_at).length > 0 && (
                           <div>
                             <h5 style={{ fontSize: '12px', fontWeight: 700, margin: '16px 0 8px 0', color: 'var(--text-secondary)' }}>Pending Invites</h5>
                             <div className={styles.listContainer}>
-                              {orgDetails.invitations.map((invite) => (
+                              {orgDetails.invitations.filter(i => !i.accepted_at).map((invite) => (
                                 <div key={invite.id} className={styles.listItem}>
                                   <div>
                                     <div style={{ fontWeight: 600, fontSize: '13px' }}>{invite.email}</div>
@@ -1313,18 +1313,16 @@ export default function SettingsPage() {
                                   </div>
                                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                                     <span className={styles.statBadge} style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
-                                      {invite.accepted_at ? 'ACCEPTED' : 'PENDING'}
+                                      PENDING
                                     </span>
-                                    {!invite.accepted_at && (
-                                      <button 
-                                        className={styles.itemRemove} 
-                                        onClick={() => handleRevokeInvitation(invite.id)}
-                                        title="Revoke Invitation"
-                                        style={{ fontSize: '18px' }}
-                                      >
-                                        ×
-                                      </button>
-                                    )}
+                                    <button 
+                                      className={styles.itemRemove} 
+                                      onClick={() => handleRevokeInvitation(invite.id)}
+                                      title="Revoke Invitation"
+                                      style={{ fontSize: '18px' }}
+                                    >
+                                      ×
+                                    </button>
                                   </div>
                                 </div>
                               ))}
