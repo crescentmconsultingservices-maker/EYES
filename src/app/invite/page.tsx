@@ -52,10 +52,19 @@ export default function InviteAcceptPage() {
       if (res.ok && data.success) {
         setSuccess(true);
         await updateUser({ accountType: 'organization', organizationId: data.organizationId });
-        // Redirect to dashboard after brief success state
+        
+        // Store briefing metadata for IRIS
+        sessionStorage.setItem('iris_welcome_org', JSON.stringify({
+          orgName: data.organizationName || 'Workspace',
+          role: data.role || 'member',
+          timestamp: Date.now(),
+        }));
+
+        // Redirect to IRIS with welcome parameters
+        const orgQuery = data.organizationName ? `&org_name=${encodeURIComponent(data.organizationName)}` : '';
         setTimeout(() => {
-          router.push('/iris');
-        }, 2000);
+          router.push(`/iris?welcome_org=1${orgQuery}`);
+        }, 1800);
       } else {
         setError(data.error || "Failed to accept invitation.");
       }

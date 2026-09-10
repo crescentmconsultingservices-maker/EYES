@@ -77,9 +77,17 @@ export async function POST(request: Request) {
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invitation.id);
 
+    // Fetch organization name for IRIS briefing
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', invitation.organization_id)
+      .maybeSingle();
+
     return NextResponse.json({
       success: true,
       organizationId: invitation.organization_id,
+      organizationName: orgData?.name || 'Workspace',
       role: invitation.role,
     });
   } catch (err) {

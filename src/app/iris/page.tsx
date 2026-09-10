@@ -21,6 +21,7 @@ import EntityDossier from '@/components/iris/EntityDossier';
 import UniversalInvestigate from '@/components/iris/UniversalInvestigate';
 
 import VoiceOrb, { VoiceOrbRef } from '@/components/iris/VoiceOrb';
+import OrgWelcomeModal from '@/components/iris/OrgWelcomeModal';
 
 interface IrisResponse {
   understanding: {
@@ -78,6 +79,9 @@ function IrisDashboardInner() {
   const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
   const [isTasksDrawerOpen, setIsTasksDrawerOpen] = useState(false);
   const [hasStartedChat, setHasStartedChat] = useState(false);
+  const [isOrgWelcomeOpen, setIsOrgWelcomeOpen] = useState(false);
+  const [welcomeOrgName, setWelcomeOrgName] = useState('Organization Workspace');
+  const [welcomeOrgRole, setWelcomeOrgRole] = useState('member');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceOrbRef = useRef<VoiceOrbRef>(null);
   const isProcessingRef = useRef<boolean>(false);
@@ -88,6 +92,36 @@ function IrisDashboardInner() {
       router.push('/login');
     }
   }, [user, isLoading, router]);
+
+  // Check for organization welcome flag upon joining workspace
+  useEffect(() => {
+    const welcomeParam = searchParams.get('welcome_org');
+    const storedWelcome = typeof window !== 'undefined' ? sessionStorage.getItem('iris_welcome_org') : null;
+
+    if (welcomeParam || storedWelcome) {
+      let orgName = searchParams.get('org_name') || 'Organization Workspace';
+      let role = 'member';
+
+      if (storedWelcome) {
+        try {
+          const parsed = JSON.parse(storedWelcome);
+          if (parsed.orgName) orgName = parsed.orgName;
+          if (parsed.role) role = parsed.role;
+        } catch {
+          // ignore parsing errors
+        }
+        try {
+          sessionStorage.removeItem('iris_welcome_org');
+        } catch {
+          // ignore
+        }
+      }
+
+      setWelcomeOrgName(orgName);
+      setWelcomeOrgRole(role);
+      setIsOrgWelcomeOpen(true);
+    }
+  }, [searchParams]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -416,6 +450,19 @@ function IrisDashboardInner() {
           )}
 
           <ActiveTasksDrawer isOpen={isTasksDrawerOpen} onClose={() => setIsTasksDrawerOpen(false)} />
+
+          <OrgWelcomeModal 
+            isOpen={isOrgWelcomeOpen}
+            orgName={welcomeOrgName}
+            userName={user?.name || undefined}
+            role={welcomeOrgRole}
+            onClose={() => setIsOrgWelcomeOpen(false)}
+            onAskPriorities={() => {
+              setIsOrgWelcomeOpen(false);
+              setHasStartedChat(true);
+              processQuery(`What are ${welcomeOrgName}'s active priorities, open commitments, and recent key decisions?`);
+            }}
+          />
 
         </div>
       </div>
