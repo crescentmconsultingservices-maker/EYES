@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import crypto from 'crypto';
+import { sendOrganizationInviteEmail } from '@/services/email/resend';
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     // Find the current user's organization context
     const { data: profile, error: profileErr } = await supabase
       .from('user_profiles')
-      .select('organization_id')
+      .select('organization_id, name')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -71,6 +72,27 @@ export async function POST(request: Request) {
     // Build the invite URL
     const baseUrl = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const inviteUrl = `${baseUrl}/invite?token=${token}`;
+
+    // Fetch organization name
+    const { data: orgRecord } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', profile.organization_id)
+      .maybeSingle();
+
+    const orgName = orgRecord?.name || 'Organization Space';
+    const inviterName = profile.name || user.email?.split('@')[0] || 'A team administrator';
+
+    // Dispatch invitation email (non-blocking)
+    sendOrganizationInviteEmail({
+      to: email,
+      orgName,
+      inviterName,
+      role: assignedRole,
+      inviteUrl,
+    }).catch((emailErr) => {
+      console.error('[Invite Email] Failed to dispatch invitation email:', emailErr);
+    });
 
     return NextResponse.json({
       success: true,
