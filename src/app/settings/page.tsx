@@ -304,18 +304,26 @@ export default function SettingsPage() {
   };
 
   const handleRevokeInvitation = async (id: string) => {
+    // Optimistically remove from state immediately
+    setOrgDetails(prev => prev ? {
+      ...prev,
+      invitations: prev.invitations.filter(inv => inv.id !== id)
+    } : null);
+
     try {
       const res = await fetch(`/api/organization/invite?id=${id}`, {
         method: 'DELETE'
       });
       const data = await safeParseJson(res);
-      if (res.ok) {
+      if (res.ok && data.success) {
         fetchOrgDetails();
       } else {
         alert(data.error || 'Failed to revoke invitation');
+        fetchOrgDetails();
       }
     } catch {
       alert('Error revoking invitation');
+      fetchOrgDetails();
     }
   };
 

@@ -1,7 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendOrganizationInviteEmail } from '@/services/email/resend';
+
+function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -23,8 +32,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid role specified' }, { status: 400 });
     }
 
+    const adminSupabase = getAdminClient();
+
     // Find the current user's organization context
-    const { data: profile, error: profileErr } = await supabase
+    const { data: profile, error: profileErr } = await adminSupabase
       .from('user_profiles')
       .select('organization_id, name')
       .eq('user_id', user.id)
@@ -35,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     // Verify user has admin/owner permissions in the organization
-    const { data: membership, error: membershipErr } = await supabase
+    const { data: membership, error: membershipErr } = await adminSupabase
       .from('organization_members')
       .select('role')
       .eq('organization_id', profile.organization_id)
@@ -51,7 +62,7 @@ export async function POST(request: Request) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // Invite link active for 7 days
 
-    const { data: invitation, error: inviteErr } = await supabase
+    const { data: invitation, error: inviteErr } = await adminSupabase
       .from('organization_invitations')
       .insert({
         organization_id: profile.organization_id,
@@ -74,7 +85,7 @@ export async function POST(request: Request) {
     const inviteUrl = `${baseUrl}/invite?token=${token}`;
 
     // Fetch organization name
-    const { data: orgRecord } = await supabase
+    const { data: orgRecord } = await adminSupabase
       .from('organizations')
       .select('name')
       .eq('id', profile.organization_id)
@@ -121,8 +132,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Invitation ID is required' }, { status: 400 });
     }
 
+    const adminSupabase = getAdminClient();
+
     // Find the invitation
-    const { data: invitation, error: inviteErr } = await supabase
+    const { data: invitation, error: inviteErr } = await adminSupabase
       .from('organization_invitations')
       .select('organization_id')
       .eq('id', id)
@@ -133,7 +146,7 @@ export async function DELETE(request: Request) {
     }
 
     // Verify user is owner/admin of that organization
-    const { data: membership, error: membershipErr } = await supabase
+    const { data: membership, error: membershipErr } = await adminSupabase
       .from('organization_members')
       .select('role')
       .eq('organization_id', invitation.organization_id)
@@ -145,7 +158,7 @@ export async function DELETE(request: Request) {
     }
 
     // Delete the invitation
-    const { error: deleteErr } = await supabase
+    const { error: deleteErr } = await adminSupabase
       .from('organization_invitations')
       .delete()
       .eq('id', id);
