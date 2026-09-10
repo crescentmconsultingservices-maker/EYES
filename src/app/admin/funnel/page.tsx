@@ -32,19 +32,30 @@ export default function AdminFunnelPage() {
   const [period, setPeriod] = useState<Period>('all');
   const [activeTab, setActiveTab] = useState<Tab>('overview');
 
-  // Check if current user is authorized as admin
-  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-  const adminEmails = adminEmailsEnv.split(',')
-    .map(email => email.trim().toLowerCase())
-    .filter(email => email !== '');
-  const isAdmin = user && user.email && adminEmails.length > 0 && adminEmails.includes(user.email.toLowerCase());
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // If auth is loaded and user is not admin, redirect to dashboard or home
-    if (!authLoading && !isAdmin) {
-      router.replace('/');
+    if (!authLoading) {
+      if (!user) {
+        router.replace('/');
+        return;
+      }
+      fetch('/api/admin/check')
+        .then(res => res.json())
+        .then(d => {
+          if (d?.isAdmin) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+            router.replace('/');
+          }
+        })
+        .catch(() => {
+          setIsAdmin(false);
+          router.replace('/');
+        });
     }
-  }, [authLoading, isAdmin, router]);
+  }, [authLoading, user, router]);
 
   const fetchFunnelData = useCallback(async () => {
     if (!isAdmin) return;

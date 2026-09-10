@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import styles from './settings.module.css';
@@ -13,9 +14,6 @@ export default function SettingsPage() {
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
   const { openConfirm } = useConfirm();
   const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'theme' | 'feedback' | 'organization'>('profile');
-  const [feedbackMessages, setFeedbackMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; time: string }>>([]);
-  const [feedbackInput, setFeedbackInput] = useState('');
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [riskSensitivity, setRiskSensitivity] = useState('MEDIUM');
   const [syncDepth, setSyncDepth] = useState('balanced');
   const [excludedSenders, setExcludedSenders] = useState<string[]>([]);
@@ -62,41 +60,97 @@ export default function SettingsPage() {
   const [orgName, setOrgName] = useState('');
   const [privacyShield, setPrivacyShield] = useState(true);
 
+  // Structured Support & Feedback Desk States
+  interface FeedbackTicket {
+    id: string;
+    type: 'bug' | 'feature' | 'feedback';
+    area: string;
+    subject: string;
+    message: string;
+    status: 'open' | 'in_progress' | 'resolved' | 'closed';
+    admin_response?: string | null;
+    responded_at?: string | null;
+    created_at: string;
+  }
+  const [feedbackTab, setFeedbackTab] = useState<'submit' | 'history'>('submit');
+  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'feedback'>('feedback');
+  const [feedbackArea, setFeedbackArea] = useState('Chat & Neural Search');
+  const [feedbackSubject, setFeedbackSubject] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState<string | null>(null);
+  const [ticketError, setTicketError] = useState<string | null>(null);
+  const [userTickets, setUserTickets] = useState<FeedbackTicket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
   useEffect(() => {
     if (user?.name) setDisplayName(user.name);
-    if (feedbackMessages.length === 0) {
-      setFeedbackMessages([
-        {
-          sender: 'bot',
-          text: `Hi ${user?.name || 'there'}! 👋 Welcome to the Feedback Desk. What's on your mind? Tell us any bugs, feature ideas, or thoughts and our dev team will receive it instantly!`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
-    }
   }, [user]);
 
-  const handleSendFeedback = async () => {
-    if (!feedbackInput.trim() || isSubmittingFeedback) return;
-    const userText = feedbackInput.trim();
-    setFeedbackInput('');
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    setFeedbackMessages(prev => [...prev, { sender: 'user', text: userText, time: now }]);
-    setIsSubmittingFeedback(true);
+  const fetchUserTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      const res = await fetch('/api/user/feedback');
+      const data = await res.json();
+      if (Array.isArray(data.tickets)) {
+        setUserTickets(data.tickets);
+      }
+    } catch (err) {
+      console.error('Failed to load tickets', err);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'feedback') {
+      fetchUserTickets();
+    }
+  }, [activeTab]);
+
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackSubject.trim() || !feedbackMessage.trim() || isSubmittingTicket) return;
+    setIsSubmittingTicket(true);
+    setTicketError(null);
+    setTicketSuccess(null);
+
+    const diagnostics = includeDiagnostics ? {
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      theme,
+      windowSize: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'unknown',
+      timestamp: new Date().toISOString(),
+    } : undefined;
 
     try {
       const res = await fetch('/api/user/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, module: 'EYES' })
+        body: JSON.stringify({
+          type: feedbackType,
+          area: feedbackArea,
+          subject: feedbackSubject.trim(),
+          message: feedbackMessage.trim(),
+          systemContext: diagnostics,
+        }),
       });
+
       const data = await res.json();
-      const botText = data.reply || "Thank you! Your feedback has been sent directly to our development team. 🚀";
-      setFeedbackMessages(prev => [...prev, { sender: 'bot', text: botText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      if (res.ok && data.success) {
+        setTicketSuccess(`Ticket #${data.ticket?.id ? data.ticket.id.slice(0, 8) : 'Created'} dispatched! Notification sent to our engineering team.`);
+        setFeedbackSubject('');
+        setFeedbackMessage('');
+        if (data.ticket) {
+          setUserTickets(prev => [data.ticket, ...prev]);
+        }
+      } else {
+        setTicketError(data.error || 'Failed to submit feedback.');
+      }
     } catch {
-      setFeedbackMessages(prev => [...prev, { sender: 'bot', text: "Feedback received and sent to dev review! 🚀", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      setTicketError('Network error submitting feedback.');
     } finally {
-      setIsSubmittingFeedback(false);
+      setIsSubmittingTicket(false);
     }
   };
 
@@ -679,85 +733,350 @@ export default function SettingsPage() {
               )}
 
               {activeTab === 'feedback' && (
-                <div style={{ display: 'flex', flexDirection: 'column', height: '520px', animation: 'fadeIn 0.3s ease-out' }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Interactive Feedback Desk</h3>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>Send feature suggestions, bug reports, or feedback directly to our core engineering team.</p>
-                  </div>
+                <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                        Support & Feedback Center
+                      </h3>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                        Submit bug reports, feature requests, or direct feedback. Our engineering team reviews and responds directly.
+                      </p>
+                    </div>
 
-                  {/* Chat Container */}
-                  <div style={{ 
-                    flex: 1, 
-                    background: 'rgba(0,0,0,0.2)', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '12px', 
-                    padding: '16px', 
-                    overflowY: 'auto', 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '12px',
-                    marginBottom: '16px'
-                  }}>
-                    {feedbackMessages.map((msg, i) => (
-                      <div 
-                        key={i} 
-                        style={{ 
-                          alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-                          maxWidth: '82%',
-                          background: msg.sender === 'user' ? 'var(--accent-primary, #6366f1)' : 'rgba(255,255,255,0.06)',
-                          color: msg.sender === 'user' ? '#ffffff' : 'var(--text-primary)',
-                          border: msg.sender === 'user' ? 'none' : '1px solid var(--border)',
-                          borderRadius: msg.sender === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          padding: '12px 16px',
-                          fontSize: '13.5px',
-                          lineHeight: 1.5,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    {/* Sub-tabs navigation */}
+                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.06)', padding: '4px', borderRadius: '10px', gap: '4px', border: '1px solid var(--border)' }}>
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackTab('submit')}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          background: feedbackTab === 'submit' ? 'var(--accent-primary, #6366f1)' : 'transparent',
+                          color: feedbackTab === 'submit' ? '#ffffff' : 'var(--text-secondary)',
+                          transition: 'all 0.15s ease',
                         }}
                       >
-                        <div>{msg.text}</div>
-                        <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px', textAlign: 'right' }}>{msg.time}</div>
-                      </div>
-                    ))}
+                        Submit Ticket
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setFeedbackTab('history'); fetchUserTickets(); }}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          background: feedbackTab === 'history' ? 'var(--accent-primary, #6366f1)' : 'transparent',
+                          color: feedbackTab === 'history' ? '#ffffff' : 'var(--text-secondary)',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        My Submissions {userTickets.length > 0 ? `(${userTickets.length})` : ''}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Chat Input Bar */}
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input 
-                      type="text" 
-                      placeholder="Type your feedback to the dev team..."
-                      value={feedbackInput}
-                      onChange={(e) => setFeedbackInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleSendFeedback(); }}
-                      style={{ 
-                        flex: 1, 
-                        background: 'rgba(255,255,255,0.04)', 
-                        border: '1px solid var(--border)', 
-                        borderRadius: '8px', 
-                        padding: '12px 16px', 
-                        color: 'var(--text-primary)', 
-                        fontSize: '13.5px',
-                        outline: 'none'
-                      }}
-                    />
-                    <button 
-                      onClick={handleSendFeedback}
-                      disabled={isSubmittingFeedback || !feedbackInput.trim()}
-                      style={{ 
-                        background: 'var(--accent-primary, #6366f1)', 
-                        color: '#ffffff', 
-                        border: 'none', 
-                        borderRadius: '8px', 
-                        padding: '0 20px', 
-                        fontSize: '13px', 
-                        fontWeight: 600, 
-                        cursor: isSubmittingFeedback || !feedbackInput.trim() ? 'not-allowed' : 'pointer',
-                        opacity: isSubmittingFeedback || !feedbackInput.trim() ? 0.6 : 1,
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      {isSubmittingFeedback ? 'Sending...' : 'Send'}
-                    </button>
-                  </div>
+                  {ticketSuccess && (
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: 'rgba(34, 197, 94, 0.12)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
+                      color: '#16a34a',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span>{ticketSuccess}</span>
+                      <button 
+                        onClick={() => setFeedbackTab('history')}
+                        style={{ background: 'transparent', border: 'none', color: '#16a34a', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                      >
+                        View in My Submissions →
+                      </button>
+                    </div>
+                  )}
+
+                  {ticketError && (
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      color: '#dc2626',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      marginBottom: '16px'
+                    }}>
+                      {ticketError}
+                    </div>
+                  )}
+
+                  {feedbackTab === 'submit' ? (
+                    <form onSubmit={handleSubmitTicket} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                      {/* Category Selection */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                          Ticket Category
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                          {[
+                            { id: 'feedback', label: 'Feedback', desc: 'General thoughts or feedback' },
+                            { id: 'bug', label: 'Bug Report', desc: 'Something is broken or failing' },
+                            { id: 'feature', label: 'Feature Request', desc: 'Idea or improvement request' },
+                          ].map(item => {
+                            const active = feedbackType === item.id;
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => setFeedbackType(item.id as 'bug' | 'feature' | 'feedback')}
+                                style={{
+                                  padding: '12px',
+                                  borderRadius: '10px',
+                                  border: active ? '2px solid var(--accent-primary, #6366f1)' : '1px solid var(--border)',
+                                  background: active ? 'rgba(99, 102, 241, 0.08)' : 'rgba(0,0,0,0.02)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <div style={{ fontSize: '13.5px', fontWeight: 700, color: active ? 'var(--accent-primary, #6366f1)' : 'var(--text-primary)' }}>
+                                  {item.label}
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  {item.desc}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Area Selection & Subject */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            Area
+                          </label>
+                          <select
+                            value={feedbackArea}
+                            onChange={(e) => setFeedbackArea(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--bg-primary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '13px',
+                              outline: 'none',
+                            }}
+                          >
+                            <option value="Chat & Neural Search">Chat & Neural Search</option>
+                            <option value="Connectors & Ingestion">Connectors & Ingestion</option>
+                            <option value="Action Queue">Action Queue</option>
+                            <option value="Privacy & Security">Privacy & Security</option>
+                            <option value="UI & Aesthetics">UI & Aesthetics</option>
+                            <option value="General System">General System</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                            Subject
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Brief summary of the issue or idea..."
+                            value={feedbackSubject}
+                            onChange={(e) => setFeedbackSubject(e.target.value)}
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--bg-primary)',
+                              color: 'var(--text-primary)',
+                              fontSize: '13px',
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Detailed Message */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                          Details & Observations
+                        </label>
+                        <textarea
+                          rows={5}
+                          placeholder="Describe what happened, steps to reproduce, or why this feature would help you..."
+                          value={feedbackMessage}
+                          onChange={(e) => setFeedbackMessage(e.target.value)}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-primary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '13px',
+                            fontFamily: 'inherit',
+                            resize: 'vertical',
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+
+                      {/* Diagnostics toggle */}
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <input
+                          type="checkbox"
+                          checked={includeDiagnostics}
+                          onChange={(e) => setIncludeDiagnostics(e.target.checked)}
+                        />
+                        <span>Attach diagnostic context (browser info, theme, timestamp) to help engineers resolve faster</span>
+                      </label>
+
+                      {/* Submit button */}
+                      <div>
+                        <button
+                          type="submit"
+                          disabled={isSubmittingTicket || !feedbackSubject.trim() || !feedbackMessage.trim()}
+                          style={{
+                            background: 'var(--accent-primary, #6366f1)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '12px 24px',
+                            fontSize: '13.5px',
+                            fontWeight: 600,
+                            cursor: isSubmittingTicket ? 'not-allowed' : 'pointer',
+                            opacity: isSubmittingTicket || !feedbackSubject.trim() || !feedbackMessage.trim() ? 0.6 : 1,
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {isSubmittingTicket ? 'Dispatching Ticket...' : 'Submit Feedback & Dispatch Ticket'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* My Submissions / Ticket History */
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {loadingTickets ? (
+                        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                          Loading your submitted tickets...
+                        </div>
+                      ) : userTickets.length === 0 ? (
+                        <div style={{
+                          padding: '40px 20px',
+                          textAlign: 'center',
+                          background: 'rgba(0,0,0,0.02)',
+                          border: '1px dashed var(--border)',
+                          borderRadius: '12px',
+                        }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>No tickets submitted yet</div>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', maxWidth: '420px', margin: '6px auto 16px' }}>
+                            Any bugs, suggestions, or questions you submit will appear here with live resolution status and developer answers.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setFeedbackTab('submit')}
+                            style={{
+                              background: 'var(--accent-primary, #6366f1)',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '8px 16px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Submit Your First Ticket
+                          </button>
+                        </div>
+                      ) : (
+                        userTickets.map((ticket) => (
+                          <div
+                            key={ticket.id}
+                            style={{
+                              padding: '16px',
+                              borderRadius: '10px',
+                              border: '1px solid var(--border)',
+                              background: 'var(--bg-primary)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '10px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{
+                                   padding: '3px 8px',
+                                   borderRadius: '12px',
+                                   fontSize: '11px',
+                                   fontWeight: 700,
+                                   background: ticket.status === 'resolved' ? 'rgba(34, 197, 94, 0.15)' :
+                                               ticket.status === 'in_progress' ? 'rgba(234, 179, 8, 0.15)' :
+                                               ticket.status === 'closed' ? 'rgba(107, 114, 128, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                                   color: ticket.status === 'resolved' ? '#16a34a' :
+                                          ticket.status === 'in_progress' ? '#ca8a04' :
+                                          ticket.status === 'closed' ? '#6b7280' : '#0284c7',
+                                }}>
+                                  {ticket.status.toUpperCase()}
+                                </span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                  #{ticket.id.slice(0, 8)} · {ticket.area}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                                {new Date(ticket.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+
+                            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                              {ticket.subject}
+                            </div>
+
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                              {ticket.message}
+                            </div>
+
+                            {/* Developer Reply Card */}
+                            {ticket.admin_response && (
+                              <div style={{
+                                marginTop: '8px',
+                                padding: '12px 14px',
+                                borderRadius: '8px',
+                                background: 'rgba(34, 197, 94, 0.08)',
+                                borderLeft: '3px solid #16a34a',
+                              }}>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', marginBottom: '4px' }}>
+                                  Developer Response {ticket.responded_at ? `(${new Date(ticket.responded_at).toLocaleDateString()})` : ''}:
+                                </div>
+                                <div style={{ fontSize: '12.5px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                                  {ticket.admin_response}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

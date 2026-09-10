@@ -2,13 +2,30 @@
 
 import { useState } from 'react';
 import UnderstandingCard from './UnderstandingCard';
+import HonestEmptyState from './HonestEmptyState';
+
+export interface AuditFindingItem {
+  id: string;
+  title: string;
+  body: string;
+  kicker: string;
+  statusBadge: string;
+  badgeType: 'live' | 'good' | 'accent' | 'slate';
+  receipt: {
+    source_url: string;
+    span: string;
+    sender: string;
+    timestamp: string;
+    confidence?: number;
+  };
+}
 
 export default function UniversalInvestigate() {
   const [query, setQuery] = useState<string>('');
   const [selectedLens, setSelectedLens] = useState<string>('revenue');
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [currentStep, setCurrentStep] = useState<number>(0);
   const [hasCompleted, setHasCompleted] = useState<boolean>(false);
+  const [findings, setFindings] = useState<AuditFindingItem[]>([]);
 
   const lenses = [
     { id: 'revenue', label: 'Revenue Leaks', active: true },
@@ -18,79 +35,56 @@ export default function UniversalInvestigate() {
     { id: 'compliance', label: 'Compliance Audit', active: false }
   ];
 
-  const steps = [
-    'Gathering evidence from vector graph...',
-    'Cross-referencing entity relationship states...',
-    'Scoring confidence and validity windows...',
-    'Composing proof-backed audit verdict...'
-  ];
-
-  const handleStartRun = (e: React.FormEvent) => {
+  const handleStartRun = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isRunning) return;
 
     setIsRunning(true);
-    setCurrentStep(0);
     setHasCompleted(false);
 
-    let step = 0;
-    const interval = setInterval(() => {
-      step++;
-      if (step < steps.length) {
-        setCurrentStep(step);
-      } else {
-        clearInterval(interval);
-        setIsRunning(false);
-        setHasCompleted(true);
-      }
-    }, 500);
+    try {
+      const res = await fetch('/api/iris/v0/investigate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lens: selectedLens, query: query.trim() })
+      });
+
+      if (!res.ok) throw new Error('Failed to run investigation');
+      const data = await res.json();
+      
+      const rawFindings = data.findings || [];
+      const parsed: AuditFindingItem[] = rawFindings.map((edge: any) => {
+        const headName = edge.head?.name || 'Entity';
+        const tailName = edge.tail?.name || 'Target';
+        const relation = edge.relation_label || 'audit_match';
+        const dateStr = edge.valid_from ? new Date(edge.valid_from).toLocaleDateString() : 'Active';
+
+        return {
+          id: edge.id,
+          title: `${headName} → ${relation.replace(/_/g, ' ')} (${tailName})`,
+          body: edge.memory_content || `Investigation match detected between ${headName} and ${tailName}.`,
+          kicker: `${selectedLens.toUpperCase()} AUDIT · EVIDENCE`,
+          statusBadge: edge.confidence && edge.confidence > 0.9 ? 'Verified' : 'Review Needed',
+          badgeType: edge.confidence && edge.confidence > 0.9 ? 'accent' : 'good',
+          receipt: {
+            source_url: edge.source_url || '/iris?view=signals',
+            span: edge.memory_content?.slice(0, 200) || `${headName} ${relation} ${tailName}`,
+            sender: `${selectedLens.toUpperCase()} Lens`,
+            timestamp: `${dateStr} · Memory Record`,
+            confidence: edge.confidence || 0.95
+          }
+        };
+      });
+
+      setFindings(parsed);
+    } catch (err) {
+      console.warn('Investigation query failed:', err);
+      setFindings([]);
+    } finally {
+      setIsRunning(false);
+      setHasCompleted(true);
+    }
   };
-
-  const revenueFindings = [
-    {
-      title: 'Unbilled Enterprise Add-on Seats (Acme Corp)',
-      body: 'Verified 4 additional workspace seats added on July 14 without an updated subscription tier.',
-      kicker: 'REVENUE AUDIT · UNBILLED SEATS',
-      statusBadge: 'Leak Confirmed',
-      badgeType: 'accent' as const,
-      receipt: {
-        source_url: '/iris?view=signals',
-        span: 'Unbilled Enterprise Add-on Seats (Acme Corp) — 4 seats unbilled.',
-        sender: 'Revenue Audit Lens',
-        timestamp: '2026-07-24 · 08:00 UTC',
-        confidence: 0.99
-      }
-    },
-    {
-      title: 'Legacy Rate Locking Expiration (Stripe Tier)',
-      body: 'Promotional 15% discount expired on June 30 but billing contract failed to reset to standard rate.',
-      kicker: 'REVENUE AUDIT · CONTRACT EXPIRED',
-      statusBadge: 'Review Needed',
-      badgeType: 'accent' as const,
-      receipt: {
-        source_url: '/iris?view=timeline',
-        span: 'Legacy Rate Locking Expiration (Stripe Tier) — contract expired June 30.',
-        sender: 'Billing Daemon',
-        timestamp: '2026-07-24 · 07:30 UTC'
-      }
-    }
-  ];
-
-  const credentialFindings = [
-    {
-      title: 'Legacy Test API Key in Repository History',
-      body: 'Discovered non-rotated test API key string in commit logs from 2026-05-12.',
-      kicker: 'CREDENTIAL AUDIT · REPO HISTORY',
-      statusBadge: 'Revocation Needed',
-      badgeType: 'accent' as const,
-      receipt: {
-        source_url: '/settings',
-        span: 'Legacy Test API Key string discovered in git commit logs.',
-        sender: 'Security Daemon',
-        timestamp: '2026-07-24 · 06:15 UTC'
-      }
-    }
-  ];
 
   return (
     <div style={{ maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '32px 40px 80px 40px', fontFamily: 'var(--font-inter, sans-serif)' }}>
@@ -187,16 +181,16 @@ export default function UniversalInvestigate() {
             </button>
           </form>
 
-          {/* 4-Step Stepped Progress Reveal (Section 10 Spec) */}
+          {/* Progress Indicator */}
           {isRunning && (
             <div style={{ background: 'var(--card, #fbfaf6)', border: '1px solid var(--accent-soft, #f0d9cd)', borderRadius: '10px', padding: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2e8b7a', display: 'inline-block' }} />
+              <span className="live-dot-breathe" style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#bf3d11', display: 'inline-block' }} />
               <div>
                 <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--accent, #bf3d11)', fontWeight: 600 }}>
-                  STEP {currentStep + 1} OF 4 · AUDIT IN PROGRESS
+                  AUDIT IN PROGRESS · QUERYING GRAPH
                 </div>
                 <div style={{ fontFamily: 'var(--font-inter, sans-serif)', fontSize: '15px', color: 'var(--ink-deep, #1a1714)', fontWeight: 500, marginTop: '4px' }}>
-                  {steps[currentStep]}
+                  Scanning bi-temporal edges for &ldquo;{selectedLens}&rdquo; violations...
                 </div>
               </div>
             </div>
@@ -210,21 +204,30 @@ export default function UniversalInvestigate() {
                   AUDIT VERDICT · {selectedLens.toUpperCase()} LENS
                 </span>
                 <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', color: 'var(--good, #2f6b4f)', fontWeight: 600 }}>
-                  ● Proof-backed Verdict (No Fabricated Numbers)
+                  ● Proof-backed Verdict ({findings.length} Evidence Records)
                 </span>
               </div>
 
-              {(selectedLens === 'revenue' ? revenueFindings : credentialFindings).map((finding, idx) => (
-                <UnderstandingCard
-                  key={idx}
-                  title={finding.title}
-                  body={finding.body}
-                  kicker={finding.kicker}
-                  statusBadge={finding.statusBadge}
-                  badgeType={finding.badgeType}
-                  receipt={finding.receipt}
+              {findings.length === 0 ? (
+                <HonestEmptyState
+                  headline={`No evidence found for ${selectedLens} audit.`}
+                  subtext="Deterministic sweep completed across your memory graph. No contradictory, leaked, or unbilled edges surfaced."
+                  suggestionText="Run Another Lens"
+                  onSuggestionClick={() => setSelectedLens(selectedLens === 'revenue' ? 'credentials' : 'revenue')}
                 />
-              ))}
+              ) : (
+                findings.map((finding) => (
+                  <UnderstandingCard
+                    key={finding.id}
+                    title={finding.title}
+                    body={finding.body}
+                    kicker={finding.kicker}
+                    statusBadge={finding.statusBadge}
+                    badgeType={finding.badgeType}
+                    receipt={finding.receipt}
+                  />
+                ))
+              )}
             </div>
           )}
         </div>

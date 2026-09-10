@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { user_id, client_stated_fee, mock } = await req.json();
+    const { user_id, client_stated_fee } = await req.json();
     if (!user_id) {
       return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
     }
@@ -37,32 +37,6 @@ export async function POST(req: Request) {
     const scanId = scanData.scan_id;
 
     // 2. Fetch Google Token
-    if (mock) {
-      // MOCK MODE: Inject fake threads directly
-      await supabase.from('leak_scan_threads').insert([
-        {
-          scan_id: scanId,
-          thread_id: 'mock_thread_1',
-          evidence: {
-            _raw_transcript: [
-              { from: 'client@acme.com', content: 'We love the proposal! When can you start?', direction: 'inbound', timestamp: new Date(Date.now() - 15 * 86400000).toISOString(), message_id: 'm1' },
-              { from: 'you@yourdomain.com', content: 'Great to hear! I will send over the final contract by Friday so we can kick off.', direction: 'outbound', timestamp: new Date(Date.now() - 14 * 86400000).toISOString(), message_id: 'm2' }
-            ]
-          }
-        },
-        {
-          scan_id: scanId,
-          thread_id: 'mock_thread_2',
-          evidence: {
-            _raw_transcript: [
-              { from: 'lead@startup.io', content: 'Hey there, we are looking to hire a senior engineer. Are you taking on new clients?', direction: 'inbound', timestamp: new Date(Date.now() - 20 * 86400000).toISOString(), message_id: 'm3' }
-            ]
-          }
-        }
-      ]);
-      return NextResponse.json({ success: true, manifest: { scan_id: scanId, threads_found: 2, threads_eligible: 2, skipped_bulk: 0, skipped_empty: 0 } });
-    }
-
     const accessToken = await getValidGoogleToken(supabase, user_id, 'gmail');
     if (!accessToken) {
       await supabase.from('leak_scans').update({ status: 'failed' }).eq('scan_id', scanId);

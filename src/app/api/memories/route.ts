@@ -17,14 +17,15 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const parseResult = MemoriesQuerySchema.safeParse({
       cursor: searchParams.get('cursor'),
-      platform: searchParams.get('platform')
+      platform: searchParams.get('platform'),
+      limit: searchParams.get('limit') ?? undefined,
     });
     
     if (!parseResult.success) {
       return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
     }
     
-    const { cursor, platform } = parseResult.data;
+    const { cursor, platform, limit } = parseResult.data;
 
     const userIds = [user.id];
 
@@ -33,9 +34,8 @@ export async function GET(req: NextRequest) {
       .from('memories')
       .select('id, platform, title, content, timestamp, event_type, author, is_flagged, flag_severity, flag_reason')
       .in('user_id', userIds)
-      .not('title', 'is', null)
       .order('timestamp', { ascending: false })
-      .limit(PAGE_SIZE);
+      .limit(limit || PAGE_SIZE);
 
     // Apply platform filter
     if (platform && platform !== 'all') {

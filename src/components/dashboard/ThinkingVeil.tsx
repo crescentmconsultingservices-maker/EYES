@@ -72,21 +72,31 @@ export function ThinkingVeil({
   const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const completedRef = useRef(false);
 
-  // ── Generate ghosted record cards (fake blur layer behind glass) ──────────
+  // ── Load real memory cards for the ghosted blur layer behind glass ──────────
   useEffect(() => {
-    const platforms = ['Gmail', 'GitHub', 'Calendar', 'Notion', 'Slack', 'Twitter'];
-    const verbs = ['sent email', 'committed to', 'scheduled', 'wrote about', 'mentioned', 'replied to'];
-    const nouns = ['the project', 'the meeting', 'the deadline', 'the proposal', 'the handover', 'the launch'];
-
-    const generated: GhostedCard[] = Array.from({ length: 18 }, (_, i) => ({
-      id: i,
-      text: `${platforms[i % platforms.length]}: ${verbs[i % verbs.length]} ${nouns[i % nouns.length]}`,
-      x: Math.random() * 85 + 5,      // 5–90% horizontal
-      y: Math.random() * 80 + 10,      // 10–90% vertical
-      speed: 18 + Math.random() * 24,  // 18–42s animation
-      opacity: 0.04 + Math.random() * 0.07, // 4–11% opacity
-    }));
-    setCards(generated);
+    async function loadGhostedMemories() {
+      try {
+        const res = await fetch('/api/memories?limit=18');
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.items || [];
+          if (items.length > 0) {
+            const generated: GhostedCard[] = items.map((m: any, i: number) => ({
+              id: i,
+              text: `[${m.platform?.toUpperCase() || 'MEMORY'}] ${m.title || m.content?.slice(0, 40) || 'Memory Record'}`,
+              x: (i * 17) % 85 + 5,
+              y: (i * 23) % 80 + 10,
+              speed: 18 + (i % 5) * 5,
+              opacity: 0.05 + ((i % 4) * 0.02),
+            }));
+            setCards(generated);
+            return;
+          }
+        }
+      } catch {}
+      setCards([]);
+    }
+    loadGhostedMemories();
   }, []);
 
   // ── Elapsed timer ─────────────────────────────────────────────────────────

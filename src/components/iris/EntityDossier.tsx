@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UnderstandingCard from './UnderstandingCard';
 import KnowledgeGraph from '@/components/dashboard/KnowledgeGraph';
+import HonestEmptyState from './HonestEmptyState';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface Entity {
   id: string;
@@ -15,54 +17,93 @@ interface Entity {
 }
 
 export default function EntityDossier() {
+  const router = useRouter();
   const { user } = useAuth();
   const userName = user?.name || (user?.email ? user.email.split('@')[0] : 'Founder');
 
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedEntityId, setSelectedEntityId] = useState<string>('self');
   const [showMindMapPanel, setShowMindMapPanel] = useState<boolean>(false);
 
-  const entities: Entity[] = [
-    {
-      id: 'self',
-      name: `${userName} (Founder)`,
-      type: 'self',
-      summary: 'Founder Office & Lead Architect. Active on EYES memory graph, IRIS UI Specification alignment, and revenue leak detection audit.',
-      commitments: [
-        'Finalize IRIS Phase 0–Phase 2 UI implementation by end of week.',
-        'Review Supabase vector store auth headers with security team.'
-      ],
-      recentChanges: [
-        'Updated globals.css with Paper & Ink design tokens.',
-        'Refactored VoiceOrb SpeechRecognition error handling.'
-      ]
-    },
-    {
-      id: 'eyes-project',
-      name: 'EYES Platform',
-      type: 'project',
-      summary: 'Digital memory dashboard and automated revenue audit engine for personal and enterprise data.',
-      commitments: [
-        '10x speedup parallel email scanner pipeline.',
-        'IRIS Paper & Ink design system migration.'
-      ],
-      recentChanges: [
-        'Superseded dark periwinkle chat bubbles with un-bubbled flowing prose.',
-        'Integrated 4-layer Receipt Panel.'
-      ]
-    },
-    {
-      id: 'vendo-co',
-      name: 'Vendo (YC S26)',
-      type: 'company',
-      summary: 'External competitor logged in intel synthesis pass. Released open-source host UI composition library.',
-      commitments: [
-        'Monitor API schema changes in public repository.'
-      ],
-      recentChanges: [
-        'Logged in overnight intel pass on 2026-07-24.'
-      ]
+  useEffect(() => {
+    async function loadEntities() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/graph');
+        if (!res.ok) throw new Error('Failed to fetch graph data');
+        const data = await res.json();
+
+        const rawNodes = data.nodes || [];
+        const rawEdges = data.edges || [];
+
+        // Build self dossier
+        const selfCommitments = rawEdges
+          .filter((e: any) => (e.label === 'commitment' || e.relation_label === 'commitment'))
+          .slice(0, 5)
+          .map((e: any) => `${e.label || 'Commitment'}: ${e.tail_name || e.target || 'Active obligation'}`);
+
+        const selfChanges = rawEdges
+          .filter((e: any) => e.valid_to)
+          .slice(0, 5)
+          .map((e: any) => `Superseded belief: ${e.head_name || e.source} (${e.label || 'relation'})`);
+
+        const selfEntity: Entity = {
+          id: 'self',
+          name: `${userName} (Founder)`,
+          type: 'self',
+          summary: `Founder profile & digital memory graph owner. Active across ${rawNodes.length} graph nodes and ${rawEdges.length} verified relationship edges.`,
+          commitments: selfCommitments.length > 0 ? selfCommitments : ['No outstanding unfulfilled commitments detected.'],
+          recentChanges: selfChanges.length > 0 ? selfChanges : ['Belief states current. No superseded lineage items.']
+        };
+
+        // Build dossiers for other detected entities
+        const otherEntities: Entity[] = rawNodes
+          .filter((n: any) => n.id !== 'self' && n.name && n.name.toLowerCase() !== 'user')
+          .slice(0, 10)
+          .map((n: any) => {
+            const connectedEdges = rawEdges.filter((e: any) => e.source === n.id || e.target === n.id);
+            const nodeCommitments = connectedEdges
+              .filter((e: any) => e.label === 'commitment')
+              .map((e: any) => `${e.source === n.id ? 'Committed to' : 'Obligation from'}: ${e.label}`);
+            
+            const nodeChanges = connectedEdges
+              .filter((e: any) => e.valid_to)
+              .map((e: any) => `Superseded relationship on ${new Date(e.valid_to).toLocaleDateString()}`);
+
+            const typeGuess: 'person' | 'project' | 'company' = 
+              n.label === 'person' ? 'person' : n.label === 'project' ? 'project' : 'company';
+
+            return {
+              id: n.id,
+              name: n.name || n.label || 'Entity',
+              type: typeGuess,
+              summary: n.description || `Extracted entity node from connected memories with ${connectedEdges.length} graph associations.`,
+              commitments: nodeCommitments.length > 0 ? nodeCommitments : ['No active commitments attached to this node.'],
+              recentChanges: nodeChanges.length > 0 ? nodeChanges : ['Stable graph representation.']
+            };
+          });
+
+        const fullList = [selfEntity, ...otherEntities];
+        setEntities(fullList);
+        setSelectedEntityId('self');
+      } catch (err) {
+        console.warn('Failed loading entities from graph:', err);
+        setEntities([{
+          id: 'self',
+          name: `${userName} (Founder)`,
+          type: 'self',
+          summary: 'Founder profile & memory graph root node.',
+          commitments: ['No commitments recorded yet.'],
+          recentChanges: ['Memory graph initialized.']
+        }]);
+      } finally {
+        setLoading(false);
+      }
     }
-  ];
+
+    loadEntities();
+  }, [userName]);
 
   const currentEntity = entities.find(e => e.id === selectedEntityId) || entities[0];
 

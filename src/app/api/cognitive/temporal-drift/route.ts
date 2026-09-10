@@ -51,15 +51,32 @@ export async function GET(request: Request) {
     }
 
     // Phase 4.D: The First Drift Signal
-    // In production, we group by timestamp and compute standard deviations.
-    // Here we generate the explicit Drift signal requested in the Directive.
-    
-    // Simulate finding a dramatic shift in the top entity for the Drift Signal
+    const entityName = topEntity.replace(/_/g, ' ');
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { count: totalMentions } = await supabase
+      .from('memories')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .ilike('content', `%${entityName}%`)
+      .gte('timestamp', oneYearAgo);
+
+    const { count: recentMentions } = await supabase
+      .from('memories')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .ilike('content', `%${entityName}%`)
+      .gte('timestamp', thirtyDaysAgo);
+
+    const pastCount = totalMentions || maxCount;
+    const currCount = recentMentions || 0;
+
     const driftGaps = [
         {
-            stated: `You historically engaged with ${topEntity.replace(/_/g, ' ')} frequently.`,
-            lived: `Your recent activity shows a massive drop in mentions regarding ${topEntity.replace(/_/g, ' ')}.`,
-            gap_summary: `You mentioned ${topEntity.replace(/_/g, ' ')} 47 times last year and 12 times this year — that pattern has changed.`
+            stated: `You historically engaged with ${entityName} frequently.`,
+            lived: `Your recent activity reflects ${currCount} mention${currCount === 1 ? '' : 's'} in the last 30 days vs ${pastCount} over the past year.`,
+            gap_summary: `Activity around ${entityName} shifted from ${pastCount} mentions historically to ${currCount} recently.`
         }
     ];
 

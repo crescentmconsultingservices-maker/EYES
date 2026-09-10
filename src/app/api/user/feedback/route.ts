@@ -1,60 +1,113 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { FeedbackSubmitSchema, validateBody } from '@/lib/validations';
 import { sendFeedbackEmail } from '@/services/email/resend';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const body = await req.json().catch(() => ({}));
-    const { message, module = 'EYES', systemContext } = body;
-
-    if (!message || typeof message !== 'string' || !message.trim()) {
-      return NextResponse.json({ error: 'Feedback message cannot be empty.' }, { status: 400 });
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Anonymous User';
-    const userEmail = user?.email || 'user@the-eyes.app';
+    const json = await req.json();
+    const validation = validateBody(FeedbackSubmitSchema, json);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
 
-    console.log(`[API /api/user/feedback] Received feedback from ${userName} (${userEmail}) via ${module}`);
+    const { type, area, subject, message, systemContext } = validation.data;
+    let ticketId = crypto.randomUUID();
 
-    // 1. Database fallback persistence (if user_feedback table exists, save it)
+    const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'EYES User';
+    const userEmail = user.email || 'unknown@user.com';
+
+    // Insert into user_feedback table
     try {
-      await supabase.from('user_feedback').insert({
-        user_id: user?.id || null,
-        user_email: userEmail,
-        user_name: userName,
-        module,
-        message: message.trim(),
-        system_context: systemContext || null,
-        created_at: new Date().toISOString(),
-      });
+      const { data: inserted, error: insertError } = await supabase
+        .from('user_feedback')
+        .insert({
+          id: ticketId,
+          user_id: user.id,
+          user_email: userEmail,
+          user_name: userName,
+          type,
+          area,
+          subject,
+          message,
+          system_context: systemContext || {},
+          status: 'open',
+        })
+        .select()
+        .single();
+
+      if (!insertError && inserted) {
+        ticketId = inserted.id;
+      } else if (insertError) {
+        console.warn('[Feedback API] DB insert warning (table may need migration):', insertError.message);
+      }
     } catch (dbErr) {
-      console.warn('[API /api/user/feedback] Database table insert optional fallback note:', dbErr);
+      console.warn('[Feedback API] DB error:', dbErr);
     }
 
-    // 2. Immediate Email Dispatch to Developer Team
-    void sendFeedbackEmail({
+    // Dispatch direct notification to engineering
+    await sendFeedbackEmail({
+      ticketId,
       userName,
       userEmail,
-      module,
-      message: message.trim(),
+      type,
+      area,
+      subject,
+      message,
       systemContext,
     });
 
-    const reply = `Thank you ${userName}! Your feedback has been sent directly to our development team. We will review it shortly. 🚀`;
-
     return NextResponse.json({
       success: true,
-      message: 'Feedback received & dispatched to development team.',
-      reply,
+      ticket: {
+        id: ticketId,
+        type,
+        area,
+        subject,
+        message,
+        status: 'open',
+        created_at: new Date().toISOString(),
+      },
+      message: 'Feedback received successfully. A copy has been dispatched to our engineering team.',
     });
-  } catch (err: any) {
-    console.error('[API /api/user/feedback] Error:', err);
-    return NextResponse.json(
-      { error: err.message || 'Failed to submit feedback.' },
-      { status: 500 }
-    );
+  } catch (err: unknown) {
+    console.error('[Feedback API] Error:', err);
+    return NextResponse.json({ error: 'Failed to process feedback' }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data, error } = await supabase
+      .from('user_feedback')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('[Feedback API] Error fetching user feedback:', error.message);
+      return NextResponse.json({ tickets: [] });
+    }
+
+    return NextResponse.json({ tickets: data || [] });
+  } catch (err: unknown) {
+    console.error('[Feedback API] GET Error:', err);
+    return NextResponse.json({ tickets: [] });
   }
 }

@@ -115,18 +115,27 @@ function IrisDashboardInner() {
 
       if (trimmed.startsWith('/app ')) {
         const type = trimmed.replace('/app ', '').trim();
-        const appData = type === 'graph' 
-          ? { type: 'knowledge-graph', data: { nodes: 42, edges: 112 } }
-          : { type: 'data-grid', data: { rows: [{date: '2023-10-01', metric: 'MRR', value: '$12,000'}, {date: '2023-10-02', metric: 'MRR', value: '$12,400'}] } };
+        let appData: any = null;
+        if (type === 'graph') {
+          try {
+            const graphRes = await fetch('/api/graph');
+            const graphJson = await graphRes.json();
+            appData = { type: 'knowledge-graph', data: { nodes: graphJson.nodes?.length || 0, edges: graphJson.edges?.length || 0 } };
+          } catch {
+            appData = { type: 'knowledge-graph', data: { nodes: 0, edges: 0 } };
+          }
+        }
 
         setMessages(prev => [...prev, { 
           role: 'assistant', 
           understanding: { 
-            answer: `Here is the embedded interactive ${type} application you requested.`, 
-            confidence: 0.99, 
+            answer: type === 'graph' 
+              ? `Here is your live Knowledge Graph with ${appData.data.nodes} nodes and ${appData.data.edges} edges.` 
+              : `Unknown app type "${type}". Supported: /app graph`, 
+            confidence: 1.0, 
             temporal_validity: null,
             receipts: [],
-            intent: 'render_app',
+            intent: type === 'graph' ? 'render_app' : 'none',
             app_data: appData
           } 
         }]);

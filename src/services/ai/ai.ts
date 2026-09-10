@@ -20,32 +20,9 @@ const ALIAS_EXTRACT = 'auto-extract';
 const ALIAS_CLASSIFY = 'auto-classify';
 const ALIAS_EMBED = 'auto-embed';
 
-// ── Mock mode (K3) ───────────────────────────────────────────────────────────
-const MOCK_MODE = process.env.MOCK_MODE === 'true';
-
 // ── No fallbacks permitted (K1) ────────────────────────────────────────────────
 // All calls route via the gateway.
 const EMBED_DIMS = 1024; // Align with Voyage/Gemini 1024-dim database schema (Migration 032)
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function pickRandom<T>(arr: T[]): T | null {
-  return arr.length === 0 ? null : arr[Math.floor(Math.random() * arr.length)];
-}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-// ── Per-model cooldown (in-process, resets on cold start) ────────────────────
-const cooldowns = new Map<string, number>();
-const COOLDOWN_MS = 300_000;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function isCooling(m: string): boolean {
-  const t = cooldowns.get(m);
-  if (!t) return false;
-  if (Date.now() - t > COOLDOWN_MS) { cooldowns.delete(m); return false; }
-  return true;
-}
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function markFailed(m: string): void { cooldowns.set(m, Date.now()); }
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export type AIPreference = 'claude' | 'gemini' | 'auto';
@@ -69,57 +46,6 @@ export interface AIInvokeOptions {
 
 export type EmbedResult = { embedding: number[] };
 export type InvokeResult = EmbedResult | string | null;
-
-// ── K3 Mock fixtures ─────────────────────────────────────────────────────────
-const MOCK_CHAT_FIXTURE = `Based on your digital history, there is a **contradiction** regarding the one-pager:
-
-1. **The Commitment**: On March 14, you received an email from John (\`john@investornet.com\`) requesting your team's one-pager "by the end of the month" [gmail_8842].
-2. **The Contradiction / Missing follow-through**: On April 2, you had a follow-up meeting on your Calendar ([cal_9120]) titled "Investor Network Meeting". However, there is no record in your sent emails of the one-pager being delivered prior to this meeting.
-3. **Connecting the Dots**: We found a GitHub Pull Request ([gh_1122]) merged on March 20 where the one-pager draft was updated by your developer, but it was never emailed to John.
-
-Would you like me to draft an email to John with the merged one-pager attached?`;
-
-const MOCK_PLANNER_FIXTURE = JSON.stringify({
-  queries: [{ q: 'sample query', sources: null, date_from: null, date_to: null, entities: null }],
-  need_insights: false,
-  is_note: false,
-});
-
-const MOCK_EMBED_FIXTURE: number[] = Array.from({ length: EMBED_DIMS }, (_, i) => Math.sin(i) * 0.01);
-
-function mockResponse(capability: AICapability, system: string, messages: AIHistoryMessage[] = []): InvokeResult {
-  if (capability === 'embed') return { embedding: MOCK_EMBED_FIXTURE };
-  // Planner / classify calls return JSON
-  if (system.includes('retrieval intent') || system.includes('classify') || /json only/i.test(system)) {
-    return MOCK_PLANNER_FIXTURE;
-  }
-
-  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
-  const query = lastUserMsg.toLowerCase();
-
-  if (query.includes('draft') || query.includes('yes') || query.includes('send') || query.includes('reply')) {
-    return `Here is the drafted email to John:
-
-**Subject:** Re: Investor Network Introduction & One-Pager
-
-Hi John,
-
-Thanks for the follow-up meeting on April 2nd. I apologize for the delay on this. Please find our team's latest updated one-pager attached (incorporating the changes from our GitHub update on March 20).
-
-Let me know when you have time for a brief review.
-
-Best,
-[User]
-
-*I have queued this draft in your Action Queue. You can approve it from the Connectors dashboard.*`;
-  }
-
-  if (query.includes('pr') || query.includes('github') || query.includes('pull request')) {
-    return `The GitHub Pull Request [gh_1122] was titled "Update one-pager draft". It was merged by your developer on March 20th and included changes fixing typos and updating team bios in the one-pager document.`;
-  }
-
-  return MOCK_CHAT_FIXTURE;
-}
 
 // ── Retry helper ─────────────────────────────────────────────────────────────
 const GATEWAY_MAX_RETRIES = 3;
@@ -256,12 +182,6 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal } = options;
 
-  // K3: Mock mode
-  if (MOCK_MODE) {
-    console.log(`[AI] MOCK_MODE — returning fixture for ${capability}`);
-    return mockResponse(capability, system, messages);
-  }
-
   if (capability === 'embed') {
     return handleEmbedding(messages[0]?.content || '', signal);
   }
@@ -289,16 +209,6 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
 export async function invokeModelStream(options: AIInvokeOptions): Promise<ReadableStream> {
   const { messages = [], system = '', signal } = options;
   const encoder = new TextEncoder();
-
-  if (MOCK_MODE) {
-    const mockText = mockResponse('chat', system, messages) as string;
-    return new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(mockText));
-        controller.close();
-      },
-    });
-  }
 
   const history = messages
     .filter(m => m.role !== 'system')

@@ -12,7 +12,7 @@ function getResendClient(): Resend {
   return new Resend(key);
 }
 
-// â”€â”€ Email templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Email templates ──────────────────────────────────────────────────────────
 
 function welcomeHtml(name: string) {
   return `<!DOCTYPE html>
@@ -30,10 +30,10 @@ function welcomeHtml(name: string) {
     <h1>EYES is now watching.</h1>
     <p>Hi ${name},</p>
     <p>Your account is active. EYES is indexing your connected platforms and will begin detecting patterns in your behavior over the next 21 days.</p>
-    <p>For now â€” ask it anything about your history. It already knows more than you think.</p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Open EYES â†’</a>
+    <p>For now — ask it anything about your history. It already knows more than you think.</p>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Open EYES →</a>
     <div class="footer">
-      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -54,14 +54,14 @@ function clusterReadyHtml(name: string, clusterCount: number) {
 </style></head>
 <body>
   <div class="container">
-    <div class="badge">ðŸ§  Behavioral patterns detected</div>
+    <div class="badge">🧠 Behavioral patterns detected</div>
     <h1>EYES found ${clusterCount} recurring states in your data.</h1>
     <p>Hi ${name},</p>
-    <p>After analyzing your last 21+ days of activity, EYES has detected ${clusterCount} distinct behavioral modes you cycle through. These are not guesses â€” they are patterns computed from your actual data.</p>
+    <p>After analyzing your last 21+ days of activity, EYES has detected ${clusterCount} distinct behavioral modes you cycle through. These are not guesses — they are patterns computed from your actual data.</p>
     <p>Open EYES to review and name each pattern. Once confirmed, every chat answer will reference which mode you're currently in.</p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Review your patterns â†’</a>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/chat" class="cta">Review your patterns →</a>
     <div class="footer">
-      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -82,23 +82,21 @@ function connectorErrorHtml(name: string, platform: string) {
 </style></head>
 <body>
   <div class="container">
-    <div class="warn">âš  Connection expired</div>
+    <div class="warn">⚠️ Connection expired</div>
     <h1>Your ${platform} connection needs to be refreshed.</h1>
     <p>Hi ${name},</p>
     <p>EYES lost access to your ${platform} account. This usually happens when OAuth tokens expire. EYES cannot index new ${platform} data until you reconnect.</p>
     <p>This takes 30 seconds to fix.</p>
-    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" class="cta">Reconnect ${platform} â†’</a>
+    <a href="${process.env.NEXT_PUBLIC_SITE_URL}/dashboard" class="cta">Reconnect ${platform} →</a>
     <div class="footer">
-      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
 </html>`;
 }
 
-
-
-// â”€â”€ Public send functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Public send functions ──────────────────────────────────────────────────
 
 export async function sendWelcomeEmail(to: string, name: string) {
   if (!process.env.RESEND_API_KEY) return;
@@ -109,7 +107,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
       subject: 'EYES is now watching.',
       html: welcomeHtml(name),
     });
-    console.log(`[Email] Welcome sent â†’ ${to}`);
+    console.log(`[Email] Welcome sent → ${to}`);
   } catch (err) {
     console.error('[Email] Welcome failed:', err);
   }
@@ -124,9 +122,9 @@ export async function sendClusterReadyEmail(to: string, name: string, clusterCou
       subject: `EYES detected ${clusterCount} behavioral patterns in your data`,
       html: clusterReadyHtml(name, clusterCount),
     });
-    console.log(`[Email] Cluster ready sent â†’ ${to}`);
+    console.log(`[Email] Cluster ready sent → ${to}`);
   } catch (err) {
-    console.error('[Email] Cluster ready failed:', err)
+    console.error('[Email] Cluster ready failed:', err);
   }
 }
 
@@ -139,7 +137,7 @@ export async function sendConnectorErrorEmail(to: string, name: string, platform
       subject: `Action needed: Your ${platform} connection expired`,
       html: connectorErrorHtml(name, platform),
     });
-    console.log(`[Email] Connector error sent â†’ ${to} for ${platform}`);
+    console.log(`[Email] Connector error sent → ${to} for ${platform}`);
   } catch (err) {
     console.error('[Email] Connector error failed:', err);
   }
@@ -162,7 +160,7 @@ function draftApprovalHtml(name: string, sender: string, summary: string, draftR
 </style></head>
 <body>
   <div class="container">
-    <div class="badge">âœ‰ Action Draft Ready</div>
+    <div class="badge">✉ Action Draft Ready</div>
     <h1>Draft Reply for: "${summary}"</h1>
     <p>Hi ${name},</p>
     <p>EYES has prepared a draft response to an email from <strong>${sender}</strong>. Review the draft below:</p>
@@ -174,9 +172,9 @@ function draftApprovalHtml(name: string, sender: string, summary: string, draftR
     
     <p>Please note: this reply will NOT be sent until you approve it.</p>
     
-    <a href="${approvalUrl}" class="cta">Approve & Send Draft â†’</a>
+    <a href="${approvalUrl}" class="cta">Approve & Send Draft →</a>
     <div class="footer">
-      EYES Â· <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
+      EYES · <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color:#4b5563">the-eyes.app</a>
     </div>
   </div>
 </body>
@@ -207,60 +205,69 @@ export async function sendDraftApprovalEmail(params: {
         params.actionId
       ),
     });
-    console.log(`[Email] Draft approval email sent â†’ ${params.to}`);
+    console.log(`[Email] Draft approval email sent → ${params.to}`);
   } catch (err) {
     console.error('[Email] Draft approval failed:', err);
   }
 }
 
 export async function sendFeedbackEmail(params: {
+  ticketId?: string;
   userName: string;
   userEmail: string;
-  module: string;
+  type?: string;
+  area?: string;
+  subject?: string;
   message: string;
-  systemContext?: string;
+  systemContext?: string | Record<string, unknown>;
 }) {
-  const devEmail = process.env.DEVELOPER_EMAIL || 'crescentmconsultingservices@gmail.com';
-  console.log(`[Email] Dispatching feedback email from ${params.userEmail} to ${devEmail}`);
+  const devEmail = process.env.DEVELOPER_EMAIL || 'chandruselvam1012@gmail.com';
+  console.log(`[Email] Dispatching ticket email from ${params.userEmail} to ${devEmail}`);
   
   if (!process.env.RESEND_API_KEY) {
-    console.log(`[Email Mock/Fallback] Feedback from ${params.userName} (${params.userEmail}) via ${params.module}: "${params.message}"`);
+    console.log(`[Email Mock/Fallback] Ticket from ${params.userName} (${params.userEmail}) [${params.type || 'feedback'}/${params.area || 'general'}]: "${params.subject || 'Feedback'}"`);
     return;
   }
+
+  const typeLabel = params.type === 'bug' ? '🐛 Bug Report' : params.type === 'feature' ? '💡 Feature Request' : '💬 User Feedback';
+  const displaySubject = params.subject || `Feedback from ${params.userName}`;
+  const displayTicket = params.ticketId ? `[Ticket #${params.ticketId.slice(0, 8)}] ` : '';
 
   const htmlContent = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><style>
-  body { font-family: -apple-system, sans-serif; background: #09090b; color: #f4f4f5; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #09090b; color: #f4f4f5; margin: 0; padding: 0; }
   .container { max-width: 600px; margin: 40px auto; padding: 32px; background: #18181b; border: 1px solid #27272a; border-radius: 16px; }
-  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #27272a; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #27272a; }
   .badge { display: inline-block; padding: 4px 12px; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.3); color: #38bdf8; border-radius: 20px; font-size: 12px; font-weight: 600; }
-  h2 { font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 16px; }
-  .msg-box { background: rgba(255,255,255,0.04); border-left: 4px solid #38bdf8; padding: 18px; margin: 20px 0; border-radius: 6px; font-size: 15px; line-height: 1.6; color: #f4f4f5; white-space: pre-wrap; }
-  .meta { font-size: 13px; color: #a1a1aa; line-height: 1.8; margin-top: 20px; }
+  .badge-bug { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #f87171; }
+  .badge-feature { background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.3); color: #c084fc; }
+  h2 { font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 8px; }
+  .subject-line { font-size: 16px; color: #e4e4e7; font-weight: 600; margin: 12px 0 6px; }
+  .msg-box { background: rgba(255,255,255,0.04); border-left: 4px solid #38bdf8; padding: 18px; margin: 16px 0; border-radius: 6px; font-size: 14.5px; line-height: 1.6; color: #f4f4f5; white-space: pre-wrap; }
+  .meta { font-size: 13px; color: #a1a1aa; line-height: 1.8; margin-top: 20px; background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; }
   .meta strong { color: #ffffff; }
   .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #27272a; font-size: 12px; color: #71717a; text-align: center; }
 </style></head>
 <body>
   <div class="container">
     <div class="header">
-      <h2>🚀 New User Feedback Received</h2>
-      <span class="badge">Module: ${params.module}</span>
+      <h2>${typeLabel}</h2>
+      <span class="badge ${params.type === 'bug' ? 'badge-bug' : params.type === 'feature' ? 'badge-feature' : ''}">Area: ${params.area || 'general'}</span>
     </div>
     
-    <p style="color:#a1a1aa; font-size:14px;">A user has submitted feedback directly via the <strong>${params.module}</strong> Settings Chat:</p>
-    
+    <div class="subject-line">${displaySubject}</div>
     <div class="msg-box">${params.message}</div>
     
     <div class="meta">
+      ${params.ticketId ? `<div><strong>Ticket ID:</strong> ${params.ticketId}</div>` : ''}
       <div><strong>Submitted By:</strong> ${params.userName} (&lt;${params.userEmail}&gt;)</div>
-      <div><strong>Platform:</strong> ${params.module} Engine</div>
       <div><strong>Timestamp:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })} IST</div>
-      ${params.systemContext ? `<div><strong>System Context:</strong> ${params.systemContext}</div>` : ''}
+      ${params.systemContext ? `<div><strong>Diagnostics:</strong> <code>${typeof params.systemContext === 'object' ? JSON.stringify(params.systemContext) : params.systemContext}</code></div>` : ''}
     </div>
 
     <div class="footer">
-      EYES & IRIS Developer Operations Desk · Real-time Feedback Dispatch
+      EYES Support Desk · Direct User Dispatch
     </div>
   </div>
 </body>
@@ -271,11 +278,63 @@ export async function sendFeedbackEmail(params: {
       from: FROM,
       to: [devEmail],
       replyTo: params.userEmail,
-      subject: `[${params.module} Feedback] New message from ${params.userName}`,
+      subject: `${displayTicket}${typeLabel}: ${displaySubject}`,
       html: htmlContent,
     });
-    console.log(`[Email] Feedback successfully delivered to ${devEmail}`);
+    console.log(`[Email] Ticket successfully delivered to ${devEmail}`);
   } catch (err) {
-    console.error('[Email] Failed to dispatch feedback email:', err);
+    console.error('[Email] Failed to dispatch ticket email:', err);
+  }
+}
+
+export async function sendTicketReplyEmail(params: {
+  to: string;
+  userName: string;
+  ticketId: string;
+  subject: string;
+  status: string;
+  adminResponse: string;
+}) {
+  if (!process.env.RESEND_API_KEY) return;
+
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #09090b; color: #f4f4f5; margin: 0; padding: 0; }
+  .container { max-width: 600px; margin: 40px auto; padding: 32px; background: #18181b; border: 1px solid #27272a; border-radius: 16px; }
+  h2 { font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 12px; }
+  .badge { display: inline-block; padding: 4px 12px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }
+  .msg-box { background: rgba(255,255,255,0.04); border-left: 4px solid #4ade80; padding: 18px; margin: 16px 0; border-radius: 6px; font-size: 14.5px; line-height: 1.6; color: #f4f4f5; white-space: pre-wrap; }
+  p { font-size: 14px; line-height: 1.6; color: #a1a1aa; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #27272a; font-size: 12px; color: #71717a; text-align: center; }
+</style></head>
+<body>
+  <div class="container">
+    <span class="badge">Status: ${params.status.toUpperCase()}</span>
+    <h2>Update on Ticket #${params.ticketId.slice(0, 8)}</h2>
+    <p>Hi ${params.userName},</p>
+    <p>Our engineering team has responded to your submission regarding <strong>"${params.subject}"</strong>:</p>
+    
+    <div class="msg-box">${params.adminResponse}</div>
+    
+    <p>You can also check the status and complete history of your tickets anytime in your <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/settings" style="color: #38bdf8; text-decoration: underline;">EYES Account Settings</a>.</p>
+
+    <div class="footer">
+      EYES Support Desk · Engineering Team
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    await getResendClient().emails.send({
+      from: FROM,
+      to: [params.to],
+      subject: `[EYES Support] Response to your ticket: "${params.subject}"`,
+      html: htmlContent,
+    });
+    console.log(`[Email] Ticket reply notification sent to ${params.to}`);
+  } catch (err) {
+    console.error('[Email] Failed to send ticket reply email:', err);
   }
 }

@@ -1,78 +1,94 @@
-'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UnderstandingCard from './UnderstandingCard';
+import HonestEmptyState from './HonestEmptyState';
+import { useRouter } from 'next/navigation';
+
+export interface TimelineEventItem {
+  id: string;
+  date: string;
+  category: 'money' | 'people' | 'product' | 'decisions';
+  title: string;
+  body: string;
+  isSuperseded: boolean;
+  kicker: string;
+  supersededText?: string;
+  replacementTitle?: string;
+  receipt: {
+    source_url: string;
+    span: string;
+    sender: string;
+    timestamp: string;
+    validity?: string;
+  };
+}
 
 export default function IrisTimeline() {
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [zoomScale, setZoomScale] = useState<'day' | 'month'>('day');
+  const [events, setEvents] = useState<TimelineEventItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const events = [
-    {
-      id: 't1',
-      date: '2026-07-24',
-      category: 'product',
-      title: 'IRIS Phase 0 & Phase 1 Specification Alignment',
-      body: 'Integrated Paper & Ink tokens, 4-layer Receipt Panel, and Workstation Intent Cards.',
-      isSuperseded: false,
-      kicker: 'ACTIVE BELIEF · PRODUCT',
-      receipt: {
-        source_url: '/iris?view=desk',
-        span: 'IRIS Phase 0 & Phase 1 Specification Alignment completed.',
-        sender: 'IRIS Architect',
-        timestamp: '2026-07-24 · 12:30 UTC'
-      }
-    },
-    {
-      id: 't2',
-      date: '2026-07-18',
-      category: 'product',
-      title: 'Initial Chat UI Dark Periwinkle Styling',
-      body: 'Generic chat bubbles with rounded pill input and static placeholder state.',
-      isSuperseded: true,
-      supersededText: 'superseded · not deleted',
-      replacementTitle: 'Replaced by Paper & Ink Un-bubbled Flowing Prose',
-      replacementUrl: '/iris?view=workstation',
-      kicker: 'SUPERSEDED BELIEF · PRODUCT',
-      receipt: {
-        source_url: '/iris?view=timeline',
-        span: 'Initial Chat UI Dark Periwinkle Styling superseded by Paper & Ink specification.',
-        sender: 'UI Migration Worker',
-        timestamp: '2026-07-18 · 16:00 UTC',
-        validity: 'superseded on 2026-07-24'
-      }
-    },
-    {
-      id: 't3',
-      date: '2026-07-24',
-      category: 'decisions',
-      title: 'Kokoro-82M TTS & Kyutai Duplex Voice Pipeline',
-      body: 'Open-weight Kokoro-82M speech synthesis and Kyutai real-time duplex voice engine.',
-      isSuperseded: false,
-      kicker: 'ACTIVE BELIEF · DECISIONS',
-      receipt: {
-        source_url: '/iris?view=workstation',
-        span: 'Kokoro-82M TTS and Kyutai duplex engines active for Customer Zero voice channel.',
-        sender: 'Voice Architect',
-        timestamp: '2026-07-24 · 17:30 UTC'
-      }
-    },
-    {
-      id: 't4',
-      date: '2026-07-05',
-      category: 'money',
-      title: 'Revenue Leak Scan Pipeline Parallelization',
-      body: 'Speed up email audit execution 10x using parallelized async processing.',
-      isSuperseded: false,
-      kicker: 'ACTIVE BELIEF · MONEY',
-      receipt: {
-        source_url: '/iris?view=investigate',
-        span: 'Revenue Leak Scan Pipeline Parallelization verified.',
-        sender: 'Audit Engine',
-        timestamp: '2026-07-05 · 10:00 UTC'
+  useEffect(() => {
+    async function fetchTimeline() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/iris/v0/timeline');
+        if (!res.ok) throw new Error('Failed to fetch timeline');
+        const data = await res.json();
+        
+        const rawEdges = data.events || [];
+        const parsed: TimelineEventItem[] = rawEdges.map((edge: any) => {
+          const isSuperseded = Boolean(edge.valid_to);
+          const headName = edge.head?.name || 'Entity';
+          const tailName = edge.tail?.name || 'Relation';
+          const relation = edge.relation_label || 'connected_to';
+          
+          let category: 'money' | 'people' | 'product' | 'decisions' = 'product';
+          const labelLower = (relation + ' ' + (edge.head?.label || '') + ' ' + (edge.tail?.label || '')).toLowerCase();
+          if (labelLower.includes('money') || labelLower.includes('fee') || labelLower.includes('payment') || labelLower.includes('revenue')) {
+            category = 'money';
+          } else if (labelLower.includes('person') || labelLower.includes('people') || labelLower.includes('author')) {
+            category = 'people';
+          } else if (labelLower.includes('decision') || labelLower.includes('commitment') || labelLower.includes('delayed') || labelLower.includes('blocked')) {
+            category = 'decisions';
+          }
+
+          const dateStr = edge.valid_from ? new Date(edge.valid_from).toISOString().split('T')[0] : 'Recent';
+          const title = `${headName} — ${relation.replace(/_/g, ' ')} ${tailName}`;
+          const body = edge.memory_content || `Relationship between ${headName} and ${tailName} confirmed in memory graph.`;
+
+          return {
+            id: edge.id,
+            date: dateStr,
+            category,
+            title,
+            body,
+            isSuperseded,
+            kicker: `${isSuperseded ? 'SUPERSEDED BELIEF' : 'ACTIVE BELIEF'} · ${category.toUpperCase()}`,
+            supersededText: isSuperseded ? `superseded on ${edge.valid_to ? new Date(edge.valid_to).toLocaleDateString() : 'earlier date'} · preserved in graph` : undefined,
+            replacementTitle: isSuperseded ? `${headName} active updated state` : undefined,
+            receipt: {
+              source_url: edge.source_url || '/iris?view=desk',
+              span: edge.memory_content?.slice(0, 180) || title,
+              sender: edge.head?.name || 'EYES Memory Graph',
+              timestamp: edge.valid_from ? new Date(edge.valid_from).toLocaleString() : 'Recent',
+              validity: isSuperseded ? `superseded on ${new Date(edge.valid_to).toLocaleDateString()}` : 'still current'
+            }
+          };
+        });
+
+        setEvents(parsed);
+      } catch (err) {
+        console.warn('Could not load live timeline events:', err);
+        setEvents([]);
+      } finally {
+        setLoading(false);
       }
     }
-  ];
+
+    fetchTimeline();
+  }, []);
 
   const filteredEvents = events.filter(evt => selectedCategory === 'all' || evt.category === selectedCategory);
 
@@ -151,53 +167,68 @@ export default function IrisTimeline() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
           <div style={{ position: 'absolute', left: '16px', top: '10px', bottom: '10px', width: '2px', background: 'var(--border-paper, #e7e1d4)' }} />
 
-          {filteredEvents.map((evt) => (
-            <div key={evt.id} style={{ paddingLeft: '36px', position: 'relative' }}>
-              <div style={{
-                position: 'absolute',
-                left: '11px',
-                top: '20px',
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: evt.isSuperseded ? 'var(--ink-faint, #6b6557)' : 'var(--accent, #bf3d11)',
-                border: '2px solid var(--paper, #faf7f1)',
-                boxShadow: evt.isSuperseded ? 'none' : '0 0 8px rgba(191, 61, 17, 0.4)'
-              }} />
-
-              {evt.isSuperseded ? (
-                <UnderstandingCard
-                  title={evt.title}
-                  body={evt.body}
-                  kicker={evt.kicker}
-                  statusBadge="Superseded"
-                  badgeType="slate"
-                  timestamp={evt.date}
-                  receipt={evt.receipt}
-                  style={{ opacity: 0.75, borderStyle: 'dashed' }}
-                >
-                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e7e1d4' }}>
-                    <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', color: 'var(--ink-faint, #6b6557)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'block', textDecoration: 'line-through' }}>
-                      {evt.supersededText}
-                    </span>
-                    <div style={{ marginTop: '4px', fontSize: '12px', fontFamily: 'var(--font-inter, sans-serif)', color: 'var(--accent, #bf3d11)', fontWeight: 600 }}>
-                      ↳ Active Replacement: {evt.replacementTitle} →
-                    </div>
-                  </div>
-                </UnderstandingCard>
-              ) : (
-                <UnderstandingCard
-                  title={evt.title}
-                  body={evt.body}
-                  kicker={evt.kicker}
-                  statusBadge="Active"
-                  badgeType="good"
-                  timestamp={evt.date}
-                  receipt={evt.receipt}
-                />
-              )}
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-faint, #6b6557)', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '13px' }}>
+              Querying bi-temporal memory graph...
             </div>
-          ))}
+          ) : filteredEvents.length === 0 ? (
+            <div style={{ paddingLeft: '36px' }}>
+              <HonestEmptyState
+                headline={selectedCategory === 'all' ? "No timeline events recorded yet." : `No events found for ${selectedCategory}.`}
+                subtext="Timeline beliefs are extracted automatically from your connected accounts as perception pipelines process commitments and decisions."
+                suggestionText="Connect Services in Settings"
+                onSuggestionClick={() => router.push('/iris?view=settings')}
+              />
+            </div>
+          ) : (
+            filteredEvents.map((evt) => (
+              <div key={evt.id} style={{ paddingLeft: '36px', position: 'relative' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: '11px',
+                  top: '20px',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: evt.isSuperseded ? 'var(--ink-faint, #6b6557)' : 'var(--accent, #bf3d11)',
+                  border: '2px solid var(--paper, #faf7f1)',
+                  boxShadow: evt.isSuperseded ? 'none' : '0 0 8px rgba(191, 61, 17, 0.4)'
+                }} />
+
+                {evt.isSuperseded ? (
+                  <UnderstandingCard
+                    title={evt.title}
+                    body={evt.body}
+                    kicker={evt.kicker}
+                    statusBadge="Superseded"
+                    badgeType="slate"
+                    timestamp={evt.date}
+                    receipt={evt.receipt}
+                    style={{ opacity: 0.75, borderStyle: 'dashed' }}
+                  >
+                    <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e7e1d4' }}>
+                      <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', color: 'var(--ink-faint, #6b6557)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'block', textDecoration: 'line-through' }}>
+                        {evt.supersededText}
+                      </span>
+                      <div style={{ marginTop: '4px', fontSize: '12px', fontFamily: 'var(--font-inter, sans-serif)', color: 'var(--accent, #bf3d11)', fontWeight: 600 }}>
+                        ↳ Active Replacement: {evt.replacementTitle} →
+                      </div>
+                    </div>
+                  </UnderstandingCard>
+                ) : (
+                  <UnderstandingCard
+                    title={evt.title}
+                    body={evt.body}
+                    kicker={evt.kicker}
+                    statusBadge="Active"
+                    badgeType="good"
+                    timestamp={evt.date}
+                    receipt={evt.receipt}
+                  />
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         {/* RIGHT COLUMN: Time Machine Metrics & Filter Info */}

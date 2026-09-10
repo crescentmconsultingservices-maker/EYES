@@ -55,12 +55,7 @@ export default function DeskBentoGrid() {
       stopAllAudio();
     } else {
       setIsPlayingAudio(true);
-
-      // Start progress simulation
-      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-      progressTimerRef.current = setInterval(() => {
-        setPlaybackProgress(prev => (prev >= 100 ? 0 : prev + 1.5));
-      }, 500);
+      setPlaybackProgress(50);
 
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -116,10 +111,11 @@ export default function DeskBentoGrid() {
           if (synthRef.current.paused) synthRef.current.resume();
           synthRef.current.cancel();
 
-          const userName = user?.name ? user.name.split(' ')[0] : (user?.email ? user.email.split('@')[0] : 'Founder');
-          const briefText = `Good morning, ${userName}. Here is your IRIS morning brief. What needs doing now: Priority 1, Finalize Series B Pitch Deck. Priority 2, VP of Engineering interviews. Priority 3, Q4 Product Roadmap Alignment. Overnight synthesis pass notes 3 items updated. Ambient pad active.`;
+          const topPriorityTitle = nowPriorities[0]?.title ? `Top priority: ${nowPriorities[0].title}.` : 'No immediate critical obligations pending.';
+          const changesCount = changedOvernight.length;
+          const dynamicBrief = `Good morning, ${userName}. Here is your IRIS morning brief. ${topPriorityTitle} Overnight synthesis pass notes ${changesCount} item${changesCount === 1 ? '' : 's'} updated. Ambient pad active.`;
 
-          const utterance = new SpeechSynthesisUtterance(briefText);
+          const utterance = new SpeechSynthesisUtterance(dynamicBrief);
           utterance.rate = 0.95;
           utterance.pitch = 1.0;
 
@@ -150,53 +146,57 @@ export default function DeskBentoGrid() {
   const [changedOvernight, setChangedOvernight] = useState<any[]>([]);
   const [slippingItems, setSlippingItems] = useState<any[]>([]);
   const [todayTimeline, setTodayTimeline] = useState<any[]>([]);
-  const [briefText, setBriefText] = useState<string>('');
 
   useEffect(() => {
     async function loadLiveData() {
       try {
-        // Fetch top priorities from action queue
-        const actRes = await fetch('/api/actions/queue');
-        if (actRes.ok) {
-          const actData = await actRes.json();
-          const items = (actData.items || []).slice(0, 3).map((a: any, idx: number) => ({
-            id: a.id || idx,
-            title: a.title || a.action || 'Pending Action',
-            sub: a.description || a.context || 'Extracted from user memory stream',
-            tag: a.priority ? `${a.priority} PRIORITY` : 'ACTION REQUIRED',
+        const briefRes = await fetch('/api/iris/v0/morning-brief');
+        if (briefRes.ok) {
+          const data = await briefRes.json();
+          
+          // Map commitments to priorities
+          const priorities = (data.openCommitments || []).slice(0, 3).map((edge: any, idx: number) => ({
+            id: edge.id || idx,
+            title: edge.tail?.name || edge.relation_label || 'Commitment',
+            sub: edge.memory_content?.slice(0, 90) || `Committed to ${edge.tail?.name || 'task'}`,
+            tag: 'ACTIVE COMMITMENT',
           }));
-          setNowPriorities(items);
-        }
+          setNowPriorities(priorities);
 
-        // Fetch recent memories for overnight changes
-        const memRes = await fetch('/api/memories?limit=5');
-        if (memRes.ok) {
-          const memData = await memRes.json();
-          const items = (memData.items || []).slice(0, 3).map((m: any, idx: number) => ({
-            id: m.id || idx,
-            title: m.title || 'Memory Index',
-            sub: m.content ? (m.content.length > 80 ? m.content.substring(0, 80) + '...' : m.content) : 'Memory record logged',
-            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent',
+          // Map overnight changes
+          const changes = (data.overnightChanges || []).slice(0, 3).map((edge: any, idx: number) => ({
+            id: edge.id || idx,
+            title: `${edge.head?.name || 'Entity'} ${edge.relation_label || 'changed'}`,
+            sub: edge.memory_content?.slice(0, 80) || 'Updated in memory graph',
+            time: edge.updated_at ? new Date(edge.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Overnight',
           }));
-          setChangedOvernight(items);
+          setChangedOvernight(changes);
 
-          // Build timeline items from latest memories
-          const timelineItems = (memData.items || []).slice(0, 5).map((m: any) => ({
-            time: m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
-            label: m.title || 'Memory Event',
+          // Map slipping items
+          const slipping = (data.slipping || []).slice(0, 3).map((edge: any, idx: number) => ({
+            id: edge.id || idx,
+            title: `${edge.head?.name || 'Item'} delayed on ${edge.tail?.name || 'dependency'}`,
+            sub: edge.memory_content?.slice(0, 80) || 'Delayed obligation',
+            daysDelayed: edge.valid_from ? Math.max(1, Math.floor((Date.now() - new Date(edge.valid_from).getTime()) / (1000 * 60 * 60 * 24))) : 1,
+            receipt: {
+              source_url: edge.source_url || '/iris?view=signals',
+              span: edge.memory_content || '',
+              sender: edge.head?.name || 'Memory Graph',
+              timestamp: edge.valid_from || new Date().toISOString()
+            }
+          }));
+          setSlippingItems(slipping);
+
+          // Map horizon / timeline items
+          const timelineItems = (data.horizon || data.openCommitments || []).slice(0, 5).map((edge: any) => ({
+            time: edge.valid_from ? new Date(edge.valid_from).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+            label: edge.tail?.name || edge.head?.name || 'Milestone',
             status: 'verified',
           }));
           setTodayTimeline(timelineItems);
         }
-
-        // Fetch flagged/slipping items
-        const statsRes = await fetch('/api/timeline-stats');
-        if (statsRes.ok) {
-          const stats = await statsRes.json();
-          setSlippingItems([]);
-        }
       } catch (err) {
-        console.warn('Failed loading live IRIS data:', err);
+        console.warn('Failed loading live morning-brief data:', err);
       }
     }
     loadLiveData();

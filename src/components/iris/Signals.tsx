@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UnderstandingCard from './UnderstandingCard';
+import HonestEmptyState from './HonestEmptyState';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface Post {
   id: string;
@@ -18,90 +20,89 @@ interface Post {
 }
 
 export default function Signals() {
+  const router = useRouter();
   const { user } = useAuth();
   const userName = user?.name || (user?.email ? user.email.split('@')[0] : 'Founder');
 
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: 'sig-1',
-      author: 'IRIS Synthesis Engine',
-      authorRole: 'Auto-Post · Score 9.4/10',
-      timestamp: 'Today · 10:14 UTC',
-      title: 'Competitor Vendo (YC S26) Open-Source Launch',
-      body: 'Vendo published their live UI composition framework for host products.',
-      meaning: 'What it means: Proves UI composition thesis, but lacks personal memory context. Our receipted understanding layer remains our core moat.',
-      score: 9.4,
-      badgeType: 'accent',
-      receipt: {
-        source_url: '/iris?view=dossiers',
-        span: 'Competitor Vendo (YC S26) Open-Source Launch — Proves UI composition thesis.',
-        sender: 'Intel Synthesis Worker',
-        timestamp: '2026-07-24 · 10:14 UTC',
-        confidence: 0.98
-      }
-    },
-    {
-      id: 'sig-2',
-      author: `${userName} (Founder)`,
-      authorRole: 'Founder Office',
-      timestamp: 'Today · 09:30 UTC',
-      title: 'Paper & Ink Token Integration Completed',
-      body: 'All surfaces now inherit the warm #faf7f1 palette, Fraunces serif display titles, and JetBrains Mono evidence.',
-      meaning: 'What it means: The interface is now visually cohesive and aligned to the IRIS UI Specification v1.0.',
-      score: 8.8,
-      badgeType: 'good',
-      receipt: {
-        source_url: '/iris?view=desk',
-        span: 'Paper & Ink Token Integration Completed in globals.css.',
-        sender: `${userName} (Founder)`,
-        timestamp: '2026-07-24 · 09:30 UTC'
-      }
-    },
-    {
-      id: 'sig-3',
-      author: 'IRIS Security Daemon',
-      authorRole: 'Auto-Post · Score 9.1/10',
-      timestamp: 'Yesterday · 22:40 UTC',
-      title: 'X-Engine-Secret Auth Audit Passed',
-      body: 'Verified that all Modal Python engine requests reject unauthenticated calls.',
-      meaning: 'What it means: Zero credential leakage risk across production vector memory operations.',
-      score: 9.1,
-      badgeType: 'live',
-      receipt: {
-        source_url: '/settings',
-        span: 'X-Engine-Secret Auth Audit Passed on Modal engine.',
-        sender: 'Security Daemon',
-        timestamp: '2026-07-23 · 22:40 UTC'
-      }
-    }
-  ]);
-
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [newPostText, setNewPostText] = useState('');
 
-  const handlePost = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadSignals() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/iris/v0/signals');
+        if (!res.ok) throw new Error('Failed to fetch signals');
+        const data = await res.json();
+        
+        const rawSignals = data.signals || [];
+        const livePosts: Post[] = rawSignals.map((sig: any) => ({
+          id: sig.id || `sig-${Math.random()}`,
+          author: 'IRIS Signals Engine',
+          authorRole: `Strict Filter · ${sig.type || 'DECISION'}`,
+          timestamp: 'Recent',
+          title: sig.title || 'Acute Signal',
+          body: sig.desc || sig.title || 'Decision-relevant signal verified from connected memory.',
+          meaning: `Consequence: ${sig.desc || 'Relevant to active user commitments.'}`,
+          score: sig.type === 'MISTAKE' ? 9.6 : sig.type === 'DECISION' ? 9.2 : 8.5,
+          badgeType: sig.type === 'MISTAKE' ? 'accent' : 'good',
+          receipt: {
+            source_url: sig.source_url || '/iris?view=timeline',
+            span: sig.desc || sig.title || '',
+            sender: 'Acute Perception Filter',
+            timestamp: new Date().toLocaleDateString(),
+            confidence: 0.95
+          }
+        }));
+
+        setPosts(livePosts);
+      } catch (err) {
+        console.warn('Failed loading live signals:', err);
+        setPosts([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSignals();
+  }, []);
+
+  const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPostText.trim()) return;
+    const textToSubmit = newPostText.trim();
+    setNewPostText('');
+
+    try {
+      await fetch('/api/iris/v0/observation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ observation: textToSubmit })
+      });
+    } catch (err) {
+      console.warn('Failed recording observation to backend:', err);
+    }
 
     const newEntry: Post = {
       id: `sig-${Date.now()}`,
       author: `${userName} (Founder)`,
-      authorRole: 'Founder Post',
+      authorRole: 'Founder Observation',
       timestamp: 'Just now',
-      title: newPostText.trim(),
-      body: 'Manual update posted directly to the team feed.',
-      meaning: 'What it means: Direct founder directive logged into the company memory graph.',
-      score: 8.0,
+      title: textToSubmit,
+      body: 'Manual observation recorded into the company memory graph.',
+      meaning: 'What it means: Direct founder observation logged for chronic perception processing.',
+      score: 8.5,
       badgeType: 'accent',
       receipt: {
         source_url: '/iris?view=signals',
-        span: newPostText.trim(),
+        span: textToSubmit,
         sender: `${userName} (Founder)`,
         timestamp: new Date().toISOString()
       }
     };
 
-    setPosts([newEntry, ...posts]);
-    setNewPostText('');
+    setPosts(prev => [newEntry, ...prev]);
   };
 
   return (
@@ -176,30 +177,46 @@ export default function Signals() {
 
           {/* Feed Stream Column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-            {posts.map((post) => (
-              <div key={post.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)' }}>
-                    {post.author} <span style={{ fontWeight: 400, color: 'var(--ink-faint, #6b6557)', fontSize: '11px', fontFamily: 'var(--font-jetbrains, monospace)' }}>({post.authorRole})</span>
-                  </span>
-                  <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', color: 'var(--ink-faint, #6b6557)' }}>
-                    {post.timestamp}
-                  </span>
-                </div>
-
-                <UnderstandingCard
-                  title={post.title}
-                  body={post.body}
-                  statusBadge={`Signal ${post.score}`}
-                  badgeType={post.badgeType}
-                  receipt={post.receipt}
-                >
-                  <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #e7e1d4', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '12px', color: 'var(--accent-ink, #7a2a0e)', fontStyle: 'italic', lineHeight: 1.4 }}>
-                    {post.meaning}
-                  </div>
-                </UnderstandingCard>
+            {loading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--ink-faint, #6b6557)', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '13px' }}>
+                Applying strict relevance filter to alerts...
               </div>
-            ))}
+            ) : posts.length === 0 ? (
+              <HonestEmptyState
+                headline="No acute signals active."
+                subtext="Items only appear in Signals if they change a decision, prevent a mistake, or reveal a time-sensitive opportunity."
+                suggestionText="Record Founder Observation"
+                onSuggestionClick={() => {
+                  const input = document.querySelector('input[placeholder*="Record an acute signal"]') as HTMLInputElement;
+                  input?.focus();
+                }}
+              />
+            ) : (
+              posts.map((post) => (
+                <div key={post.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink-deep, #1a1714)' }}>
+                      {post.author} <span style={{ fontWeight: 400, color: 'var(--ink-faint, #6b6557)', fontSize: '11px', fontFamily: 'var(--font-jetbrains, monospace)' }}>({post.authorRole})</span>
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '11px', color: 'var(--ink-faint, #6b6557)' }}>
+                      {post.timestamp}
+                    </span>
+                  </div>
+
+                  <UnderstandingCard
+                    title={post.title}
+                    body={post.body}
+                    statusBadge={`Signal ${post.score}`}
+                    badgeType={post.badgeType}
+                    receipt={post.receipt}
+                  >
+                    <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #e7e1d4', fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '12px', color: 'var(--accent-ink, #7a2a0e)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                      {post.meaning}
+                    </div>
+                  </UnderstandingCard>
+                </div>
+              ))
+            )}
           </div>
 
         </div>
@@ -219,8 +236,8 @@ export default function Signals() {
                 <span style={{ color: '#bf3d11', fontWeight: 600 }}>SCORE &gt; 5.0</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontFamily: 'var(--font-jetbrains, monospace)' }}>
-                <span style={{ color: '#6b6557' }}>Auto-Posts Today:</span>
-                <span style={{ color: '#2f6b4f', fontWeight: 600 }}>3 EVENTS</span>
+                <span style={{ color: '#6b6557' }}>Auto-Posts Active:</span>
+                <span style={{ color: '#2f6b4f', fontWeight: 600 }}>{posts.length} {posts.length === 1 ? 'EVENT' : 'EVENTS'}</span>
               </div>
             </div>
           </div>

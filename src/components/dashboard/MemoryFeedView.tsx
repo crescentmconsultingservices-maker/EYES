@@ -50,13 +50,21 @@ export function MemoryFeedView({
       if (platform && platform !== 'all') params.set('platform', platform);
 
       const res = await fetch(`/api/memories?${params.toString()}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setHasMore(false);
+        return;
+      }
 
       const data = await res.json();
       const newItems: FeedItem[] = data.items ?? [];
       const nc: string | null = data.nextCursor ?? null;
 
-      setItems(prev => replace ? newItems : [...prev, ...newItems]);
+      setItems(prev => {
+        if (replace) return newItems;
+        const existingIds = new Set(prev.map((item: FeedItem) => item.id));
+        const unique = newItems.filter((item: FeedItem) => !existingIds.has(item.id));
+        return [...prev, ...unique];
+      });
       setNextCursor(nc);
       setHasMore(nc !== null);
 
@@ -86,10 +94,11 @@ export function MemoryFeedView({
   // ── IntersectionObserver — triggers next page on scroll to bottom ──────────
   useEffect(() => {
     if (observerRef.current) observerRef.current.disconnect();
+    if (loading || !hasMore || !nextCursor) return;
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !loadingMore) {
+        if (entries[0]?.isIntersecting && hasMore && !loadingMore && !loading && nextCursor) {
           setLoadingMore(true);
           fetchPage(nextCursor, filterPlatform, false).finally(() => setLoadingMore(false));
         }
@@ -100,7 +109,7 @@ export function MemoryFeedView({
     if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
 
     return () => observerRef.current?.disconnect();
-  }, [nextCursor, hasMore, loadingMore, filterPlatform, fetchPage]);
+  }, [nextCursor, hasMore, loadingMore, loading, filterPlatform, fetchPage]);
 
   function platformLabel(id: string): string {
     const fromStatus = platforms.find(p => p.id.toLowerCase() === id);
@@ -153,13 +162,13 @@ export function MemoryFeedView({
         )}
 
         {/* Feed items */}
-        {!loading && items.map((e) => {
+        {!loading && items.map((e, idx) => {
           const platform = ALL_POSSIBLE_PLATFORMS.find(p => p.id === e.platform.toLowerCase());
           const hasRisk = e.is_flagged || e.flag_severity;
           const preview = cleanContent(e.content);
 
           return (
-            <div id={`memory-${e.id}`} key={e.id} className={`${styles.feedEventCard} ${hasRisk ? styles.cardHasRisk : ''}`}>
+            <div id={`memory-${e.id}`} key={`${e.id}-${idx}`} className={`${styles.feedEventCard} ${hasRisk ? styles.cardHasRisk : ''}`}>
               <div className={styles.eventIconWrapper}>
                 {platform?.icon
                   ? React.cloneElement(platform.icon as React.ReactElement<{ size?: number }>, { size: 18 })

@@ -32,7 +32,7 @@ export default function IrisSettings() {
       setFeedbackMessages([
         {
           sender: 'bot',
-          text: `Hi ${user?.name || 'there'}! 👋 Welcome to IRIS Feedback. Share your thoughts or bug reports — messages are dispatched to our core dev team and logged on EYES memory graph!`,
+          text: `Hi ${user?.name || 'there'}! Welcome to IRIS Feedback. Share your thoughts or bug reports — messages are dispatched to our core dev team and logged on EYES memory graph!`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -55,10 +55,10 @@ export default function IrisSettings() {
         body: JSON.stringify({ message: userText, module: 'IRIS' })
       });
       const data = await res.json();
-      const botText = data.reply || "Thank you! Your feedback has been sent directly to our development team. 🚀";
+      const botText = data.reply || "Thank you! Your feedback has been sent directly to our development team.";
       setFeedbackMessages(prev => [...prev, { sender: 'bot', text: botText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
     } catch {
-      setFeedbackMessages(prev => [...prev, { sender: 'bot', text: "Feedback received and sent to dev review! 🚀", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      setFeedbackMessages(prev => [...prev, { sender: 'bot', text: "Feedback received and sent to dev review!", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
     } finally {
       setIsSubmittingFeedback(false);
     }

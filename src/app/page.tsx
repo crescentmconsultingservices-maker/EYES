@@ -17,21 +17,6 @@ function HomeInner() {
   const { user, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSystemBooting, setIsSystemBooting] = useState(true);
-  const [isAdminRedirecting, setIsAdminRedirecting] = useState(false);
-
-  // Redirect admin users immediately to admin funnel analytics.
-  useEffect(() => {
-    if (!isLoading && user) {
-      fetch('/api/admin/funnel?period=24h', { method: 'GET' })
-        .then(res => {
-          if (res.ok) {
-            setIsAdminRedirecting(true);
-            router.replace('/admin/funnel');
-          }
-        })
-        .catch(() => {}); // non-admins get 403, silently ignored
-    }
-  }, [user, isLoading, router]);
 
   // Synchronize loading across components
   const handleBootComplete = useCallback(() => {
@@ -100,31 +85,7 @@ function HomeInner() {
     );
   }
 
-  // Show clean transition screen for admins while redirecting
-  if (isAdminRedirecting) {
-    return (
-      <div style={{
-        background: '#080808',
-        height: '100vh',
-        width: '100vw',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{
-          color: '#E06A3B',
-          fontFamily: 'var(--font-display)',
-          fontWeight: 600,
-          fontSize: '12px',
-          letterSpacing: '0.15em',
-          marginBottom: '16px',
-        }}>
-          ROUTING TO ADMIN CONSOLE...
-        </div>
-      </div>
-    );
-  }
+
 
   // If authenticated user, render the Dashboard
   return (
