@@ -302,6 +302,23 @@ export async function fireEntityExtraction(supabase: SupabaseClient, events: Raw
           .eq('platform', event.platform)
           .eq('source_id', event.platform_id);
 
+        // Always ensure entities are registered in the chronic_nodes table
+        for (const ent of (entities as { text: string; label: string }[])) {
+          if (!ent.text?.trim()) continue;
+          try {
+            await getOrCreateNodeId(
+              supabase,
+              event.user_id,
+              ent.text,
+              ent.label || 'other',
+              event.organization_id,
+              event.scope
+            );
+          } catch (nodeErr) {
+            console.warn('[Chronic Engine] Failed to save node to Supabase:', nodeErr);
+          }
+        }
+
         // Save relationships to the Bi-Temporal Graph table (Phase 2)
         if (relations.length > 0) {
           const findEntityLabel = (text: string): string => {

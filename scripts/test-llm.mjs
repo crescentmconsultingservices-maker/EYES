@@ -17,7 +17,7 @@ async function testLLM() {
       'Authorization': `Bearer ${LITELLM_KEY}`
     },
     body: JSON.stringify({
-      model: "claude-haiku",
+      model: "auto-extract",
       messages: [
         { role: "system", content: "You are a test bot. Output valid JSON." },
         { role: "user", content: "Hello! Reply with { \"status\": \"ok\" }" }
