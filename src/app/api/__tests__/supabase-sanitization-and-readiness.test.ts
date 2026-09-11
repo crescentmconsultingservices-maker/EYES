@@ -22,9 +22,9 @@ describe('Supabase Key Sanitization', () => {
   });
 
   it('createBrowserClient sanitizes and trims CRLF characters from URL and anon key', () => {
-    const client = createBrowserClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = createBrowserClient() as any;
     expect(client).toBeDefined();
-    // @ts-expect-error accessing internal supabaseUrl for assertion
     const url = client.supabaseUrl;
     expect(url).toBe('https://rwywnbkvbztzosvbmrqw.supabase.co');
     expect(url).not.toContain('\r');
@@ -33,9 +33,9 @@ describe('Supabase Key Sanitization', () => {
   });
 
   it('createServerClient sanitizes and trims CRLF characters', async () => {
-    const client = await createServerClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const client = (await createServerClient()) as any;
     expect(client).toBeDefined();
-    // @ts-expect-error accessing internal supabaseUrl for assertion
     const url = client.supabaseUrl;
     expect(url).toBe('https://rwywnbkvbztzosvbmrqw.supabase.co');
     expect(url).not.toContain('\r');
@@ -43,13 +43,13 @@ describe('Supabase Key Sanitization', () => {
   });
 
   it('createAdminClient (server & admin) trims CRLF characters', async () => {
-    const admin1 = await createServerAdminClient();
-    const admin2 = createAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const admin1 = (await createServerAdminClient()) as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const admin2 = createAdminClient() as any;
     expect(admin1).toBeDefined();
     expect(admin2).toBeDefined();
-    // @ts-expect-error accessing internal supabaseUrl for assertion
     expect(admin1.supabaseUrl).toBe('https://rwywnbkvbztzosvbmrqw.supabase.co');
-    // @ts-expect-error accessing internal supabaseUrl for assertion
     expect(admin2.supabaseUrl).toBe('https://rwywnbkvbztzosvbmrqw.supabase.co');
   });
 });
