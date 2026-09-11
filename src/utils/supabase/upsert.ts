@@ -135,24 +135,29 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
     };
   });
 
-  const { error: upsertError } = await supabase
-    .from('memories')
-    .upsert(memoryRows, { onConflict: 'user_id,platform,source_id' });
+  const CHUNK_SIZE = 25;
+  for (let i = 0; i < memoryRows.length; i += CHUNK_SIZE) {
+    const chunk = memoryRows.slice(i, i + CHUNK_SIZE);
+    const { error: upsertError } = await supabase
+      .from('memories')
+      .upsert(chunk, { onConflict: 'user_id,platform,source_id' });
 
-  if (!upsertError) {
-    // Fire acute detection asynchronously (non-blocking)
-    fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
-    fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
-    return;
+    if (upsertError) {
+      if (!hasMissingConflictConstraint(upsertError)) {
+        throw upsertError;
+      }
+      // Fallback if missing constraint
+      console.warn(
+        '[DB] memories upsert fallback activated because ON CONFLICT constraint is missing. Apply latest migrations.'
+      );
+      break;
+    }
   }
 
-  if (!hasMissingConflictConstraint(upsertError)) {
-    throw upsertError;
-  }
-
-  console.warn(
-    '[DB] memories upsert fallback activated because ON CONFLICT constraint is missing. Apply latest migrations.'
-  );
+  // Fire acute detection asynchronously (non-blocking)
+  fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
+  fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
+  return;
 
   const groupedIds = new Map<string, { userId: string; platform: string; ids: string[] }>();
 
