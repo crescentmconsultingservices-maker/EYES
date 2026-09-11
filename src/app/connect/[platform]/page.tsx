@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 
 // ─── Platform → sync route mapping ───────────────────────────────────────────
 const PLATFORM_SYNC_ROUTES: Record<string, string[]> = {
+  facebook:           ['meta'],
+  meta:               ['meta'],
   github:             ['github'],
   notion:             ['notion'],
   slack:              ['slack'],
@@ -84,8 +86,8 @@ function ConnectPlatformInner() {
         setState('success');
       }, 0);
       
-      // Redirect after brief success flash
-      setTimeout(() => router.replace(user?.onboardingCompleted ? '/?view=connectors' : '/onboarding'), 1200);
+      // Redirect after brief success flash to dashboard
+      setTimeout(() => router.replace('/'), 1200);
 
     } else if (oauthStatus === 'error') {
       setTimeout(() => {

@@ -154,6 +154,64 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       console.warn('[Meta Sync] Instagram sync warning:', igErr);
     }
 
+    // 5.5 Fetch Facebook Profile and Feed
+    try {
+      const fbMeUrl = new URL('https://graph.facebook.com/v19.0/me');
+      fbMeUrl.searchParams.set('access_token', accessToken);
+      fbMeUrl.searchParams.set('fields', 'id,name,picture,link');
+
+      const fbMeRes = await fetch(fbMeUrl.toString(), { cache: 'no-store' });
+      if (fbMeRes.ok) {
+        const fbMeData = await fbMeRes.json();
+        if (fbMeData?.id) {
+          rawEvents.push({
+            user_id: userId,
+            platform: 'facebook',
+            platform_id: `fb_profile_${fbMeData.id}`,
+            event_type: 'social_profile',
+            title: `Facebook Profile: ${fbMeData.name || 'Account'}`,
+            content: `Connected Meta Facebook account for ${fbMeData.name || 'User'} (Facebook ID: ${fbMeData.id})`,
+            author: fbMeData.name || userName || 'Facebook User',
+            timestamp: new Date().toISOString(),
+            metadata: {
+              facebook_id: fbMeData.id,
+              name: fbMeData.name,
+              picture: fbMeData.picture?.data?.url,
+            },
+          });
+        }
+      }
+
+      const fbFeedUrl = new URL('https://graph.facebook.com/v19.0/me/posts');
+      fbFeedUrl.searchParams.set('access_token', accessToken);
+      fbFeedUrl.searchParams.set('fields', 'id,message,story,created_time');
+      fbFeedUrl.searchParams.set('limit', '25');
+
+      const fbFeedRes = await fetch(fbFeedUrl.toString(), { cache: 'no-store' });
+      if (fbFeedRes.ok) {
+        const fbFeedData = await fbFeedRes.json();
+        const fbPosts = fbFeedData.data || [];
+        for (const post of fbPosts) {
+          rawEvents.push({
+            user_id: userId,
+            platform: 'facebook',
+            platform_id: post.id,
+            event_type: 'social_post',
+            title: post.story || (post.message ? post.message.substring(0, 60) : 'Facebook Post'),
+            content: post.message || post.story || 'Facebook update',
+            author: userName || 'Facebook User',
+            timestamp: post.created_time || new Date().toISOString(),
+            metadata: {
+              id: post.id,
+              raw_story: post.story,
+            },
+          });
+        }
+      }
+    } catch (fbErr) {
+      console.warn('[Meta Sync] Facebook profile/feed sync note:', fbErr);
+    }
+
     // 6. Save raw events & memories
     if (rawEvents.length > 0) {
       await upsertRawEventsSafely(supabase, rawEvents);
