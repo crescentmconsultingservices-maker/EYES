@@ -42,11 +42,8 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('redirect_uri', callbackUrl);
   authUrl.searchParams.set('state', state);
   
-  // Standard Meta Scopes allowed in Development mode without App Review
-  const scopes = [
-    'public_profile',
-    'email'
-  ].join(',');
+  // Standard Meta Scope allowed without special permissions or App Review
+  const scopes = process.env.FACEBOOK_SCOPES?.trim() || 'public_profile';
   
   authUrl.searchParams.set('scope', scopes);
   authUrl.searchParams.set('response_type', 'code');
