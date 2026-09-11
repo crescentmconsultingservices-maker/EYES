@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import type { AuditSummary, FeedItem, PlatformStatus } from '@/types/dashboard';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type SyncStatusRow = {
   platform: string;
   status: PlatformStatus['status'] | null;
@@ -140,6 +143,7 @@ function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[], actua
 
 function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }[] = []): PlatformStatus[] {
   const uniquePlatforms: Record<string, PlatformStatus> = {};
+  const tokenPlatformSet = new Set(oauthRows.map(r => r.platform.replace(/_/g, '-')));
 
   for (const row of syncRows) {
     // Normalise the DB underscore format to the hyphen format used in ALL_POSSIBLE_PLATFORMS.
@@ -148,13 +152,15 @@ function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }
     const status = (row.status ?? 'idle') as PlatformStatus['status'];
     const items = row.total_items ?? 0;
     const errorMessage = row.error_message;
+    const hasToken = tokenPlatformSet.has(id);
+    const connected = hasToken || ['connected', 'syncing'].includes(status) || (status === 'error' && items > 0);
 
     const existing = uniquePlatforms[id];
     if (!existing) {
       uniquePlatforms[id] = {
         id,
         name,
-        connected: true,
+        connected,
         status,
         items,
         errorMessage,
@@ -169,7 +175,7 @@ function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }
       uniquePlatforms[id] = {
         id,
         name: existing.name || name,
-        connected: true,
+        connected: existing.connected || connected,
         status: prioritizedStatus,
         items: Math.max(existing.items, items),
         errorMessage: existing.errorMessage || errorMessage,

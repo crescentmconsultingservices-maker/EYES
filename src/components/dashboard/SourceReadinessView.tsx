@@ -69,8 +69,8 @@ export function SourceReadinessView({ platforms: initialPlatforms, totalMemories
   }, []);
 
   useEffect(() => {
-    if (initialPlatforms && initialPlatforms.length > 0) {
-      setReadinessPlatforms(prev => prev.length === 0 ? initialPlatforms : prev);
+    if (initialPlatforms) {
+      setReadinessPlatforms(initialPlatforms);
     }
   }, [initialPlatforms]);
 

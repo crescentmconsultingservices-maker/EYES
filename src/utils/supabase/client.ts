@@ -114,7 +114,12 @@ declare global {
 }
 
 export function createClient() {
-  const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-build'
+  const supabaseUrl = rawUrl.trim().replace(/[\r\n]/g, '')
+  const supabaseAnonKey = rawKey.trim().replace(/[\r\n]/g, '')
+
+  const projectRef = supabaseUrl.split('//')[1]?.split('.')[0]
   const storageKey = projectRef ? `sb-${projectRef}-auth-token` : 'sb-auth-token'
 
   if (typeof window !== 'undefined') {
@@ -125,8 +130,8 @@ export function createClient() {
   }
 
   const client = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-build',
+    supabaseUrl,
+    supabaseAnonKey,
     {
       auth: {
         // autoRefreshToken: true (default) — tokens refresh automatically before expiry.

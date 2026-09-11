@@ -2,8 +2,10 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-build'
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
+  const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key-for-build'
+  const supabaseUrl = rawUrl.trim().replace(/[\r\n]/g, '')
+  const supabaseAnonKey = rawKey.trim().replace(/[\r\n]/g, '')
 
   let cookieStore: Awaited<ReturnType<typeof cookies>> | null = null
 
@@ -43,8 +45,10 @@ export async function createClient() {
 }
 
 export async function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key-for-build'
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url-for-build.supabase.co'
+  const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key-for-build'
+  const supabaseUrl = rawUrl.trim().replace(/[\r\n]/g, '')
+  const supabaseServiceRoleKey = rawKey.trim().replace(/[\r\n]/g, '')
 
   return createServerClient(
     supabaseUrl,

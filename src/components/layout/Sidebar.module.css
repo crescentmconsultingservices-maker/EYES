@@ -202,6 +202,9 @@
 .platformsCount { font-size: 12px; font-weight: 700; color: var(--text-primary); }
 .reliabilityLabel { font-size: 10px; color: var(--text-secondary); }
 .reliabilityHigh { color: var(--accent-green); font-weight: 800; }
+.reliabilityMedium { color: #eab308; font-weight: 800; }
+.reliabilityLow { color: #ef4444; font-weight: 800; }
+.reliabilityMuted { color: var(--text-secondary); font-weight: 600; }
 
 /* ── Ember theme overrides ── */
 [data-theme='ember'] .newChatBtn { background: var(--accent-primary); color: #FFFFFF; box-shadow: 0 4px 20px rgba(224, 106, 59, 0.4); }

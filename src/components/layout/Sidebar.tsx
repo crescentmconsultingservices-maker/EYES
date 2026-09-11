@@ -56,8 +56,15 @@ export default function Sidebar() {
     };
     loadReadiness();
     const interval = setInterval(loadReadiness, 120000); // Every 2 min
-    return () => clearInterval(interval);
-  }, []);
+
+    const handleRefresh = () => loadReadiness();
+    window.addEventListener('eyes-realtime-refresh', handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('eyes-realtime-refresh', handleRefresh);
+    };
+  }, [user?.id]);
 
   // Fetch threads — simple and reliable, no auto-deletion
   const fetchThreads = async () => {
@@ -212,6 +219,37 @@ export default function Sidebar() {
     if (platforms.length === 0) return 0;
     return Math.round((connectedCount / platforms.length) * 100);
   }, [platforms, connectedCount]);
+
+  const reliability = useMemo(() => {
+    if (platforms.length === 0 || connectedCount === 0) {
+      return { label: 'None', className: styles.reliabilityMuted };
+    }
+    const errorCount = platforms.filter(p => p.connected && p.status === 'error').length;
+    const syncingCount = platforms.filter(p => p.connected && (p.status === 'syncing' || p.status === 'authenticating')).length;
+    const healthyCount = connectedCount - errorCount;
+    const healthRatio = healthyCount / connectedCount;
+
+    if (errorCount > 0 && healthRatio < 0.7) {
+      return { label: 'Degraded', className: styles.reliabilityLow };
+    }
+    if (syncingCount > 0 && healthyCount === connectedCount) {
+      return { label: 'Syncing', className: styles.reliabilityMedium };
+    }
+    if (healthRatio >= 0.85 && connectedCount >= 2) {
+      return { label: 'High', className: styles.reliabilityHigh };
+    }
+    if (healthRatio >= 0.5) {
+      return { label: 'Moderate', className: styles.reliabilityMedium };
+    }
+    return { label: 'Low', className: styles.reliabilityLow };
+  }, [connectedCount, platforms]);
+
+  const gaugeStroke = useMemo(() => {
+    if (coverageScore === 0) return 'var(--border-primary)';
+    if (reliability.label === 'Degraded' || reliability.label === 'Low') return '#ef4444';
+    if (reliability.label === 'Moderate' || reliability.label === 'Syncing') return '#eab308';
+    return 'var(--accent-green)';
+  }, [coverageScore, reliability.label]);
 
   const circumference = 2 * Math.PI * 45;
   const offset = circumference - (coverageScore / 100) * circumference;
@@ -466,7 +504,7 @@ export default function Sidebar() {
                   className={styles.gaugeFill}
                   strokeDasharray={circumference}
                   strokeDashoffset={offset}
-                  style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+                  style={{ transition: 'stroke-dashoffset 0.8s ease', stroke: gaugeStroke }}
                 />
                 <text x="50" y="58" textAnchor="middle" className={styles.gaugeText}>{coverageScore}%</text>
               </svg>
@@ -476,7 +514,7 @@ export default function Sidebar() {
                 {connectedCount}/{platforms.length} Platforms
               </div>
               <div className={styles.reliabilityLabel}>
-                Reliability: <span className={styles.reliabilityHigh}>High</span>
+                Reliability: <span className={reliability.className}>{reliability.label}</span>
               </div>
             </div>
           </div>

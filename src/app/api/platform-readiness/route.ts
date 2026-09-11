@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 
 import { createClient } from '@/utils/supabase/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type PlatformId = 
   | 'gmail' | 'github' | 'notion' | 'google-calendar' | 'discord' | 'slack' | 'twitter' | 'dropbox'
   | 'asana' | 'trello' | 'linear' | 'clickup'
@@ -291,7 +294,13 @@ export async function GET() {
     const user = authData.user;
 
     if (!user) {
-      return NextResponse.json({ platforms: [] }, { status: 200 });
+      return NextResponse.json(
+        { platforms: [] },
+        {
+          status: 200,
+          headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
+        }
+      );
     }
 
     const userIds = [user.id];
@@ -352,7 +361,13 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ platforms }, { status: 200 });
+    return NextResponse.json(
+      { platforms },
+      {
+        status: 200,
+        headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
+      }
+    );
   } catch (error) {
     console.error('[Readiness] API Fatal Error:', error);
     return NextResponse.json({ platforms: [], error: 'Internal Server Error' }, { status: 500 });
