@@ -69,7 +69,7 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
 
   const isBackfill = mode === 'backfill';
   const perPage = 100;
-  const maxTotal = isBackfill ? Infinity : 100;
+  const maxTotal = 100; // Safe batch limit per invocation; remaining chained via QStash
 
   await upsertSyncStatusSafely(supabase, {
     user_id: userId,
@@ -214,6 +214,22 @@ export async function executeGithubSync(actor: SyncActor, mode: string = 'delta'
       updated_at: now,
     }).eq('user_id', userId),
   ]);
+
+  // Auto-chain remaining backfill via QStash
+  if (hasMore && isBackfill) {
+    try {
+      const { dispatchNextSyncJob } = await import('@/services/sync/queue-dispatcher');
+      await dispatchNextSyncJob({
+        userId,
+        platform: 'github',
+        mode: 'backfill',
+        cursor: String(page),
+        delaySeconds: 3,
+      });
+    } catch (qErr) {
+      console.warn('[GitHub Sync] Could not schedule next QStash sync chunk:', qErr);
+    }
+  }
 
   return {
     status: 200,

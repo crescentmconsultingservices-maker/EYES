@@ -18,6 +18,7 @@ import { executeNotionSync } from './notion-service';
 import { executeRedditSync } from './reddit-service';
 import { executeSlackSync } from './slack-service';
 import { executeDiscordSync } from './discord-service';
+import { executeMetaSync } from './meta-service';
 
 export const syncProviders: Record<string, SyncProvider> = {
   'github': { executeSync: executeGithubSync },
@@ -27,4 +28,6 @@ export const syncProviders: Record<string, SyncProvider> = {
   'reddit': { executeSync: executeRedditSync },
   'slack': { executeSync: executeSlackSync },
   'discord': { executeSync: executeDiscordSync },
+  'meta': { executeSync: executeMetaSync },
+  'facebook': { executeSync: executeMetaSync },
 };

@@ -126,9 +126,9 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
     }
     const accessToken = decryptedToken;
 
-    const depth = mode === 'backfill' ? 'deep' : 'shallow';
+    const isBackfill = mode === 'backfill';
     const maxResultsPerPage = 100;
-    const maxTotalResults = depth === 'deep' ? 500 : 50;
+    const maxTotalResults = isBackfill ? 100 : 50;
 
     // Mark as 'syncing'
     await upsertSyncStatusSafely(supabase, {
@@ -172,13 +172,13 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
         break;
       }
 
-      const body = (await searchResponse.json()) as { results?: NotionSearchResult[], next_cursor?: string | null };
+      const body = (await searchResponse.json()) as { results?: NotionSearchResult[]; next_cursor?: string | null; has_more?: boolean };
       const pageResults = body.results ?? [];
       allResults = [...allResults, ...pageResults];
       
       nextCursor = body.next_cursor || undefined;
-      if (!nextCursor) {
-        hasMore = false;
+      hasMore = Boolean(body.has_more && body.next_cursor);
+      if (!hasMore || isBackfill) {
         break;
       }
     }
@@ -238,6 +238,22 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
         updated_at: new Date().toISOString(),
       }).eq('user_id', userId),
     ]);
+
+    // Auto-chain remaining backfill via QStash
+    if (hasMore && mode === 'backfill') {
+      try {
+        const { dispatchNextSyncJob } = await import('@/services/sync/queue-dispatcher');
+        await dispatchNextSyncJob({
+          userId,
+          platform: 'notion',
+          mode: 'backfill',
+          cursor: nextCursor,
+          delaySeconds: 3,
+        });
+      } catch (qErr) {
+        console.warn('[Notion Sync] Could not schedule next QStash sync chunk:', qErr);
+      }
+    }
 
     return { status: 200, data: { 
       ok: true,

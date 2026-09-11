@@ -20,8 +20,16 @@ export const dynamic = 'force-dynamic';
  * H-NEW-1 fix: this is the missing bridge that activates the Chronic Layer end-to-end.
  */
 
+const MODAL_GLINER_URL = process.env.MODAL_GLINER_URL || process.env.MODAL_WEBHOOK_URL;
 const CHRONIC_ENGINE_URL = (process.env.CHRONIC_ENGINE_URL || 'http://localhost:8000').replace(/\/$/, '');
 const CHRONIC_ENGINE_SECRET = process.env.CHRONIC_ENGINE_SECRET || '';
+
+const DEFAULT_ENTITY_LABELS = [
+  'person', 'organization', 'place', 'project',
+  'commitment', 'decision', 'goal', 'emotional_state',
+  'event', 'topic', 'document', 'financial_transaction',
+  'task', 'blocker'
+];
 
 interface EngineEntity {
   label: string;
@@ -88,47 +96,89 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No content to extract from.' }, { status: 400 });
     }
 
-    // ── 3. Call the Python GLiNER engine ────────────────────────────────────
-    const engineHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (CHRONIC_ENGINE_SECRET) {
-      engineHeaders['X-Engine-Secret'] = CHRONIC_ENGINE_SECRET;
-    }
+    // ── 3. Extract Entities via Modal Cloud Engine (or local Chronic Engine) ───
+    let entities: EngineEntity[] = [];
+    let relations: EngineRelation[] = [];
 
-    let engineResult: EngineResponse;
-    try {
-      const engineRes = await fetch(`${CHRONIC_ENGINE_URL}/extract`, {
-        method: 'POST',
-        headers: engineHeaders,
-        body: JSON.stringify({
-          user_id: user.id,
-          platform_id: platform,
-          text: contentToExtract,
-        }),
-        signal: AbortSignal.timeout(20_000), // 20s engine call timeout
-      });
+    // Attempt 1: Call Modal Cloud GLiNER if configured
+    if (MODAL_GLINER_URL) {
+      try {
+        const modalRes = await fetch(MODAL_GLINER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: contentToExtract,
+            labels: DEFAULT_ENTITY_LABELS,
+          }),
+          signal: AbortSignal.timeout(20_000),
+        });
 
-      if (!engineRes.ok) {
-        const errText = await engineRes.text().catch(() => '');
-        console.error(`[Cognitive/Extract] Engine error ${engineRes.status}:`, errText.slice(0, 200));
-        return NextResponse.json(
-          { error: `Engine returned ${engineRes.status}`, detail: errText.slice(0, 200) },
-          { status: 502 }
-        );
+        if (modalRes.ok) {
+          const mData = await modalRes.json();
+          entities = mData.entities || [];
+          relations = mData.relations || [];
+          console.log(`[Cognitive/Extract] Modal Cloud extracted ${entities.length} entities.`);
+        }
+      } catch (modalErr) {
+        console.warn('[Cognitive/Extract] Modal Cloud call skipped/failed:', modalErr);
       }
-
-      engineResult = await engineRes.json() as EngineResponse;
-    } catch (fetchErr) {
-      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-      console.error('[Cognitive/Extract] Engine unreachable:', msg);
-      return NextResponse.json(
-        { error: 'Chronic engine unreachable. Check CHRONIC_ENGINE_URL and ensure the engine is running.', detail: msg },
-        { status: 503 }
-      );
     }
 
-    const { entities = [], relations = [] } = engineResult;
+    // Attempt 2: If Modal was not configured or returned no entities, try local Python Chronic Engine
+    if (entities.length === 0 && !relations.length && CHRONIC_ENGINE_URL) {
+      try {
+        const engineHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (CHRONIC_ENGINE_SECRET) engineHeaders['X-Engine-Secret'] = CHRONIC_ENGINE_SECRET;
+
+        const engineRes = await fetch(`${CHRONIC_ENGINE_URL}/extract`, {
+          method: 'POST',
+          headers: engineHeaders,
+          body: JSON.stringify({
+            user_id: user.id,
+            platform_id: platform,
+            text: contentToExtract,
+          }),
+          signal: AbortSignal.timeout(15_000),
+        });
+
+        if (engineRes.ok) {
+          const engineData = await engineRes.json() as EngineResponse;
+          entities = engineData.entities || [];
+          relations = engineData.relations || [];
+        }
+      } catch (localErr) {
+        console.warn('[Cognitive/Extract] Local Chronic engine unavailable:', localErr);
+      }
+    }
+
+    // Attempt 3: Speech-act relationship extraction via AI Gateway if relations are empty
+    if (!relations.length) {
+      const speechActRegex = /\b(i'll|we'll|let me|count on me|leave it (with|to)|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|eod|eow|next week|tonight)|will|promise|waiting|blocked|stuck|still hasn't|delay|delayed|haven't|hasn't|late|missed|behind|pass on|drop|kill|scrap|opted not|decide|decided|resolved)\b/i;
+      
+      if (speechActRegex.test(contentToExtract)) {
+        try {
+          const { invokeModel } = await import('@/services/ai/ai');
+          const entityList = entities.map(e => `[${e.label}] ${e.text}`).join(', ');
+          const system = `You are a bitemporal relationship extraction engine. Extract commitments, delays, and decisions. Entities detected: ${entityList || 'none'}. Return a JSON array of objects with fields: head (string), label (one of: promised_to, delayed_on, decided_to, blocked_by, assigned_to), tail (string), score (0.0 to 1.0). Return JSON ONLY: [{"head": "...", "label": "...", "tail": "...", "score": 0.9}]. If none, return [].`;
+          
+          const rawResult = await invokeModel({
+            capability: 'extract',
+            messages: [{ role: 'user', content: contentToExtract }],
+            system,
+          });
+
+          if (rawResult && typeof rawResult === 'string') {
+            const cleanJson = rawResult.replace(/```json|```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            if (Array.isArray(parsed)) {
+              relations = parsed;
+            }
+          }
+        } catch (aiErr) {
+          console.warn('[Cognitive/Extract] AI Gateway relation extraction note:', aiErr);
+        }
+      }
+    }
 
     // ── 4. Write relations to chronic_edges ─────────────────────────────────
     // The Python engine already handles contradictions internally,

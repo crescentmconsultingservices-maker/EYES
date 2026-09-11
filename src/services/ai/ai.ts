@@ -134,6 +134,49 @@ async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[
   return null;
 }
 
+async function gatewayEmbedBatch(texts: string[], signal?: AbortSignal): Promise<number[][] | null> {
+  if (!texts.length) return [];
+  const base = getGatewayBase();
+  const key = getGatewayKey();
+  if (!base || !key) return null;
+
+  for (let attempt = 0; attempt < GATEWAY_MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${base}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: ALIAS_EMBED,
+          input: texts.map((t) => t.slice(0, 8000)),
+          dimensions: 1024,
+        }),
+        signal,
+      });
+      if (res.ok) {
+        const body = await res.json();
+        const data = body?.data;
+        if (Array.isArray(data)) {
+          // Sort by index to maintain exact alignment with input array order
+          const sorted = [...data].sort((a: any, b: any) => (a.index ?? 0) - (b.index ?? 0));
+          return sorted.map((item: any) => item.embedding);
+        }
+        return null;
+      }
+      if (res.status < 500 && res.status !== 429) return null; // Non-retriable
+      console.warn(`[AI Embed Batch] Gateway returned ${res.status} — retry ${attempt + 1}/${GATEWAY_MAX_RETRIES}`);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return null;
+      console.warn(`[AI Embed Batch] fetch failed (attempt ${attempt + 1}):`, err instanceof Error ? err.message : err);
+    }
+    if (attempt < GATEWAY_MAX_RETRIES - 1) await retryDelay(attempt);
+  }
+  console.error(`[AI Embed Batch] Exhausted ${GATEWAY_MAX_RETRIES} retries.`);
+  return null;
+}
+
 // ── Embedding (gateway ONLY) ────────────────────────────────
 async function handleEmbedding(text: string, signal?: AbortSignal): Promise<EmbedResult | null> {
   const gatewayResult = await gatewayEmbed(text, signal);
@@ -280,6 +323,10 @@ function sseToReadable(body: ReadableStream<Uint8Array>, encoder: TextEncoder): 
 // ── Legacy wrappers ──────────────────────────────────────────────────────────
 export async function generateEmbedding(text: string) {
   return invokeModel({ capability: 'embed', messages: [{ role: 'user', content: text }] });
+}
+
+export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][] | null> {
+  return gatewayEmbedBatch(texts);
 }
 
 export async function chatCompletion(messages: AIHistoryMessage[]): Promise<string | null> {

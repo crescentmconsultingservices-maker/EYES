@@ -431,6 +431,22 @@ export async function executeGmailSync(actor: SyncActor, mode: string = 'delta')
       }).eq('user_id', userId),
     ]);
 
+    // Auto-chain remaining backfill via QStash
+    if (finalHasMore && isBackfill) {
+      try {
+        const { dispatchNextSyncJob } = await import('@/services/sync/queue-dispatcher');
+        await dispatchNextSyncJob({
+          userId,
+          platform: 'gmail',
+          mode: 'backfill',
+          cursor: nextCursor,
+          delaySeconds: 3,
+        });
+      } catch (qErr) {
+        console.warn('[Gmail Sync] Could not schedule next QStash sync chunk:', qErr);
+      }
+    }
+
     return { status: 200, data: { 
       ok: true,
       syncedMessages: events.length,

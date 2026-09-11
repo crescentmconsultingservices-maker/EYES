@@ -162,6 +162,22 @@ export async function executeGoogleCalendarSync(actor: SyncActor, mode: string =
 
     if (profileUpdate.error) throw profileUpdate.error;
 
+    // Auto-chain remaining backfill via QStash
+    if (hasMore && mode === 'backfill') {
+      try {
+        const { dispatchNextSyncJob } = await import('@/services/sync/queue-dispatcher');
+        await dispatchNextSyncJob({
+          userId,
+          platform: 'google_calendar',
+          mode: 'backfill',
+          cursor: nextPageToken,
+          delaySeconds: 3,
+        });
+      } catch (qErr) {
+        console.warn('[Google Calendar Sync] Could not schedule next QStash sync chunk:', qErr);
+      }
+    }
+
     return { status: 200, data: {  
       ok: true, 
       syncedEvents: events.length,

@@ -79,8 +79,8 @@ export async function executeRedditSync(actor: SyncActor, mode: string = 'delta'
 
     const me = (await meResponse.json()) as RedditMe;
 
-    const depth = mode === 'backfill' ? 'deep' : 'shallow';
-    const maxTotalRequests = depth === 'deep' ? 1000 : 25;
+    const isBackfill = mode === 'backfill';
+    const maxTotalRequests = isBackfill ? 50 : 25;
     
     interface RedditChild {
       data: {
@@ -125,8 +125,8 @@ export async function executeRedditSync(actor: SyncActor, mode: string = 'delta'
       allChildren = [...allChildren, ...children];
       
       afterToken = body.data?.after || undefined;
-      if (!afterToken) {
-        hasMore = false;
+      hasMore = Boolean(afterToken && children.length > 0);
+      if (!hasMore || isBackfill) {
         break;
       }
       
@@ -192,6 +192,22 @@ export async function executeRedditSync(actor: SyncActor, mode: string = 'delta'
 
     if (profileUpdate.error) {
       throw profileUpdate.error;
+    }
+
+    // Auto-chain remaining backfill via QStash
+    if (hasMore && mode === 'backfill') {
+      try {
+        const { dispatchNextSyncJob } = await import('@/services/sync/queue-dispatcher');
+        await dispatchNextSyncJob({
+          userId,
+          platform: 'reddit',
+          mode: 'backfill',
+          cursor: afterToken,
+          delaySeconds: 3,
+        });
+      } catch (qErr) {
+        console.warn('[Reddit Sync] Could not schedule next QStash sync chunk:', qErr);
+      }
     }
 
     return { status: 200, data: {  

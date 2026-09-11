@@ -5,6 +5,7 @@ import { getPrompt } from '@/services/prompts/getPrompt';
 import { sendClusterReadyEmail } from '@/services/email/resend';
 import { UMAP } from 'umap-js';
 import { DBSCAN } from 'density-clustering';
+import { runGraphCommunityClustering } from '@/services/graph/leiden';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -65,18 +66,38 @@ export async function GET(request: Request) {
     .filter(([, count]) => count >= 3)
     .map(([userId]) => userId);
 
-  console.log(`[Clustering] ${eligibleUsers.length} users eligible (≥3 state vectors)`);
+  // Find users with active chronic edges as well
+  const { data: edgeUsers } = await supabase
+    .from('chronic_edges')
+    .select('user_id')
+    .is('valid_to', null)
+    .limit(500);
+
+  const targetUsers = new Set<string>(eligibleUsers);
+  for (const row of (edgeUsers ?? [])) {
+    if (row.user_id) targetUsers.add(row.user_id);
+  }
+
+  console.log(`[Clustering] ${eligibleUsers.length} users eligible for state vectors, ${targetUsers.size} total target users`);
 
   const results: Record<string, unknown> = {};
 
-  for (const userId of eligibleUsers) {
+  for (const userId of targetUsers) {
     try {
-      const clusterCount = await runClusteringForUser(supabase, userId);
-      const loopCount    = await runLoopDetectionForUser(supabase, userId);
-      const driftResult  = await runDriftDetectionForUser(supabase, userId);
+      const isVectorEligible = eligibleUsers.includes(userId);
+      const clusterCount = isVectorEligible ? await runClusteringForUser(supabase, userId) : 0;
+      const graphClusterCount = await runGraphCommunityClustering(supabase, userId);
+      const loopCount    = isVectorEligible ? await runLoopDetectionForUser(supabase, userId) : 0;
+      const driftResult  = isVectorEligible ? await runDriftDetectionForUser(supabase, userId) : false;
       // Wire entity correlations — runs after clustering so cluster_id refs are fresh
-      const corrCount    = await runEntityCorrelationsForUser(supabase, userId);
-      results[userId] = { clusters: clusterCount, loops: loopCount, drift: driftResult, entityCorrelations: corrCount };
+      const corrCount    = isVectorEligible ? await runEntityCorrelationsForUser(supabase, userId) : 0;
+      results[userId] = {
+        clusters: clusterCount,
+        graphClusters: graphClusterCount,
+        loops: loopCount,
+        drift: driftResult,
+        entityCorrelations: corrCount,
+      };
 
       // Send cluster-ready email on the FIRST ever clustering run (version 1 only)
       if (clusterCount > 0) {
@@ -106,7 +127,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ eligible: eligibleUsers.length, results });
+  return NextResponse.json({ eligible: eligibleUsers.length, targetUsers: targetUsers.size, results });
 }
 
 // Native JS clustering — no external service required

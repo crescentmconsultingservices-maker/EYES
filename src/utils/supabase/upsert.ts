@@ -219,6 +219,7 @@ async function fireAcuteDetection(supabase: SupabaseClient, events: RawEventUpse
  * Sends data to the new Python FastAPI Chronic Engine running locally.
  */
 export async function fireEntityExtraction(supabase: SupabaseClient, events: RawEventUpsertRow[]) {
+  const MODAL_GLINER_URL = process.env.MODAL_GLINER_URL || process.env.MODAL_WEBHOOK_URL;
   const CHRONIC_ENGINE_URL = process.env.CHRONIC_ENGINE_URL || 'http://127.0.0.1:8000';
   
   try {
@@ -226,25 +227,60 @@ export async function fireEntityExtraction(supabase: SupabaseClient, events: Raw
     const eligible = events.filter(e => e.content && e.content.length >= 80);
     if (eligible.length === 0) return;
 
+    const DEFAULT_LABELS = [
+      'person', 'organization', 'place', 'project',
+      'commitment', 'decision', 'goal', 'event',
+      'topic', 'document', 'financial_transaction', 'task', 'blocker'
+    ];
+
     for (const event of eligible) {
       try {
-        const response = await fetch(`${CHRONIC_ENGINE_URL}/extract`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: event.user_id,
-            platform_id: event.platform_id,
-            text: event.content.slice(0, 2000), // Send first 2000 chars to GLiNER
-            threshold: 0.6
-          })
-        });
+        let data: { entities?: any[]; relations?: any[] } | null = null;
 
-        if (!response.ok) {
-          console.warn(`[Entities] Chronic Engine returned ${response.status}`);
-          continue;
+        // Primary: Modal Cloud GLiNER container
+        if (MODAL_GLINER_URL) {
+          try {
+            const mRes = await fetch(MODAL_GLINER_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: event.content.slice(0, 2000),
+                labels: DEFAULT_LABELS,
+              }),
+              signal: AbortSignal.timeout(15_000),
+            });
+            if (mRes.ok) {
+              data = await mRes.json();
+            }
+          } catch (mErr) {
+            console.warn('[Entities] Modal GLiNER note:', mErr);
+          }
         }
 
-        const data = await response.json();
+        // Secondary: Local Chronic Engine fallback
+        if (!data && CHRONIC_ENGINE_URL) {
+          try {
+            const response = await fetch(`${CHRONIC_ENGINE_URL}/extract`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: event.user_id,
+                platform_id: event.platform_id,
+                text: event.content.slice(0, 2000),
+                threshold: 0.6,
+              }),
+              signal: AbortSignal.timeout(15_000),
+            });
+            if (response.ok) {
+              data = await response.json();
+            }
+          } catch (localErr) {
+            console.warn('[Entities] Local Chronic Engine note:', localErr);
+          }
+        }
+
+        if (!data) continue;
+
         const entities = data.entities || [];
         const relations = data.relations || [];
 

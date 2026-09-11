@@ -398,6 +398,21 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
       }).eq('user_id', userId),
     ]);
 
+    // Auto-chain remaining backfill via QStash
+    if (hasMoreOverall && mode === 'backfill') {
+      try {
+        const { dispatchNextSyncJob } = await import('@/services/sync/queue-dispatcher');
+        await dispatchNextSyncJob({
+          userId,
+          platform: 'discord',
+          mode: 'backfill',
+          delaySeconds: 3,
+        });
+      } catch (qErr) {
+        console.warn('[Discord Sync] Could not schedule next QStash sync chunk:', qErr);
+      }
+    }
+
     return { status: 200, data: { 
       success: true,
       count: events.length,

@@ -172,8 +172,8 @@ function toFiniteNumber(raw: string | undefined, fallback: number) {
 // All platforms that can be synced via the daily cron.
 // OAuth platforms come from oauth_tokens; direct-key platforms are injected below.
 const SUPPORTED_PLATFORMS = new Set([
-  // Original 7
-  'github', 'gmail', 'google_calendar', 'google-calendar', 'notion', 'reddit', 'slack', 'discord',
+  // Original active ingestion engines
+  'github', 'gmail', 'google_calendar', 'google-calendar', 'notion', 'reddit', 'slack', 'discord', 'meta', 'facebook',
   // Expanded — all OAuth platforms added in later sessions
   'dropbox', 'asana', 'clickup', 'netlify', 'webflow', 'canva',
   'strava', 'fitbit', 'withings', 'sentry', 'twitter',

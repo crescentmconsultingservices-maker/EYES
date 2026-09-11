@@ -1,26 +1,19 @@
 /**
- * Cron endpoint: background embedding worker for ALL users.
+ * High-Throughput Batch Embedding Worker for ALL users.
  *
- * Triggered by Vercel scheduler every 5 minutes (see vercel.json).
  * Scans the `memories` table for rows with embedding IS NULL,
- * generates 1024-dim vectors via Gemini gemini-embedding-001,
- * and writes them back inline to memories.embedding.
+ * generates 1024-dim vectors in batches via the AI Gateway (auto-embed),
+ * and writes them back concurrently to memories.embedding.
  *
- * Replaces the broken OpenAI/raw_events implementation.
+ * Automatically chains follow-up batches via QStash if a backlog remains.
  */
 
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
-import { generateEmbedding } from '@/services/ai/ai';
+import { generateEmbeddingsBatch } from '@/services/ai/ai';
 
-/** Max memories to embed per cron tick (across all users). Keep ≤100 on free tier. */
+/** Batch size per gateway call (keep 50-100 for optimal latency & token payload) */
 const BATCH_SIZE = Number(process.env.EMBEDDING_QUEUE_BATCH_SIZE || 50);
-
-/** Milliseconds between individual embedding API calls — avoids rate-limit bursts. */
-const INTER_CALL_DELAY_MS = Number(process.env.EMBEDDING_INTER_CALL_DELAY_MS || 250);
-
-/** How many consecutive provider failures before we abort the whole batch early. */
-const MAX_CONSECUTIVE_FAILURES = 3;
 
 function getCronSecret(request: Request): string | null {
   const authHeader = request.headers.get('authorization');
@@ -39,17 +32,44 @@ function isAuthorizedCron(request: Request): boolean {
   return !!providedSecret && providedSecret === expectedSecret;
 }
 
+async function chainNextEmbeddingBatch(secret: string): Promise<void> {
+  const qstashToken = process.env.QSTASH_TOKEN;
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+
+  if (!qstashToken || !siteUrl) return;
+
+  try {
+    const { Client } = await import('@upstash/qstash');
+    const qstash = new Client({ token: qstashToken });
+    await qstash.publishJSON({
+      url: `${siteUrl.replace(/\/$/, '')}/api/cron/embeddings`,
+      headers: {
+        'x-cron-secret': secret,
+      },
+      body: {},
+      delay: 2, // 2-second breathing window
+    });
+    console.log('[Cron Embeddings] Enqueued next embedding batch via QStash.');
+  } catch (err) {
+    console.warn('[Cron Embeddings] Failed to enqueue next batch via QStash:', err);
+  }
+}
+
 /**
  * POST /api/cron/embeddings
- * Processes a batch of un-embedded memories across all users.
+ * Processes a high-throughput batch of un-embedded memories across all users.
  */
 export async function POST(request: Request) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const batchSize = Number(process.env.EMBEDDING_QUEUE_BATCH_SIZE || 50);
   const startedAt = Date.now();
   const supabase = createAdminClient();
+  const cronSecret = process.env.CRON_SECRET || '';
 
   try {
     // ── 1. Fetch a batch of memories missing embeddings (across ALL users) ────
@@ -58,8 +78,8 @@ export async function POST(request: Request) {
       .select('id, user_id, platform, title, content')
       .is('embedding', null)
       .not('content', 'is', null)
-      .order('synced_at', { ascending: true }) // oldest-first: drain backlog in order
-      .limit(BATCH_SIZE);
+      .order('synced_at', { ascending: true })
+      .limit(batchSize);
 
     if (fetchError) {
       console.error('[Cron Embeddings] Failed to fetch memories:', fetchError.message);
@@ -73,109 +93,92 @@ export async function POST(request: Request) {
       return NextResponse.json({
         message: 'No memories pending embedding — index is current.',
         processed: 0,
+        hasMore: false,
         durationMs: Date.now() - startedAt,
       });
     }
 
-    console.log(`[Cron Embeddings] Processing ${memories.length} un-embedded memories...`);
+    console.log(`[Cron Embeddings] Batch processing ${memories.length} un-embedded memories...`);
 
+    // Prepare non-empty text payloads
+    const validMemories = memories
+      .map((m) => ({
+        id: m.id,
+        user_id: m.user_id,
+        platform: m.platform,
+        text: [m.title, m.content].filter(Boolean).join('\n').slice(0, 8000).trim(),
+      }))
+      .filter((m) => m.text.length > 0);
+
+    if (validMemories.length === 0) {
+      return NextResponse.json({
+        message: 'All items in batch had empty text.',
+        processed: 0,
+        hasMore: memories.length === batchSize,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // ── 2. High-throughput Batch Embedding via Gateway ───────────────────────
+    const texts = validMemories.map((m) => m.text);
+    const embeddings = await generateEmbeddingsBatch(texts);
+
+    if (!embeddings || !Array.isArray(embeddings) || embeddings.length !== validMemories.length) {
+      console.error('[Cron Embeddings] Batch embedding generation returned invalid payload.');
+      return NextResponse.json(
+        { error: 'Batch embedding generation failed' },
+        { status: 502 }
+      );
+    }
+
+    // ── 3. Concurrent Vector Writes to Supabase ──────────────────────────────
+    const updatePromises = validMemories.map((m, idx) => {
+      const vector = embeddings[idx];
+      if (!vector || !Array.isArray(vector)) {
+        return Promise.reject(new Error(`Missing vector for memory ${m.id}`));
+      }
+      return supabase
+        .from('memories')
+        .update({
+          embedding: vector,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', m.id)
+        .eq('user_id', m.user_id);
+    });
+
+    const results = await Promise.allSettled(updatePromises);
     let successCount = 0;
     let failureCount = 0;
-    let consecutiveFailures = 0;
 
-    for (const memory of memories) {
-      // Vercel Hobby CPU Guard: Stop if approaching 10s default timeout
-      if (Date.now() - startedAt > 8000) {
-        console.warn('[Cron Embeddings] Vercel 10s CPU limit approaching — pausing batch safely to avoid timeout.');
-        break;
+    results.forEach((res) => {
+      if (res.status === 'fulfilled') {
+        successCount++;
+      } else {
+        failureCount++;
       }
+    });
 
-      // Abort early if providers are consistently failing
-      if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        console.warn(
-          `[Cron Embeddings] ${MAX_CONSECUTIVE_FAILURES} consecutive provider failures — ` +
-          `aborting batch. Will resume on next cron tick.`
-        );
-        break;
-      }
+    const hasMore = memories.length === batchSize;
 
-      try {
-        // Build the text to embed
-        const textToEmbed = [memory.title, memory.content]
-          .filter(Boolean)
-          .join('\n')
-          .slice(0, 8000);
-
-        if (!textToEmbed.trim()) {
-          // Nothing to embed — mark it so it won't block future batches
-          // by setting a zero-vector placeholder ... but better: just skip
-          // and log. The row will be revisited if content is added later.
-          console.warn(`[Cron Embeddings] Memory ${memory.id} has empty content — skipping.`);
-          continue;
-        }
-
-        // generateEmbedding uses: Gemini gemini-embedding-001 (sole provider, 1024d)
-        const result = await generateEmbedding(textToEmbed);
-
-        // Narrow: generateEmbedding returns EmbedResult | string | null
-        if (!result || typeof result === 'string' || !('embedding' in result) || !Array.isArray(result.embedding)) {
-          console.warn(
-            `[Cron Embeddings] All embedding providers exhausted for memory ${memory.id} ` +
-            `(user ${memory.user_id}, platform ${memory.platform}).`
-          );
-          consecutiveFailures += 1;
-          failureCount += 1;
-          continue;
-        }
-
-        // ── 2. Write the embedding back to the memories row ─────────────────
-        const { error: updateError } = await supabase
-          .from('memories')
-          .update({ embedding: result.embedding, updated_at: new Date().toISOString() })
-          .eq('id', memory.id)
-          .eq('user_id', memory.user_id); // belt-and-suspenders: match user_id too
-
-        if (updateError) {
-          console.warn(
-            `[Cron Embeddings] DB update failed for memory ${memory.id}:`,
-            updateError.message
-          );
-          failureCount += 1;
-          consecutiveFailures += 1;
-          continue;
-        }
-
-        successCount += 1;
-        consecutiveFailures = 0; // reset on any success
-
-        // Rate-limit safety: pause between API calls
-        await new Promise((r) => setTimeout(r, INTER_CALL_DELAY_MS));
-
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(`[Cron Embeddings] Unexpected error on memory ${memory.id}:`, message);
-        failureCount += 1;
-        consecutiveFailures += 1;
-      }
+    // Auto-chain remaining backlog via QStash
+    if (hasMore) {
+      await chainNextEmbeddingBatch(cronSecret);
     }
 
     const durationMs = Date.now() - startedAt;
-    const remaining = memories.length - successCount - failureCount;
-
     console.log(
-      `[Cron Embeddings] Done — success=${successCount} failed=${failureCount} ` +
-      `skipped=${remaining} duration=${durationMs}ms`
+      `[Cron Embeddings] Batch complete — success=${successCount} failed=${failureCount} hasMore=${hasMore} duration=${durationMs}ms`
     );
 
     return NextResponse.json({
-      message: 'Embedding batch complete.',
+      message: 'Batch embedding complete.',
       processed: successCount,
       failed: failureCount,
       total: memories.length,
-      abortedEarly: consecutiveFailures >= MAX_CONSECUTIVE_FAILURES,
+      hasMore,
       durationMs,
     });
-
   } catch (err) {
     console.error('[Cron Embeddings] Fatal error:', err);
     return NextResponse.json(
