@@ -53,12 +53,20 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
     const accessToken = tokenRow.access_token;
     const isBackfill = mode === 'backfill';
 
-    await upsertSyncStatusSafely(supabase, {
-      user_id: userId,
-      platform: 'meta',
-      status: 'syncing',
-      last_sync_at: new Date().toISOString(),
-    });
+    await Promise.all([
+      upsertSyncStatusSafely(supabase, {
+        user_id: userId,
+        platform: 'meta',
+        status: 'syncing',
+        last_sync_at: new Date().toISOString(),
+      }),
+      upsertSyncStatusSafely(supabase, {
+        user_id: userId,
+        platform: 'facebook',
+        status: 'syncing',
+        last_sync_at: new Date().toISOString(),
+      }),
+    ]);
 
     let currentCursors: MetaPagingCursors = {};
     if (currentStatus?.metadata?.meta_cursors) {
@@ -241,23 +249,27 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
     };
 
     const now = new Date().toISOString();
+    const finalSyncData = {
+      user_id: userId,
+      status: (hasMore ? 'syncing' : 'connected') as 'syncing' | 'connected',
+      sync_progress: hasMore ? 60 : 100,
+      total_items: (currentStatus?.total_items || 0) + rawEvents.length,
+      last_sync_at: now,
+      next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
+      cursor: hasMore ? (nextWaAfter || nextIgAfter || null) : null,
+      metadata: { meta_cursors: updatedCursors },
+      error_message: null,
+    };
+
     await Promise.all([
       upsertSyncStatusSafely(supabase, {
-        user_id: userId,
+        ...finalSyncData,
         platform: 'meta',
-        status: hasMore ? 'syncing' : 'connected',
-        sync_progress: hasMore ? 60 : 100,
-        total_items: (currentStatus?.total_items || 0) + rawEvents.length,
-        last_sync_at: now,
-        next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
-        cursor: hasMore ? (nextWaAfter || nextIgAfter || null) : null,
-        metadata: { meta_cursors: updatedCursors },
-        error_message: null,
       }),
-      supabase.from('user_profiles').update({
-        memories_indexed: (currentStatus?.total_items || 0) + rawEvents.length,
-        updated_at: now,
-      }).eq('user_id', userId),
+      upsertSyncStatusSafely(supabase, {
+        ...finalSyncData,
+        platform: 'facebook',
+      }),
     ]);
 
     // 7. Auto-chain remaining backfill via QStash
@@ -287,12 +299,21 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
   } catch (err: any) {
     console.error('[Meta Sync Fatal Error]:', err);
     try {
-      await upsertSyncStatusSafely(actor.supabase, {
-        user_id: actor.userId,
-        platform: 'meta',
-        status: 'error',
-        error_message: err instanceof Error ? err.message.slice(0, 200) : String(err),
-      });
+      const errMessage = err instanceof Error ? err.message.slice(0, 200) : String(err);
+      await Promise.all([
+        upsertSyncStatusSafely(actor.supabase, {
+          user_id: actor.userId,
+          platform: 'meta',
+          status: 'error',
+          error_message: errMessage,
+        }),
+        upsertSyncStatusSafely(actor.supabase, {
+          user_id: actor.userId,
+          platform: 'facebook',
+          status: 'error',
+          error_message: errMessage,
+        }),
+      ]);
     } catch { /* ignore */ }
     return { status: 500, error: err.message || 'Sync failed' };
   }

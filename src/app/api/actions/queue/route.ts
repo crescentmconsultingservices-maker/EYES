@@ -20,7 +20,7 @@ export async function GET() {
         .from('action_queue')
         .select('*')
         .in('user_id', userIds)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'PENDING'])
         .order('confidence', { ascending: false })
         .order('extracted_at', { ascending: false })
         .limit(50),
@@ -37,7 +37,7 @@ export async function GET() {
         .from('action_queue')
         .select('id, platform, title, status, executed_at, extracted_at')
         .in('user_id', userIds)
-        .in('status', ['approved', 'dismissed', 'executed'])
+        .in('status', ['approved', 'dismissed', 'executed', 'APPROVED', 'DISMISSED', 'EXECUTED'])
         .order('executed_at', { ascending: false })
         .limit(5),
 

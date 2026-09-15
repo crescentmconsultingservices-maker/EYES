@@ -327,6 +327,51 @@ export default function SettingsPage() {
     }
   };
 
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+
+  const handleRemoveMember = (member: OrgMember) => {
+    const isSelf = member.user_id === user?.id;
+    openConfirm({
+      title: isSelf ? 'Leave Workspace?' : `Remove ${member.profile.name}?`,
+      description: isSelf
+        ? 'You will lose access to this organization workspace and its shared memories. Your account will revert to an individual account.'
+        : `This will remove ${member.profile.name} from the organization workspace. They will lose access to the shared memory pool immediately.`,
+      confirmLabel: isSelf ? 'Leave Workspace' : 'Remove Member',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        setRemovingMemberId(member.id);
+        // Optimistically remove member from list
+        setOrgDetails(prev => prev ? {
+          ...prev,
+          members: prev.members.filter(m => m.id !== member.id)
+        } : null);
+
+        try {
+          const res = await fetch(`/api/organization/members?memberId=${member.id}`, {
+            method: 'DELETE'
+          });
+          const data = await safeParseJson(res);
+          if (res.ok && data.success) {
+            if (isSelf) {
+              updateUser({ accountType: 'individual', organizationId: null });
+              router.refresh();
+            } else {
+              fetchOrgDetails();
+            }
+          } else {
+            alert(data.error || 'Failed to remove member');
+            fetchOrgDetails();
+          }
+        } catch {
+          alert('Network error removing member');
+          fetchOrgDetails();
+        } finally {
+          setRemovingMemberId(null);
+        }
+      }
+    });
+  };
+
   const handleCopyLink = (url: string) => {
     navigator.clipboard.writeText(url);
     setCopiedLink(url);
@@ -1179,33 +1224,82 @@ export default function SettingsPage() {
                         <p className={styles.fieldDesc} style={{ marginBottom: '16px' }}>List of personnel with access to the organization's shared memory pool.</p>
 
                         <div className={styles.listContainer}>
-                          {orgDetails.members.map((member) => (
-                            <div key={member.id} className={styles.listItem}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ 
-                                  width: '28px', 
-                                  height: '28px', 
-                                  borderRadius: '50%', 
-                                  background: 'var(--accent-primary, #6366f1)', 
-                                  color: '#fff', 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  justifyContent: 'center', 
-                                  fontWeight: 'bold', 
-                                  fontSize: '12px' 
-                                }}>
-                                  {member.profile.avatar}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: 600, fontSize: '13.5px' }}>{member.profile.name}</div>
-                                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                    Joined {new Date(member.joined_at).toLocaleDateString()}
+                          {orgDetails.members.map((member) => {
+                            const currentMember = orgDetails.members.find(m => m.user_id === user?.id);
+                            const currentUserRole = currentMember?.role;
+                            const isSelf = member.user_id === user?.id;
+                            const canRemove = !isSelf && (
+                              currentUserRole === 'owner' ||
+                              (currentUserRole === 'admin' && member.role === 'member')
+                            );
+                            const canLeave = isSelf && member.role !== 'owner';
+
+                            return (
+                              <div key={member.id} className={styles.listItem}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ 
+                                    width: '28px', 
+                                    height: '28px', 
+                                    borderRadius: '50%', 
+                                    background: 'var(--accent-primary, #6366f1)', 
+                                    color: '#fff', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    fontWeight: 'bold', 
+                                    fontSize: '12px' 
+                                  }}>
+                                    {member.profile.avatar}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 600, fontSize: '13.5px' }}>
+                                      {member.profile.name} {isSelf && <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 400 }}>(You)</span>}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                      Joined {new Date(member.joined_at).toLocaleDateString()}
+                                    </div>
                                   </div>
                                 </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span className={styles.statBadge}>{member.role.toUpperCase()}</span>
+                                  {(canRemove || canLeave) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveMember(member)}
+                                      disabled={removingMemberId === member.id}
+                                      title={canLeave ? 'Leave Workspace' : `Remove ${member.profile.name}`}
+                                      style={{
+                                        background: 'rgba(239, 68, 68, 0.08)',
+                                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                                        borderRadius: '6px',
+                                        padding: '4px 10px',
+                                        color: '#ef4444',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        cursor: removingMemberId === member.id ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        transition: 'all 0.2s ease',
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (removingMemberId !== member.id) {
+                                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)';
+                                          e.currentTarget.style.borderColor = '#ef4444';
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+                                      }}
+                                    >
+                                      {removingMemberId === member.id ? 'Removing…' : canLeave ? 'Leave' : 'Remove'}
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                              <span className={styles.statBadge}>{member.role.toUpperCase()}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 

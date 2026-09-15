@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 type PlatformId = 
-  | 'gmail' | 'github' | 'notion' | 'google-calendar' | 'discord' | 'slack' | 'twitter' | 'dropbox'
+  | 'gmail' | 'github' | 'notion' | 'google-calendar' | 'discord' | 'slack' | 'twitter' | 'dropbox' | 'facebook'
   | 'asana' | 'trello' | 'linear' | 'clickup'
   | 'vercel' | 'netlify' | 'supabase' | 'sentry' | 'webflow' | 'cursor'
   | 'canva'
@@ -38,6 +38,12 @@ const platformConfigs: Array<{
   scopes: string[];
   optional?: boolean;
 }> = [
+  {
+    id: 'facebook',
+    name: 'Facebook & Meta',
+    env: ['META_CLIENT_ID', 'META_CLIENT_SECRET'],
+    scopes: ['public_profile'],
+  },
   {
     id: 'github',
     name: 'GitHub',
@@ -321,10 +327,14 @@ export async function GET() {
 
     const platforms: PlatformReadiness[] = platformConfigs.map((cfg) => {
       const dbId = toDbPlatform(cfg.id);
-      const sync = syncMap.get(dbId);
-      const hasToken = tokenPlatforms.has(dbId);
+      const isMeta = cfg.id === 'facebook';
+      const sync = syncMap.get(dbId) || (isMeta ? syncMap.get('meta') || syncMap.get('facebook') : undefined);
+      const hasToken = tokenPlatforms.has(dbId) || (isMeta && (tokenPlatforms.has('facebook') || tokenPlatforms.has('meta')));
 
       let status = (sync?.status ?? 'idle') as PlatformReadiness['status'];
+      if (hasToken && status === 'idle') {
+        status = 'connected';
+      }
 
       // If a sync is stuck in 'syncing' with no update for >30 min, treat it as 'error'.
       // This self-heals the UI when a cron run crashes mid-sync and never completes.

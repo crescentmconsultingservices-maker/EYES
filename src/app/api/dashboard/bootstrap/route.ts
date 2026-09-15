@@ -75,6 +75,8 @@ const platformLabelMap: Record<string, string> = {
   'google-maps':    'Google Maps',
   google_maps:      'Google Maps',
   youtube:          'YouTube',
+  facebook:         'Facebook & Meta',
+  meta:             'Facebook & Meta',
 };
 
 function getOverallRisk(heavy: number, direct: number): AuditSummary['overallRisk'] {
@@ -143,11 +145,15 @@ function mapSummary(syncRows: SyncStatusRow[], flaggedRows: RawEventRow[], actua
 
 function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }[] = []): PlatformStatus[] {
   const uniquePlatforms: Record<string, PlatformStatus> = {};
-  const tokenPlatformSet = new Set(oauthRows.map(r => r.platform.replace(/_/g, '-')));
+  const tokenPlatformSet = new Set(oauthRows.map(r => {
+    const raw = r.platform.replace(/_/g, '-');
+    return raw === 'meta' ? 'facebook' : raw;
+  }));
 
   for (const row of syncRows) {
     // Normalise the DB underscore format to the hyphen format used in ALL_POSSIBLE_PLATFORMS.
-    const id = row.platform.replace(/_/g, '-');
+    const rawId = row.platform.replace(/_/g, '-');
+    const id = rawId === 'meta' ? 'facebook' : rawId;
     const name = platformLabelMap[row.platform] ?? platformLabelMap[id] ?? row.platform;
     const status = (row.status ?? 'idle') as PlatformStatus['status'];
     const items = row.total_items ?? 0;
@@ -161,7 +167,7 @@ function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }
         id,
         name,
         connected,
-        status,
+        status: hasToken && status === 'idle' ? 'connected' : status,
         items,
         errorMessage,
       };
@@ -184,7 +190,8 @@ function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }
   }
 
   for (const row of oauthRows) {
-    const id = row.platform.replace(/_/g, '-');
+    const rawId = row.platform.replace(/_/g, '-');
+    const id = rawId === 'meta' ? 'facebook' : rawId;
     if (!uniquePlatforms[id]) {
       const name = platformLabelMap[row.platform] ?? platformLabelMap[id] ?? row.platform;
       uniquePlatforms[id] = {
@@ -195,6 +202,11 @@ function mapPlatforms(syncRows: SyncStatusRow[], oauthRows: { platform: string }
         items: 0,
         errorMessage: null,
       };
+    } else {
+      uniquePlatforms[id].connected = true;
+      if (uniquePlatforms[id].status === 'idle') {
+        uniquePlatforms[id].status = 'connected';
+      }
     }
   }
 
