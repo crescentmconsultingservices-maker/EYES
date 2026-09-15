@@ -12,10 +12,12 @@ function facebookRedirectUri(baseUrl: string) {
 
 export async function GET(request: Request) {
   const baseUrl = await getBaseUrl(request);
+  const { searchParams } = new URL(request.url);
+  const platform = searchParams.get('platform') || 'facebook';
   const clientId = process.env.META_CLIENT_ID?.trim();
 
   if (!clientId) {
-    return NextResponse.redirect(new URL('/connect/facebook?oauth=error&reason=missing_client_id', baseUrl));
+    return NextResponse.redirect(new URL(`/connect/${platform}?oauth=error&reason=missing_client_id`, baseUrl));
   }
 
   const supabase = await createClient();
@@ -34,6 +36,13 @@ export async function GET(request: Request) {
     path: '/',
     maxAge: 60 * 10,
   });
+  cookieStore.set('meta_target_platform', platform, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 10,
+  });
 
   const callbackUrl = facebookRedirectUri(baseUrl);
   const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
@@ -43,7 +52,12 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('state', state);
   
   // Standard Meta Scope allowed without special permissions or App Review
-  const scopes = process.env.FACEBOOK_SCOPES?.trim() || 'public_profile';
+  let scopes = process.env.FACEBOOK_SCOPES?.trim() || 'public_profile';
+  if (platform === 'instagram') {
+    scopes = process.env.INSTAGRAM_SCOPES?.trim() || 'public_profile,instagram_basic,pages_show_list';
+  } else if (platform === 'whatsapp') {
+    scopes = process.env.WHATSAPP_SCOPES?.trim() || 'public_profile,whatsapp_business_management,whatsapp_business_messaging';
+  }
   
   authUrl.searchParams.set('scope', scopes);
   authUrl.searchParams.set('response_type', 'code');

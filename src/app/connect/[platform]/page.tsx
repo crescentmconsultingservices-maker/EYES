@@ -8,6 +8,9 @@ import { useAuth } from '@/context/AuthContext';
 const PLATFORM_SYNC_ROUTES: Record<string, string[]> = {
   facebook:           ['meta'],
   meta:               ['meta'],
+  instagram:          ['meta'],
+  whatsapp:           ['meta'],
+  'meta-ads':         ['meta'],
   github:             ['github'],
   notion:             ['notion'],
   slack:              ['slack'],

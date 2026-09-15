@@ -68,34 +68,33 @@ export async function GET(request: Request) {
       ? new Date(Date.now() + expiresIn * 1000).toISOString()
       : null;
 
-    const { error: tokenError } = await supabase
-      .from('oauth_tokens')
-      .upsert({
-        user_id: user.id,
-        platform: 'facebook',
-        access_token: accessToken,
-        refresh_token: null, // Facebook typically doesn't use refresh tokens this way, they use long-lived tokens
-        expires_at: expiresAt,
-        scope: '', // Facebook doesn't return scope in the token response directly here
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,platform' });
+    const targetPlatform = cookieStore.get('meta_target_platform')?.value || 'facebook';
 
-    if (tokenError) {
-      console.error('Database Error:', tokenError);
-      return NextResponse.redirect(new URL('/connect/facebook?oauth=error&reason=db_save_failed', baseUrl));
+    const platformsToSave = Array.from(new Set([targetPlatform, 'meta', 'facebook']));
+    for (const p of platformsToSave) {
+      await supabase
+        .from('oauth_tokens')
+        .upsert({
+          user_id: user.id,
+          platform: p,
+          access_token: accessToken,
+          refresh_token: null,
+          expires_at: expiresAt,
+          scope: '',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,platform' });
+
+      await supabase
+        .from('sync_status')
+        .upsert({
+          user_id: user.id,
+          platform: p,
+          status: 'idle',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,platform' });
     }
 
-    // Initialize sync status
-    await supabase
-      .from('sync_status')
-      .upsert({
-        user_id: user.id,
-        platform: 'facebook',
-        status: 'idle',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,platform' });
-
-    return NextResponse.redirect(new URL('/connect/facebook?oauth=success', baseUrl));
+    return NextResponse.redirect(new URL(`/connect/${targetPlatform}?oauth=success`, baseUrl));
   } catch (err) {
     console.error('Meta Auth Error:', err);
     return NextResponse.redirect(new URL('/connect/facebook?oauth=error&reason=server_error', baseUrl));
