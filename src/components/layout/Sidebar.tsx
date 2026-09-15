@@ -374,16 +374,6 @@ export default function Sidebar() {
             </div>
           </div>
 
-          <div
-            className={`${styles.item} ${activeView === 'timeline' ? styles.itemActive : ''}`}
-            onClick={() => navigateToView('timeline')}
-          >
-            <div className={styles.itemIcon}><GraphIcon /></div>
-            <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Time Line</span>
-              <span className={styles.itemDesc}>Chronological event mapping</span>
-            </div>
-          </div>
 
           <div
             className={`${styles.item} ${activeView === 'mindmap' ? styles.itemActive : ''}`}
