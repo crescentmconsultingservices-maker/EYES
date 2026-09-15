@@ -137,26 +137,31 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     setIsInitiating(true);
     setErrorMessage(null);
     try {
-      const res = await fetch('/api/stripe/checkout', {
+      const res = await fetch('/api/audit/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type })
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (data.auditId) {
+          setActiveAudit({
+            id: data.auditId,
+            status: 'analysis',
+            createdAt: new Date().toISOString(),
+          } as ReputationAudit);
+          setAuditMode('running');
         } else {
-          setErrorMessage('Failed to initialize checkout session.');
-          setIsInitiating(false);
+          setErrorMessage('Failed to initialize reputation audit.');
         }
       } else {
-        setErrorMessage('Failed to start checkout. Check network or server logs.');
-        setIsInitiating(false);
+        const data = await res.json().catch(() => ({}));
+        setErrorMessage(data.error || 'Failed to start audit. Check server logs.');
       }
     } catch (err) {
       console.error('Initiation failed:', err);
       setErrorMessage('A network error occurred.');
+    } finally {
       setIsInitiating(false);
     }
   };
@@ -271,7 +276,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   // 2. RUNNING / FAILED STATE — Thinking Veil
   if (auditMode === 'running') {
-    // If we don't have the audit ID yet (waiting for Stripe Webhook), show a generic initializing screen
+    // If we don't have the audit ID yet, show initializing screen
     if (!activeAudit?.id) {
       return (
         <div className={styles.auditContainer} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh'}}>
@@ -279,8 +284,8 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             <svg className={styles.spinner} viewBox="0 0 50 50" style={{width: '40px', height: '40px', margin: '0 auto 20px', animation: 'spin 2s linear infinite'}}>
               <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="90 150" strokeLinecap="round" />
             </svg>
-            <h2>Verifying Secure Payment...</h2>
-            <p>Waiting for secure webhook confirmation. Your audit will begin momentarily.</p>
+            <h2>Initializing Audit Analysis...</h2>
+            <p>Scanning your connected personal data vault...</p>
           </div>
         </div>
       );

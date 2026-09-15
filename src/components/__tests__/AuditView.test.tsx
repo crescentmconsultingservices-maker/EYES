@@ -31,7 +31,6 @@ describe('AuditView', () => {
   let fetchMock: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    // Override window.location for Stripe redirect test
     Object.defineProperty(window, 'location', {
       value: {
         href: 'http://localhost/',
@@ -51,13 +50,13 @@ describe('AuditView', () => {
         }), { status: 200 });
       }
 
+      if (url.includes('/api/audit/create')) {
+        return new Response(JSON.stringify({ success: true, auditId: 'audit-new-123' }), { status: 200 });
+      }
+
       if (url.includes('/api/audit/latest') || url.includes('/api/audit/')) {
         // Default to returning null/empty for latest unless mocked otherwise in specific tests
         return new Response(JSON.stringify(null), { status: 200 });
-      }
-
-      if (url.includes('/api/stripe/checkout')) {
-        return new Response(JSON.stringify({ url: 'http://mock-stripe-url.com' }), { status: 200 });
       }
 
       return new Response(JSON.stringify({}), { status: 200 });
@@ -84,7 +83,7 @@ describe('AuditView', () => {
     });
   });
 
-  it('initiates checkout on clicking start audit', async () => {
+  it('initiates audit directly on clicking start audit without payment', async () => {
     render(<AuditView onBack={vi.fn()} />);
 
     const startBtn = screen.getByText('START FULL SCAN');
@@ -93,14 +92,12 @@ describe('AuditView', () => {
     expect(startBtn).toHaveTextContent('INITIALIZING...');
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/stripe/checkout', expect.any(Object));
-      expect(window.location.href).toBe('http://mock-stripe-url.com');
+      expect(fetchMock).toHaveBeenCalledWith('/api/audit/create', expect.any(Object));
+      expect(screen.getByTestId('thinking-veil')).toBeInTheDocument();
     });
   });
 
   it('renders error state correctly', async () => {
-    render(<AuditView onBack={vi.fn()} />);
-
     // To transition to error, we'll force it via the mocked ThinkingVeil
     window.location.search = '?audit=success';
     
@@ -108,24 +105,25 @@ describe('AuditView', () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.includes('/api/audit/latest')) {
-        return new Response(JSON.stringify({ id: 'audit-running-1', status: 'pending', createdAt: new Date().toISOString() }), { status: 200 });
+        return new Response(JSON.stringify({ id: 'running-audit', status: 'pending' }), { status: 200 });
       }
       return new Response(JSON.stringify({}), { status: 200 });
     });
 
-    render(<AuditView onBack={vi.fn()} />);
-
-    // Wait for the veil to appear
+    const { unmount } = render(<AuditView onBack={vi.fn()} />);
+    
     await waitFor(() => {
       expect(screen.getByTestId('thinking-veil')).toBeInTheDocument();
     });
 
-    // Trigger error
-    fireEvent.click(screen.getByText('Error'));
+    const errBtn = screen.getByText('Error');
+    fireEvent.click(errBtn);
 
     await waitFor(() => {
       expect(screen.getByText('Analysis Error')).toBeInTheDocument();
       expect(screen.getByText('Test Error')).toBeInTheDocument();
     });
+
+    unmount();
   });
 });
