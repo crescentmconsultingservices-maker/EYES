@@ -44,18 +44,30 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         if (auditRes.ok) {
           const data = await auditRes.json();
           if (data && data.id) {
+            const safeAudit: ReputationAudit = {
+              ...data,
+              riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore)
+                ? data.riskScore
+                : typeof data.risk_score === 'number' && !isNaN(data.risk_score)
+                  ? data.risk_score
+                  : 0,
+              mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? 0),
+              commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? 0),
+              metadata: data.metadata || {},
+            };
+
             // Check if the audit is recent (created in the last 2 minutes)
-            const auditCreatedAt = new Date(data.createdAt).getTime();
+            const auditCreatedAt = safeAudit.createdAt ? new Date(safeAudit.createdAt).getTime() : 0;
             const ageMs = Date.now() - auditCreatedAt;
             const isRecent = ageMs < 120000; // 120 seconds
 
             // If we are returning from a successful payment, we only care about the new audit.
             // If the latest audit in the DB is old and completed, we must wait for the webhook to create the new one.
-            if (checkIsSuccessRedirect && data.status === 'completed' && !isRecent) {
+            if (checkIsSuccessRedirect && safeAudit.status === 'completed' && !isRecent) {
               return false; // Keep polling until the new audit is registered
             }
 
-            setActiveAudit(data);
+            setActiveAudit(safeAudit);
             
             // If we came from Stripe, or loaded a specific history item, set correct mode
             if (checkIsSuccessRedirect || targetAuditId) {
@@ -64,17 +76,16 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 url.searchParams.delete('audit');
                 window.history.replaceState({}, document.title, url.pathname + url.search);
               }
-              if (data.status === 'completed') {
+              if (safeAudit.status === 'completed') {
                 setAuditMode('completed');
               } else {
                 setAuditMode('running');
               }
-            } else if (data.status === 'analysis' || data.status === 'pending') {
+            } else if (safeAudit.status === 'analysis' || safeAudit.status === 'pending') {
               // If the latest audit is active, automatically show the progress screen
               setAuditMode('running');
-            } else if (data.status === 'completed') {
-              // If the latest audit is already completed, allow viewing it directly in completed view if they choose
-              // but default dashboard view is fine unless they requested a specific ID
+            } else if (safeAudit.status === 'completed') {
+              // If the latest audit is already completed, allow viewing it directly in completed view
               setAuditMode('completed');
             }
             return true; // Found the correct audit
@@ -87,7 +98,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     };
 
     fetchLatest().then((found) => {
-      // If we are waiting for a webhook from Stripe, poll every 2 seconds until it appears
       if (!found && checkIsSuccessRedirect) {
         interval = setInterval(async () => {
           const isFound = await fetchLatest();
@@ -105,7 +115,21 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   useEffect(() => {
     fetch('/api/audit/history')
       .then(r => r.json())
-      .then(d => setAuditHistory((d.audits || []).slice(0, 8)))
+      .then(d => {
+        const rawList = Array.isArray(d?.audits) ? d.audits : [];
+        const safeList: ReputationAudit[] = rawList.map((a: any) => ({
+          ...a,
+          riskScore: typeof a.riskScore === 'number' && !isNaN(a.riskScore)
+            ? a.riskScore
+            : typeof a.risk_score === 'number' && !isNaN(a.risk_score)
+              ? a.risk_score
+              : 0,
+          mentionsCount: Number(a.mentionsCount ?? a.mentions_count ?? 0),
+          commitmentsCount: Number(a.commitmentsCount ?? a.commitments_count ?? 0),
+          metadata: a.metadata || {},
+        }));
+        setAuditHistory(safeList.slice(0, 8));
+      })
       .catch(() => {});
   }, []);
 
@@ -122,7 +146,18 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         if (!res.ok) return;
         const data = await res.json();
         if (!data) return;
-        setActiveAudit(prev => ({ ...(prev ?? {} as Partial<ReputationAudit>), ...data } as ReputationAudit));
+        setActiveAudit(prev => ({
+          ...(prev ?? {} as Partial<ReputationAudit>),
+          ...data,
+          riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore)
+            ? data.riskScore
+            : typeof data.risk_score === 'number' && !isNaN(data.risk_score)
+              ? data.risk_score
+              : (prev?.riskScore ?? 0),
+          mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? prev?.mentionsCount ?? 0),
+          commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? prev?.commitmentsCount ?? 0),
+          metadata: data.metadata || prev?.metadata || {},
+        } as ReputationAudit));
         stopped = true; // single refresh on mount is enough
       } catch (err) {
         console.warn('[Audit Poll] failed:', err);
@@ -149,7 +184,14 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             id: data.auditId,
             status: 'analysis',
             createdAt: new Date().toISOString(),
-          } as ReputationAudit);
+            riskScore: 0,
+            mentionsCount: 0,
+            commitmentsCount: 0,
+            summaryNarrative: '',
+            reportUrl: undefined,
+            connectorsCovered: [],
+            metadata: {},
+          } as unknown as ReputationAudit);
           setAuditMode('running');
         } else {
           setErrorMessage('Failed to initialize reputation audit.');
@@ -166,74 +208,171 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     }
   };
 
-  // 1. DASHBOARD STATE (PROACTIVE)
+  // 1. DASHBOARD MODE (Default Selection & Overview)
   if (auditMode === 'dashboard') {
     return (
       <div className={styles.auditContainer}>
-        <header className={styles.auditHeader}>
-          <div>
-            <h1 className={styles.auditTitle}>Audit Control Center</h1>
-            <p className={styles.auditSubtitle}>Select a lens to run a deep analysis of your connected data.</p>
-          </div>
-          {activeAudit && activeAudit.status === 'completed' && (
-            <button 
-              className={styles.viewLatestBtn}
-              onClick={() => setAuditMode('completed')}
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-              VIEW LATEST CERTIFICATE
-            </button>
-          )}
+        {/* Modern Minimal Breadcrumb */}
+        <div className={styles.breadcrumbBar}>
+          <button 
+            className={styles.backBtnMinimal} 
+            onClick={onBack}
+            aria-label="Back to dashboard"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            <span>DASHBOARD</span>
+          </button>
+          <span className={styles.breadcrumbSep}>/</span>
+          <span className={styles.breadcrumbCurrent}>REPUTATION AUDIT</span>
+        </div>
+
+        {/* Hero Section */}
+        <header className={styles.heroSection}>
+          <div className={styles.heroPreTitle}>AI-POWERED THREAT INTELLIGENCE</div>
+          <h1 className={styles.heroMainTitle}>Reputation & Risk Audit</h1>
+          <p className={styles.heroSubtitle}>
+            Deep multi-source analysis of your public and internal digital footprint. We detect behavioral patterns, sentiment anomalies, and unfulfilled commitments that could impact your reputation.
+          </p>
         </header>
 
-        <div className={styles.auditGrid}>
-          {/* PRIMARY ACTION */}
-          <div className={`${styles.mainAuditCard} magnetic-card stagger-2`} onClick={() => handleStartAudit('full')}>
+        {/* Inline Error Notification — replaces alert() */}
+        {errorMessage && (
+          <div style={{
+            margin: '0 0 24px',
+            padding: '14px 18px',
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: '10px',
+            color: 'var(--accent-red, #ef4444)',
+            fontSize: '0.85rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <span>⚠ {errorMessage}</span>
+            <button
+              onClick={() => setErrorMessage(null)}
+              style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}
+            >×</button>
+          </div>
+        )}
+
+        {/* Audit Tier Cards */}
+        <div className={styles.grid}>
+          {/* Card 1: Full Reputation Audit */}
+          <div className={`${styles.card} ${styles.featuredCard} stagger-1`}>
+            <div className={styles.cardGlow} />
             <div className={styles.cardHeader}>
               <div className={styles.cardBadge}>RECOMMENDED</div>
+              <h2 className={styles.cardTitle}>Complete Audit Dossier</h2>
+              <p className={styles.cardSubtitle}>
+                Comprehensive behavioral and reputational assessment across all linked communication and work platforms.
+              </p>
             </div>
-            <div className={styles.cardBody}>
-              <h3>Full Reputation Audit</h3>
-              <p>A comprehensive 360° scan of all connected platforms to detect sentiment shifts, commitments, and privacy leaks.</p>
+
+            <div className={styles.featureList}>
+              <div className={styles.featureItem}>
+                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span>Sentiment & tone analysis across 100% of memories</span>
+              </div>
+              <div className={styles.featureItem}>
+                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span>Broken promises & unfulfilled commitments extraction</span>
+              </div>
+              <div className={styles.featureItem}>
+                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span>Cryptographically verifiable PDF compliance certificate</span>
+              </div>
+              <div className={styles.featureItem}>
+                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span>Actionable remediation steps with risk scoring</span>
+              </div>
             </div>
-            <button className={`${styles.primaryAuditBtn} liquid-hover`} disabled={isInitiating}>
-              {isInitiating ? 'INITIALIZING...' : 'START FULL SCAN'}
-            </button>
+
+            <div className={styles.cardAction}>
+              <button 
+                className={styles.ctaButtonPrimary}
+                disabled={isInitiating}
+                onClick={() => handleStartAudit('full')}
+              >
+                {isInitiating ? 'INITIALIZING...' : 'START COMPLIANCE AUDIT'}
+              </button>
+            </div>
           </div>
 
-          {/* SPECIALIZED ACTIONS */}
-          <div className={`${styles.secondaryAuditGrid} stagger-3`}>
-            <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('reputation')}>
-              <h4>Investor / Reputation</h4>
-              <p>&quot;What will someone find when they run diligence on me?&quot; Cold, clinical analysis of unfulfilled commitments, contradictions, and external risks.</p>
+          {/* Card 2: Specialized Reports */}
+          <div className={`${styles.card} stagger-2`}>
+            <div className={styles.cardHeader}>
+              <div className={styles.cardBadgeSecondary}>TARGETED</div>
+              <h2 className={styles.cardTitle}>Specialized Audits</h2>
+              <p className={styles.cardSubtitle}>
+                Tailored analysis designed for specific high-stakes scenarios and audits.
+              </p>
             </div>
-            <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('behavioral')}>
-              <h4>Behavioral / Self</h4>
-              <p>&quot;What did I actually accomplish, and what slipped?&quot; Analysis of follow-through, task loops, drift, and dropped commitments.</p>
-            </div>
-            <div className={`${styles.miniAuditCard} magnetic-card`} onClick={() => handleStartAudit('hiring')}>
-              <h4>Hiring / Professional</h4>
-              <p>&quot;What does a recruiter or employer see?&quot; Analysis of reliability, stakeholder communication quality, and professional red flags.</p>
+
+            <div className={styles.specializedAudits}>
+              <div className={styles.specializedItem}>
+                <div>
+                  <strong>Investor / Due Diligence</strong>
+                  <p>Focused on financial commitments, roadmap promises, and founder credibility.</p>
+                </div>
+                <button 
+                  className={styles.ctaButtonSecondary}
+                  disabled={isInitiating}
+                  onClick={() => handleStartAudit('reputation')}
+                >
+                  AUDIT
+                </button>
+              </div>
+
+              <div className={styles.specializedItem}>
+                <div>
+                  <strong>Hiring & Career History</strong>
+                  <p>Analyzes work ethics, collaboration health, and professional peer friction.</p>
+                </div>
+                <button 
+                  className={styles.ctaButtonSecondary}
+                  disabled={isInitiating}
+                  onClick={() => handleStartAudit('hiring')}
+                >
+                  AUDIT
+                </button>
+              </div>
+
+              <div className={styles.specializedItem}>
+                <div>
+                  <strong>Behavioral / Self Analysis</strong>
+                  <p>Private personal feedback on tone, commitments, and communication habits.</p>
+                </div>
+                <button 
+                  className={styles.ctaButtonSecondary}
+                  disabled={isInitiating}
+                  onClick={() => handleStartAudit('behavioral')}
+                >
+                  AUDIT
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Audit History Table — C1 fix: was fetched but never rendered */}
+        {/* Audit History Table */}
         {auditHistory.length > 0 && (
           <div className={`${styles.readinessFooter} stagger-5`} style={{ marginTop: '32px' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '2px', color: 'var(--text-secondary)', marginBottom: '12px' }}>PAST AUDITS</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {auditHistory.map(a => {
-                const isHigh = a.riskScore > 7;
-                const isMed = a.riskScore > 4;
+                const score = typeof a.riskScore === 'number' && !isNaN(a.riskScore) ? a.riskScore : 0;
+                const isHigh = score > 7;
+                const isMed = score > 4;
                 const riskColor = isHigh ? 'var(--accent-red, #ef4444)' : isMed ? '#f59e0b' : 'var(--accent-green, #10b981)';
                 return (
                   <div
                     key={a.id}
-                    onClick={() => { setActiveAudit(a); setAuditMode('completed'); }}
+                    onClick={() => { setActiveAudit({ ...a, riskScore: score }); setAuditMode('completed'); }}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '12px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
@@ -249,11 +388,11 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                          a.metadata?.audit_type === 'hiring' ? 'Hiring / Professional' : 'Full Reputation'}
                       </span>
                       <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        {new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
                       </span>
                     </div>
                     <span style={{ fontSize: '18px', fontWeight: 900, fontFamily: 'var(--font-mono)', color: riskColor }}>
-                      {a.riskScore.toFixed(1)}
+                      {score.toFixed(1)}
                     </span>
                   </div>
                 );
@@ -294,7 +433,30 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     return (
       <ThinkingVeil
         auditId={activeAudit.id}
-        onComplete={() => setAuditMode('completed')}
+        onComplete={async () => {
+          try {
+            const res = await fetch(`/api/audit/${activeAudit.id}`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data) {
+                setActiveAudit({
+                  ...data,
+                  riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore)
+                    ? data.riskScore
+                    : typeof data.risk_score === 'number' && !isNaN(data.risk_score)
+                      ? data.risk_score
+                      : 0,
+                  mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? 0),
+                  commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? 0),
+                  metadata: data.metadata || {},
+                });
+              }
+            }
+          } catch (e) {
+            console.warn('[AuditView] Could not refresh audit on complete:', e);
+          }
+          setAuditMode('completed');
+        }}
         onError={(msg) => { setErrorMessage(msg); setAuditMode('error'); }}
         onReturnToDashboard={() => { setErrorMessage(null); setAuditMode('dashboard'); }}
       />
@@ -302,7 +464,6 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
   }
 
   // C2 fix: error mode renders a static ErrorBanner — no auditId polling, no infinite loop.
-  // Always transition via setAuditMode('error') to reach this branch.
   if (auditMode === 'error') {
     return (
       <div className={styles.auditContainer} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', gap: '20px' }}>
@@ -325,6 +486,12 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   // 3. COMPLETED PREVIEW
   if (auditMode === 'completed' && activeAudit) {
+    const score = typeof activeAudit.riskScore === 'number' && !isNaN(activeAudit.riskScore)
+      ? activeAudit.riskScore
+      : typeof (activeAudit as any).risk_score === 'number' && !isNaN((activeAudit as any).risk_score)
+        ? (activeAudit as any).risk_score
+        : 0;
+
     return (
       <div className={styles.auditContainer}>
         <header className={styles.auditHeader}>
@@ -338,7 +505,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               }
             </h1>
             <div className={styles.auditMeta}>
-              ID: {activeAudit.id.slice(0, 8).toUpperCase()} <span className={styles.metaDivider}>•</span> {new Date(activeAudit.createdAt).toUTCString()}
+              ID: {(activeAudit.id || '').slice(0, 8).toUpperCase()} <span className={styles.metaDivider}>•</span> {activeAudit.createdAt ? new Date(activeAudit.createdAt).toUTCString() : 'Recent'}
             </div>
           </div>
           <div className={styles.headerRight}>
@@ -370,7 +537,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               <span className={styles.metricLabel}>Sentiment Balance</span>
             </div>
             <div className={styles.metricValue}>
-              <AnimatedNumber value={((activeAudit.metadata?.sentimentBalance || 0) * 100)} />%
+              <AnimatedNumber value={Math.round((activeAudit.metadata?.sentimentBalance ?? 1) * 100)} />%
             </div>
             <div className={styles.metricSubText}>Positive linguistic alignment</div>
           </div>
@@ -412,13 +579,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Linguistic Trajectory</div>
                   <div className={styles.obsValue} style={{ textTransform: 'capitalize' }}>
-                    {activeAudit.metadata?.trajectory || (activeAudit.riskScore > 6 ? 'attention required' : activeAudit.riskScore > 3 ? 'stable' : 'optimal')}
+                    {activeAudit.metadata?.trajectory || (score > 6 ? 'attention required' : score > 3 ? 'stable' : 'optimal')}
                   </div>
                 </div>
                 <div className={`${styles.obsCard} magnetic-card`}>
                   <div className={styles.obsLabel}>Tracked Signals</div>
                   <div className={styles.obsValue}>
-                    <AnimatedNumber value={activeAudit.metadata?.riskFindings?.length || (activeAudit.riskScore > 0 ? activeAudit.riskScore * 2 + 1 : 0)} /> Identified
+                    <AnimatedNumber value={activeAudit.metadata?.riskFindings?.length || (score > 0 ? score * 2 + 1 : 0)} /> Identified
                   </div>
                 </div>
                 <div className={`${styles.obsCard} magnetic-card`}>
@@ -427,6 +594,18 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                     <AnimatedNumber value={activeAudit.mentionsCount || 0} /> Scanned
                   </div>
                 </div>
+              </div>
+
+              {/* Connectors Audited Tags */}
+              <div className={styles.connectorsAudited}>
+                <span className={styles.connectorsAuditedLabel}>Sources Covered:</span>
+                {(activeAudit.connectorsCovered || []).length > 0 ? (
+                  activeAudit.connectorsCovered.map((c, i) => (
+                    <span key={i} className={styles.connectorPill}>{c}</span>
+                  ))
+                ) : (
+                  <span className={styles.connectorPillNone}>Vault Data Only</span>
+                )}
               </div>
 
               {/* Lock banner — only show if no PDF has been generated yet */}
@@ -447,16 +626,16 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             <div className={styles.sidebarSectionTitle}>RISK PROFILE</div>
             {/* Minimalist Single Gauge Chart */}
             {(() => {
-              const isCritical = activeAudit.riskScore > 7;
-              const isModerate = activeAudit.riskScore > 4;
+              const isCritical = score > 7;
+              const isModerate = score > 4;
               const riskColor = isCritical ? 'var(--accent-red)' : isModerate ? '#f59e0b' : 'var(--accent-green)';
 
               // Metric values 0–1
-              const promiseVal = activeAudit.riskScore > 7 ? 0.72 : activeAudit.riskScore > 4 ? 0.85 : 0.96;
-              const sentimentVal = Math.min(1, (activeAudit.metadata?.sentimentBalance || 1));
-              const safetyVal = Math.min(1, (10 - activeAudit.riskScore) / 10);
+              const promiseVal = score > 7 ? 0.72 : score > 4 ? 0.85 : 0.96;
+              const sentimentVal = Math.min(1, Math.max(0, (activeAudit.metadata?.sentimentBalance ?? 1)));
+              const safetyVal = Math.min(1, Math.max(0, (10 - score) / 10));
 
-              const riskFraction = activeAudit.riskScore / 10;
+              const riskFraction = Math.min(1, Math.max(0, score / 10));
               const circumference = 2 * Math.PI * 60;
 
               return (
@@ -493,7 +672,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                     </svg>
                     <div className={styles.gaugeScore}>
                       <span className={styles.scoreNumber} style={{ color: riskColor }}>
-                        {activeAudit.riskScore.toFixed(1)}
+                        {score.toFixed(1)}
                       </span>
                       <span className={styles.scoreText}>RISK SCORE</span>
                     </div>
@@ -639,5 +818,3 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
   return null;
 }
-// Section 06: AgenticTerminal removed — replaced by ThinkingVeil (frosted glass overlay).
-// The ThinkingVeil is a self-contained component in ThinkingVeil.tsx.

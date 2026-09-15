@@ -70,8 +70,8 @@ describe('AuditView', () => {
   it('renders dashboard state by default', async () => {
     render(<AuditView onBack={vi.fn()} />);
 
-    expect(screen.getByText('Audit Control Center')).toBeInTheDocument();
-    expect(screen.getByText('Full Reputation Audit')).toBeInTheDocument();
+    expect(screen.getByText('Reputation & Risk Audit')).toBeInTheDocument();
+    expect(screen.getByText('Complete Audit Dossier')).toBeInTheDocument();
   });
 
   it('loads audit history on mount', async () => {
@@ -86,7 +86,7 @@ describe('AuditView', () => {
   it('initiates audit directly on clicking start audit without payment', async () => {
     render(<AuditView onBack={vi.fn()} />);
 
-    const startBtn = screen.getByText('START FULL SCAN');
+    const startBtn = screen.getByText('START COMPLIANCE AUDIT');
     fireEvent.click(startBtn);
 
     expect(startBtn).toHaveTextContent('INITIALIZING...');
