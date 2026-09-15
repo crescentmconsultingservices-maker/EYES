@@ -277,15 +277,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         {/* Audit Tier Cards */}
         <div className={styles.grid}>
           {/* Card 1: Full Reputation Audit */}
-          <div className={`${styles.card} ${styles.featuredCard} stagger-1`}>
+          <div className={`${styles.card} ${styles.featuredCard}`}>
             <div className={styles.cardGlow} />
-            <div className={styles.cardHeader}>
-              <div className={styles.cardBadge}>RECOMMENDED</div>
-              <h2 className={styles.cardTitle}>Complete Audit Dossier</h2>
-              <p className={styles.cardSubtitle}>
-                Comprehensive behavioral and reputational assessment across all linked communication and work platforms.
-              </p>
-            </div>
+            <div className={styles.cardBadge}>RECOMMENDED</div>
+            <h2 className={styles.cardTitle}>Complete Audit Dossier</h2>
+            <p className={styles.cardSubtitle}>
+              Comprehensive behavioral and reputational assessment across all linked communication and work platforms.
+            </p>
 
             <div className={styles.featureList}>
               <div className={styles.featureItem}>
@@ -318,14 +316,12 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </div>
 
           {/* Card 2: Specialized Reports */}
-          <div className={`${styles.card} stagger-2`}>
-            <div className={styles.cardHeader}>
-              <div className={styles.cardBadgeSecondary}>TARGETED</div>
-              <h2 className={styles.cardTitle}>Specialized Audits</h2>
-              <p className={styles.cardSubtitle}>
-                Tailored analysis designed for specific high-stakes scenarios and audits.
-              </p>
-            </div>
+          <div className={styles.card}>
+            <div className={styles.cardBadgeSecondary}>TARGETED</div>
+            <h2 className={styles.cardTitle}>Specialized Audits</h2>
+            <p className={styles.cardSubtitle}>
+              Tailored analysis designed for specific high-stakes scenarios and audits.
+            </p>
 
             <div className={styles.specializedAudits}>
               <div className={styles.specializedItem}>
@@ -373,49 +369,41 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </div>
         </div>
 
-        {/* Audit History Table */}
+        {/* Past Audits (Compact horizontal pill bar) */}
         {auditHistory.length > 0 && (
-          <div className={`${styles.readinessFooter} stagger-5`} style={{ marginTop: '32px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '2px', color: 'var(--text-secondary)', marginBottom: '12px' }}>PAST AUDITS</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {auditHistory.map(a => {
+          <div className={styles.historyCompactBar}>
+            <span className={styles.historyCompactLabel}>PAST AUDITS</span>
+            <div className={styles.historyCompactList}>
+              {auditHistory.slice(0, 5).map(a => {
                 const score = typeof a.riskScore === 'number' && !isNaN(a.riskScore) ? a.riskScore : 0;
                 const isHigh = score > 7;
                 const isMed = score > 4;
                 const riskColor = isHigh ? 'var(--accent-red, #ef4444)' : isMed ? '#f59e0b' : 'var(--accent-green, #10b981)';
                 return (
-                  <div
+                  <button
                     key={a.id}
+                    className={styles.historyPill}
                     onClick={() => { setActiveAudit({ ...a, riskScore: score }); setAuditMode('completed'); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 16px', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-                      borderRadius: '10px', cursor: 'pointer', transition: 'border-color 0.2s',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-primary)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle)'; }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'capitalize' }}>
-                        {a.metadata?.audit_type === 'reputation' ? 'Investor / Reputation' :
-                         a.metadata?.audit_type === 'behavioral' ? 'Behavioral / Self' :
-                         a.metadata?.audit_type === 'hiring' ? 'Hiring / Professional' : 'Full Reputation'}
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '18px', fontWeight: 900, fontFamily: 'var(--font-mono)', color: riskColor }}>
+                    <span className={styles.historyPillType}>
+                      {a.metadata?.audit_type === 'reputation' ? 'Investor' :
+                       a.metadata?.audit_type === 'behavioral' ? 'Behavioral' :
+                       a.metadata?.audit_type === 'hiring' ? 'Hiring' : 'Full'}
+                    </span>
+                    <span className={styles.historyPillDate}>
+                      {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recent'}
+                    </span>
+                    <span className={styles.historyPillScore} style={{ color: riskColor }}>
                       {score.toFixed(1)}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           </div>
         )}
 
-        <div className={`${styles.readinessFooter} stagger-4`}>
+        <div className={styles.readinessFooter}>
           <div className={styles.readinessStatus}>
             <span className={styles.statusDot} />
             {summary
