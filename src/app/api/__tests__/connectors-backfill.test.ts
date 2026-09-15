@@ -158,6 +158,14 @@ describe('Connectors Backfill Auto-Chaining', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: [], paging: {} }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'fb_me_123', name: 'Meta User' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: [] }),
       } as Response);
 
     const mockSupabase = {
