@@ -40,7 +40,7 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       .from('oauth_tokens')
       .select('access_token')
       .eq('user_id', userId)
-      .in('platform', ['meta', 'facebook'])
+      .in('platform', ['meta', 'facebook', 'instagram', 'whatsapp'])
       .maybeSingle();
 
     if (!tokenRow?.access_token) {

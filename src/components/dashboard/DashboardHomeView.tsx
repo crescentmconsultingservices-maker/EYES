@@ -93,7 +93,12 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
         setGoogleInterstitial(startUrl);
         return;
       }
-      const isMeta = p.id === 'facebook' || p.id === 'instagram' || p.id === 'whatsapp' || p.id === 'meta-ads';
+      if (p.id === 'instagram') {
+        startUrl = `/api/connect/instagram/start`;
+        setMetaInterstitial({ platformName: 'Instagram', startUrl });
+        return;
+      }
+      const isMeta = p.id === 'facebook' || p.id === 'whatsapp' || p.id === 'meta-ads';
       if (isMeta) {
         startUrl = `/api/connect/facebook/start?platform=${p.id}`;
         setMetaInterstitial({ platformName: p.name, startUrl });
@@ -232,63 +237,83 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
         </div>
       )}
 
-      {/* Meta pre-consent interstitial modal */}
-      {metaInterstitial && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
-        }}>
+      {/* Meta / Instagram pre-consent interstitial modal */}
+      {metaInterstitial && (() => {
+        const isInstagram = metaInterstitial.platformName === 'Instagram';
+        return (
           <div style={{
-            background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)',
-            borderRadius: '20px', padding: '32px', maxWidth: '480px', width: '100%',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
           }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-              Connecting {metaInterstitial.platformName}
-            </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '16px' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>{metaInterstitial.platformName}</strong> is part of the Meta ecosystem.
-              You will be redirected to Meta&apos;s official secure authorization dialog to grant read access.
-            </p>
             <div style={{
-              background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-              borderRadius: '12px', padding: '14px 16px', marginBottom: '20px',
-              fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55,
+              background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)',
+              borderRadius: '20px', padding: '32px', maxWidth: '480px', width: '100%',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
             }}>
-              <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                ℹ️ Official Integration Details:
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
+                {isInstagram ? 'Connect with Instagram' : `Connecting ${metaInterstitial.platformName}`}
+              </h2>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '16px' }}>
+                {isInstagram ? (
+                  <>
+                    You will be securely redirected to <strong style={{ color: 'var(--text-primary)' }}>Instagram&apos;s official login portal</strong>.
+                    Sign in directly using your Instagram username and password.
+                  </>
+                ) : (
+                  <>
+                    <strong style={{ color: 'var(--text-primary)' }}>{metaInterstitial.platformName}</strong> is part of the Meta ecosystem.
+                    You will be redirected to Meta&apos;s official secure authorization dialog to grant read access.
+                  </>
+                )}
               </p>
-              <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <li>Meta allows cloud API connectivity for <strong>WhatsApp Business</strong> and <strong>Instagram Professional / Creator</strong> accounts.</li>
-                <li>Your personal password and private chats are never shared with EYES.</li>
-                <li>All access tokens are encrypted at rest and you can disconnect anytime.</li>
-              </ul>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => { window.location.href = metaInterstitial.startUrl; }}
-                style={{
-                  flex: 1, padding: '12px 20px', background: 'var(--text-primary)', color: 'var(--bg-primary)',
-                  border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-                }}
-              >
-                Continue to Meta
-              </button>
-              <button
-                onClick={() => setMetaInterstitial(null)}
-                style={{
-                  padding: '12px 20px', background: 'transparent', color: 'var(--text-secondary)',
-                  border: '1px solid var(--border-subtle)', borderRadius: '10px', fontWeight: 600,
-                  fontSize: '0.9rem', cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
+              <div style={{
+                background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+                borderRadius: '12px', padding: '14px 16px', marginBottom: '20px',
+                fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55,
+              }}>
+                <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  ℹ️ {isInstagram ? 'Direct Instagram Details:' : 'Official Integration Details:'}
+                </p>
+                {isInstagram ? (
+                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <li>Direct login screen using your <strong>Instagram credentials</strong> (no Facebook login required).</li>
+                    <li>Your personal password is never stored or visible to EYES.</li>
+                    <li>All access tokens are encrypted at rest and you can disconnect anytime.</li>
+                  </ul>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <li>Meta allows cloud API connectivity for <strong>WhatsApp Business</strong> and <strong>Facebook Pages</strong>.</li>
+                    <li>Your personal password and private chats are never shared with EYES.</li>
+                    <li>All access tokens are encrypted at rest and you can disconnect anytime.</li>
+                  </ul>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => { window.location.href = metaInterstitial.startUrl; }}
+                  style={{
+                    flex: 1, padding: '12px 20px', background: isInstagram ? '#E4405F' : 'var(--text-primary)', color: '#fff',
+                    border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+                  }}
+                >
+                  {isInstagram ? 'Continue to Instagram' : 'Continue to Meta'}
+                </button>
+                <button
+                  onClick={() => setMetaInterstitial(null)}
+                  style={{
+                    padding: '12px 20px', background: 'transparent', color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-subtle)', borderRadius: '10px', fontWeight: 600,
+                    fontSize: '0.9rem', cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* High-Contrast Live Indexing Counter Hero */}
       <div style={{ marginBottom: '32px', paddingBottom: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
