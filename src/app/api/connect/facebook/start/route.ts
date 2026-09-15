@@ -4,7 +4,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getBaseUrl } from '@/utils/url';
 
-function facebookRedirectUri(baseUrl: string) {
+function getMetaRedirectUri(baseUrl: string, platform: string) {
+  if (platform === 'whatsapp') {
+    return process.env.WHATSAPP_REDIRECT_URI?.trim() || new URL('/api/connect/whatsapp/callback', baseUrl).toString();
+  }
   const explicit = process.env.FACEBOOK_REDIRECT_URI?.trim();
   if (explicit) return explicit;
   return new URL('/api/connect/facebook/callback', baseUrl).toString();
@@ -44,19 +47,20 @@ export async function GET(request: Request) {
     maxAge: 60 * 10,
   });
 
-  const callbackUrl = facebookRedirectUri(baseUrl);
+  const callbackUrl = getMetaRedirectUri(baseUrl, platform);
   const authUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
   
   authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', callbackUrl);
   authUrl.searchParams.set('state', state);
   
-  // Standard Meta Scope allowed without special permissions or App Review
+  // Scopes matching the Meta Facebook Login configuration
   let scopes = process.env.FACEBOOK_SCOPES?.trim() || 'public_profile';
   if (platform === 'instagram') {
-    scopes = process.env.INSTAGRAM_SCOPES?.trim() || 'public_profile,instagram_basic,pages_show_list';
+    scopes = process.env.INSTAGRAM_SCOPES?.trim() || 'public_profile';
   } else if (platform === 'whatsapp') {
-    scopes = process.env.WHATSAPP_SCOPES?.trim() || 'public_profile,whatsapp_business_management,whatsapp_business_messaging';
+    // Only use custom scopes if explicitly provided in environment, otherwise standard public_profile
+    scopes = process.env.WHATSAPP_SCOPES?.trim() || 'public_profile';
   }
   
   authUrl.searchParams.set('scope', scopes);

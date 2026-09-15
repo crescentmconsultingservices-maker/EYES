@@ -9,7 +9,10 @@ function getRequestBaseUrl(request: Request) {
   return `${protocol}://${host}`;
 }
 
-function facebookRedirectUri(baseUrl: string) {
+function getMetaRedirectUri(baseUrl: string, platform: string) {
+  if (platform === 'whatsapp') {
+    return process.env.WHATSAPP_REDIRECT_URI?.trim() || new URL('/api/connect/whatsapp/callback', baseUrl).toString();
+  }
   const explicit = process.env.FACEBOOK_REDIRECT_URI?.trim();
   if (explicit) return explicit;
   return new URL('/api/connect/facebook/callback', baseUrl).toString();
@@ -23,20 +26,21 @@ export async function GET(request: Request) {
 
   const cookieStore = await cookies();
   const savedState = cookieStore.get('facebook_oauth_state')?.value;
+  const targetPlatform = cookieStore.get('meta_target_platform')?.value || 'facebook';
 
   if (!code || !state || state !== savedState) {
-    return NextResponse.redirect(new URL('/connect/facebook?oauth=error&reason=invalid_state', baseUrl));
+    return NextResponse.redirect(new URL(`/connect/${targetPlatform}?oauth=error&reason=invalid_state`, baseUrl));
   }
 
   const clientId = process.env.META_CLIENT_ID?.trim();
   const clientSecret = process.env.META_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/connect/facebook?oauth=error&reason=missing_config', baseUrl));
+    return NextResponse.redirect(new URL(`/connect/${targetPlatform}?oauth=error&reason=missing_config`, baseUrl));
   }
 
   try {
-    const callbackUrl = facebookRedirectUri(baseUrl);
+    const callbackUrl = getMetaRedirectUri(baseUrl, targetPlatform);
     
     // Exchange authorization code for access token
     const tokenExchangeUrl = new URL('https://graph.facebook.com/v19.0/oauth/access_token');
@@ -67,8 +71,6 @@ export async function GET(request: Request) {
     const expiresAt = expiresIn 
       ? new Date(Date.now() + expiresIn * 1000).toISOString()
       : null;
-
-    const targetPlatform = cookieStore.get('meta_target_platform')?.value || 'facebook';
 
     const platformsToSave = Array.from(new Set([targetPlatform, 'meta', 'facebook']));
     for (const p of platformsToSave) {
