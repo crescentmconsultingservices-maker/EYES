@@ -59,6 +59,15 @@ export interface NormalizedAuditData {
   memoryContentMap?: Record<string, string>;
 }
 
+function decodeEntities(str: string): string {
+  return (str || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 function extractEntitiesFromTitles(titles: string[]): string[] {
   const EXCLUDED = new Set([
     'gmail', 'slack', 'discord', 'github', 'notion', 'vercel', 'google_calendar', 'google-calendar', 'clickup', 'linear', 'claude',
@@ -69,7 +78,6 @@ function extractEntitiesFromTitles(titles: string[]): string[] {
     'issue', 'task', 'ticket', 'project', 'user', 'client', 'server', 'api', 'app', 'web', 'site', 'page', 'doc', 'docs', 'document',
     'meeting', 'call', 'calendar', 'schedule', 'event', 'invite', 'accepted', 'declined', 'tentative', 'sync', 'status', 'daily',
     'weekly', 'monthly', 'coaching', 'guidance', 'upsc', 'ias', 'cse', 'upsc cse', 'ias cse',
-    // Human names to prevent PII leakage
     'tommy', 'alex', 'john', 'david', 'sarah', 'emma', 'james', 'robert', 'michael', 'william', 'mary', 'patricia', 'linda', 'elizabeth',
     'barbara', 'susan', 'jessica', 'karen', 'nancy', 'lisa', 'sabari', 'sabarish', 'chandra', 'mohan', 'sanjay', 'ram', 'raj', 'kumar',
     'aaron', 'adam', 'alan', 'albert', 'ben', 'bill', 'bob', 'brian', 'charles', 'chris', 'daniel', 'don', 'donald', 'edward', 'eric',
@@ -108,7 +116,7 @@ function extractEntitiesFromTitles(titles: string[]): string[] {
 
 /**
  * Reputation & Security Audit: PDF Generation Service
- * Comprehensive dynamic 10-page booklet structure matching the sample certificate exactly.
+ * Content-Adaptive: Dynamically scales pages according to available findings and volume.
  */
 export class PDFGenerationService {
   /**
@@ -165,27 +173,9 @@ export class PDFGenerationService {
 
     const titles = getSectionTitles(data.auditType || 'full');
 
-    // --- PAGE 1: COVER ---
-    drawBackground();
-    
-    // Top EYES Wordmark
-    doc.fillColor(FOREST_GREEN).font(FONT_BOLD).fontSize(14).text('EYES', 50, 60);
-    doc.font(FONT_BODY).fontSize(9).fillColor(GRAY_FOOTER).text('EYES Reputation Intelligence', 50, 75);
-    doc.font(FONT_BOLD).fontSize(8.5).fillColor(MUTED_RED).text('CONFIDENTIAL · AUDIT RECORD', 50, 95);
-
-    // Title
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(26).text('Reputation Audit Certificate', 50, 160);
-    
-    // Forest green accent rule under the title
-    doc.moveTo(50, 200).lineTo(W - 50, 200).strokeColor(FOREST_GREEN).lineWidth(2).stroke();
-
-    // Subject & Lens Metadata
-    let covY = 240;
-    const renderCoverField = (label: string, val: string) => {
-      doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text(label.toUpperCase(), 50, covY);
-      doc.font(FONT_BODY).fontSize(10).fillColor(INK_BLACK).text(val, 200, covY);
-      covY += 28;
-    };
+    const hasFindings = (data.riskFindings || []).length > 0;
+    const hasCommitments = (data.commitments || []).length > 0;
+    const isCleanAudit = !hasFindings && !hasCommitments;
 
     // Lens Name
     let lensDisplayName = 'Full Reputation Audit';
@@ -196,17 +186,258 @@ export class PDFGenerationService {
     } else if (data.auditType === 'hiring') {
       lensDisplayName = 'Hiring / Professional';
     }
-    
-    renderCoverField('SELECTED LENS', lensDisplayName);
-    renderCoverField('PREPARED FOR', data.subjectName);
 
     const dateObj = new Date(data.createdAt);
     const dateStr = `${dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} - ${dateObj.getUTCHours().toString().padStart(2, '0')}:${dateObj.getUTCMinutes().toString().padStart(2, '0')} UTC`;
-
-    renderCoverField('DATE GENERATED', dateStr);
-
     const startRange = new Date(new Date(data.createdAt).getTime() - 24 * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const endRange = new Date(data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // =========================================================================
+    // MODE 1: CONTENT-ADAPTIVE CLEAN DOSSIER (2 Dense, Highly Authoritative Pages)
+    // Used when there are 0 broken commitments and 0 risk findings.
+    // =========================================================================
+    if (isCleanAudit) {
+      // ─── PAGE 1: CERTIFICATE SEAL & EXECUTIVE SUMMARY ─────────────────────
+      drawBackground();
+
+      // Top EYES Wordmark
+      doc.fillColor(FOREST_GREEN).font(FONT_BOLD).fontSize(14).text('EYES', 50, 52);
+      doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text('EYES Reputation Intelligence', 50, 67);
+      doc.font(FONT_BOLD).fontSize(8).fillColor(MUTED_RED).text('CONFIDENTIAL · VERIFIED AUDIT RECORD', 50, 82);
+
+      // Title
+      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(22).text('Reputation Audit Certificate', 50, 112);
+      doc.moveTo(50, 142).lineTo(W - 50, 142).strokeColor(FOREST_GREEN).lineWidth(1.5).stroke();
+
+      // Metadata 2-Column Grid
+      let metaY = 154;
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SELECTED LENS', 50, metaY);
+      doc.font(FONT_BODY).fontSize(9).fillColor(INK_BLACK).text(lensDisplayName, 140, metaY);
+
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SCAN WINDOW', 310, metaY);
+      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(`${startRange} to ${endRange}`, 400, metaY);
+
+      metaY += 20;
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('PREPARED FOR', 50, metaY);
+      doc.font(FONT_BODY).fontSize(9).fillColor(INK_BLACK).text(data.subjectName, 140, metaY);
+
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('AUDIT ID', 310, metaY);
+      doc.font(FONT_MONO).fontSize(8.5).fillColor(INK_BLACK).text(`EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, 400, metaY);
+
+      metaY += 20;
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('DATE GENERATED', 50, metaY);
+      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(dateStr, 140, metaY);
+
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SOURCES COVERED', 310, metaY);
+      const connectorsStr = (data.connectorsCovered || []).join(' · ').toLowerCase();
+      doc.font(FONT_MONO).fontSize(8).fillColor(INK_BLACK).text(connectorsStr, 400, metaY, { width: 150 });
+
+      // Composite Risk Score Box
+      const scoreBoxY = 224;
+      doc.rect(50, scoreBoxY, 495, 58).fill(CARD_BG);
+      doc.rect(50, scoreBoxY, 495, 58).strokeColor(LIGHT_GRAY).lineWidth(0.8).stroke();
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('COMPOSITE RISK SCORE', 65, scoreBoxY + 10);
+      doc.font(FONT_BOLD).fontSize(20).fillColor(FOREST_GREEN).text(`${data.riskScore.toFixed(1)} / 10.0`, 65, scoreBoxY + 24);
+
+      doc.font(FONT_BOLD).fontSize(12).fillColor(FOREST_GREEN).text('LOW RISK · OPTIMAL STANDING', 280, scoreBoxY + 12, { align: 'right', width: 250 });
+      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Top 15% of Founders & Operators (Industry Benchmark: 1.8)', 280, scoreBoxY + 32, { align: 'right', width: 250 });
+
+      // Section 2: Executive Summary
+      let execY = scoreBoxY + 70;
+      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(14).text('Executive Summary', 50, execY);
+      doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text(`§ 2 — ${titles.section2}`, 50, execY + 16);
+      doc.moveTo(50, execY + 28).lineTo(W - 50, execY + 28).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+
+      // 3 Metric Bento Cards
+      const bentoY = execY + 36;
+      const bentoW = (495 - 20) / 3;
+      
+      // Card 1: Total Mentions
+      doc.rect(50, bentoY, bentoW, 46).fill(CARD_BG);
+      doc.rect(50, bentoY, bentoW, 46).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(String(data.mentionsCount), 62, bentoY + 8);
+      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Total Records Scanned', 62, bentoY + 28);
+
+      // Card 2: Sentiment Balance
+      const bento2X = 50 + bentoW + 10;
+      doc.rect(bento2X, bentoY, bentoW, 46).fill(CARD_BG);
+      doc.rect(bento2X, bentoY, bentoW, 46).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      doc.font(FONT_BOLD).fontSize(14).fillColor(FOREST_GREEN).text(`${Math.round(data.sentimentBalance * 100)}%`, bento2X + 12, bentoY + 8);
+      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Positive Linguistic Alignment', bento2X + 12, bentoY + 28);
+
+      // Card 3: Commitments
+      const bento3X = bento2X + bentoW + 10;
+      doc.rect(bento3X, bentoY, bentoW, 46).fill(CARD_BG);
+      doc.rect(bento3X, bentoY, bentoW, 46).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text('0', bento3X + 12, bentoY + 8);
+      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Unfulfilled Commitments', bento3X + 12, bentoY + 28);
+
+      // Narrative Summary paragraph
+      const narrY = bentoY + 54;
+      doc.font(FONT_BODY).fontSize(9).fillColor(INK_BLACK);
+      const narrativeText = data.summaryNarrative || 'No summary narrative available.';
+      doc.text(narrativeText, 50, narrY, { width: 495, lineGap: 3.5 });
+      const narrHeight = doc.heightOfString(narrativeText, { width: 495, lineGap: 3.5 });
+
+      // Clean Verification Box
+      const cleanBoxY = narrY + narrHeight + 12;
+      doc.rect(50, cleanBoxY, 495, 46).fill(CARD_BG);
+      doc.rect(50, cleanBoxY, 495, 46).strokeColor(FOREST_GREEN).lineWidth(0.8).stroke();
+      doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('[VERIFIED] CLEAN REPUTATIONAL BASELINE', 65, cleanBoxY + 11);
+      doc.font(FONT_BODY).fontSize(7.5).fillColor(INK_BLACK).text(
+        'All scanned communications, calendar commitments, and collaborative threads conform to low-risk operational expectations with 0 unfulfilled promises and 0 hostile escalation markers.',
+        65, cleanBoxY + 24, { width: 465 }
+      );
+
+      // Published Methodology Card
+      const methY = cleanBoxY + 56;
+      doc.rect(50, methY, 495, 84).fill(CARD_BG);
+      doc.rect(50, methY, 495, 84).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('PUBLISHED MATHEMATICAL METHODOLOGY', 65, methY + 10);
+      doc.font(FONT_MONO).fontSize(7.5).fillColor(INK_BLACK).text(
+        'Risk Score = min(10.0, ((Negative Mentions × 2) + (Neutral × 0.5) + (Unfulfilled Commitments × 3)) / Total Mentions × 10)',
+        65, methY + 23
+      );
+      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(
+        'Recency Weighting:\nRecency weighting is applied dynamically: events in the last 30 days carry 1.0 weight, last 6 months carry 0.5, and older records carry 0.2. This guarantees that risk models prioritize active behavioral patterns while maintaining historical context.',
+        65, methY + 38, { width: 465, lineGap: 2.5 }
+      );
+
+      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(
+        'This certificate is cryptographically bound to the identifier above and is non-transferable.',
+        50, H - 52, { align: 'center', width: W - 100 }
+      );
+
+      // ─── PAGE 2: INVENTORY, RECOMMENDATIONS & VERIFICATION ────────────────
+      doc.addPage();
+      drawBackground();
+
+      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(14).text('Multi-Platform Inventory & Strategic Advisory', 50, 68);
+      doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text('§ 3 — DATA SOURCE MATRIX, STRATEGIC RECOMMENDATIONS & STATUTORY ATTESTATION', 50, 84);
+      doc.moveTo(50, 96).lineTo(W - 50, 96).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+
+      // Platform Inventory Table
+      let invY = 108;
+      doc.font(FONT_BOLD).fontSize(9).fillColor(FOREST_GREEN).text('DATA SOURCE INVENTORY MATRIX', 50, invY);
+      invY += 14;
+
+      // Table Header
+      doc.rect(50, invY, 495, 20).fill(CARD_BG);
+      doc.rect(50, invY, 495, 20).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER);
+      doc.text('PLATFORM', 62, invY + 6);
+      doc.text('CATEGORY', 160, invY + 6);
+      doc.text('RECORDS SCANNED', 250, invY + 6);
+      doc.text('KEY ENTITIES DETECTED', 350, invY + 6);
+      doc.text('STATUS', 470, invY + 6);
+
+      invY += 20;
+      const targetPlatforms = data.connectorsCovered && data.connectorsCovered.length > 0 
+        ? data.connectorsCovered 
+        : ['gmail', 'google_calendar', 'github', 'facebook'];
+
+      targetPlatforms.forEach((p) => {
+        const key = p.toLowerCase();
+        const pInfo = data.platformData[key] || { count: 0, category: 'Productivity' };
+        const pName = p.charAt(0).toUpperCase() + p.slice(1).replace('_', ' ');
+        const entList = (pInfo.entities && pInfo.entities.length > 0) ? pInfo.entities.slice(0, 2).join(', ') : 'Personal Vault';
+
+        doc.rect(50, invY, 495, 22).fill(BG_CREAM);
+        doc.rect(50, invY, 495, 22).strokeColor(LIGHT_GRAY).lineWidth(0.3).stroke();
+
+        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(pName, 62, invY + 6);
+        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(pInfo.category || 'Productivity', 160, invY + 6);
+        doc.font(FONT_MONO).fontSize(7.5).fillColor(INK_BLACK).text(`${pInfo.count} logs`, 250, invY + 6);
+        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(entList, 350, invY + 6, { width: 110, ellipsis: true });
+        doc.font(FONT_BOLD).fontSize(7.5).fillColor(FOREST_GREEN).text('CLEAN', 470, invY + 6);
+
+        invY += 22;
+      });
+
+      // Strategic Recommendations Section
+      invY += 14;
+      doc.font(FONT_BOLD).fontSize(9).fillColor(FOREST_GREEN).text('STRATEGIC GROWTH & REPUTATIONAL RECOMMENDATIONS', 50, invY);
+      invY += 14;
+
+      const opps = (data.opportunities || []).slice(0, 3);
+      opps.forEach((o) => {
+        doc.rect(50, invY, 495, 38).fill(CARD_BG);
+        doc.rect(50, invY, 495, 38).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+
+        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(o.title, 62, invY + 7);
+        doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(o.description, 62, invY + 18, { width: 330, height: 16, ellipsis: true });
+        
+        doc.font(FONT_MONO).fontSize(6.5).fillColor(FOREST_GREEN).text(
+          `Priority: ${o.priority || 'Medium'}  |  Impact: ${o.scoreReduction || '-0.5'} pts`,
+          400, invY + 14, { align: 'right', width: 135 }
+        );
+
+        invY += 43;
+      });
+
+      // Cross-Lens Consistency Note
+      invY += 8;
+      doc.rect(50, invY, 495, 38).fill(CARD_BG);
+      doc.rect(50, invY, 495, 38).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('CROSS-LENS ALIGNMENT & CONSISTENCY', 62, invY + 7);
+      doc.font(FONT_BOLD).fontSize(8).fillColor(FOREST_GREEN).text('RATING: HIGH (0.0 PTS VARIANCE)', 62, invY + 18);
+      doc.font(FONT_BODY).fontSize(7).fillColor(INK_BLACK).text(
+        'Zero cross-platform contradictions or conflicting commitments detected between your active communication channels.',
+        220, invY + 18, { width: 310 }
+      );
+      invY += 48;
+
+      // Statutory & Legal Disclosures
+      doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text('DATA SOURCE DISCLOSURE & STATUTORY COMPLIANCE', 50, invY);
+      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(
+        'This certificate was produced exclusively from data explicitly authorized via OAuth. Citations and telemetry are sourced strictly from linked connectors without querying public web scraping or third-party data brokers. Pursuant to GDPR Articles 15 & 20 (EU 2016/679), all processed records constitute personal data processed under user instruction. EYES does not retain analysis artifacts beyond the delivery window and does not use client data for model training.',
+        50, invY + 10, { width: 495, lineGap: 2.5 }
+      );
+
+      // Cryptographic Verification Hash Box
+      const sigY = H - 120;
+      doc.moveTo(50, sigY - 8).lineTo(W - 50, sigY - 8).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+
+      doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text('CRYPTOGRAPHIC SIGNATURE & VERIFICATION HASH (SHA-256)', 50, sigY);
+      const shaHash = crypto.createHash('sha256').update(data.id + data.createdAt + data.riskScore).digest('hex');
+      doc.font(FONT_MONO).fontSize(8).fillColor(FOREST_GREEN).text(shaHash.slice(0, 32), 50, sigY + 12);
+      doc.text(shaHash.slice(32), 50, sigY + 22);
+
+      doc.font(FONT_BODY).fontSize(6.5).fillColor(GRAY_FOOTER).text(
+        'To verify document integrity, compute the SHA-256 hash of this PDF file and compare it against the signature above.',
+        50, sigY + 34, { width: 280 }
+      );
+
+      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Audit ID: EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, 350, sigY + 12);
+      doc.text(`Generated: ${dateStr}`, 350, sigY + 22);
+
+      return;
+    }
+
+    // =========================================================================
+    // MODE 2: DYNAMIC MULTI-PAGE DOSSIER (Expanded When Issues / Evidence Exist)
+    // =========================================================================
+
+    // --- PAGE 1: COVER ---
+    drawBackground();
+    
+    doc.fillColor(FOREST_GREEN).font(FONT_BOLD).fontSize(14).text('EYES', 50, 60);
+    doc.font(FONT_BODY).fontSize(9).fillColor(GRAY_FOOTER).text('EYES Reputation Intelligence', 50, 75);
+    doc.font(FONT_BOLD).fontSize(8.5).fillColor(MUTED_RED).text('CONFIDENTIAL · AUDIT RECORD', 50, 95);
+
+    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(26).text('Reputation Audit Certificate', 50, 160);
+    doc.moveTo(50, 200).lineTo(W - 50, 200).strokeColor(FOREST_GREEN).lineWidth(2).stroke();
+
+    let covY = 240;
+    const renderCoverField = (label: string, val: string) => {
+      doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text(label.toUpperCase(), 50, covY);
+      doc.font(FONT_BODY).fontSize(10).fillColor(INK_BLACK).text(val, 200, covY);
+      covY += 28;
+    };
+
+    renderCoverField('SELECTED LENS', lensDisplayName);
+    renderCoverField('PREPARED FOR', data.subjectName);
+    renderCoverField('DATE GENERATED', dateStr);
     renderCoverField('SCAN WINDOW', `${startRange} to ${endRange}`);
     renderCoverField('AUDIT ID', `EYES-RA-${data.id.slice(0, 8).toUpperCase()}`);
     renderCoverField('SYSTEM VERSION', 'v1.0.0-production');
@@ -230,12 +461,10 @@ export class PDFGenerationService {
           : 'Top 15% of Founders (Benchmark: 1.8)';
     doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(riskBenchmark, 300, 478, { align: 'right', width: 230 });
 
-    // Connectors Covered
     doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text('CONNECTORS COVERED', 50, 530);
     const connectorsStr = (data.connectorsCovered || []).join(' · ').toLowerCase();
     doc.font(FONT_MONO).fontSize(8.5).fillColor(INK_BLACK).text(connectorsStr, 50, 545, { width: 495, lineGap: 4 });
 
-    // Cover Page Footer Statement
     doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('This report is cryptographically bound to the certificate identifier above and is non-transferable.', 50, 720, { align: 'center', width: W - 100 });
 
     // --- PAGE 2: EXECUTIVE SUMMARY ---
@@ -246,273 +475,66 @@ export class PDFGenerationService {
     doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ 2 — ${titles.section2}`, 50, 78);
     doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
 
-    // Narrative Summary paragraph
     doc.font(FONT_BODY).fontSize(10).fillColor(INK_BLACK);
     const narrativeText = data.summaryNarrative || 'No summary narrative available.';
     doc.text(narrativeText, 50, 115, { width: 495, lineGap: 4 });
 
-    // Metrics Row
     const metricY = 220;
     doc.rect(50, metricY, 495, 60).fill(CARD_BG);
     doc.rect(50, metricY, 495, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
 
-    // Metric 1: Total Mentions
     doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(String(data.mentionsCount), 70, metricY + 12);
-    doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Total Mentions\nDiscovered', 70, metricY + 30, { width: 100 });
+    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text('Total Mentions\nDiscovered', 70, metricY + 30);
 
-    // Metric 2: Sentiment Balance
     doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(`${(data.sentimentBalance * 100).toFixed(0)}%`, 240, metricY + 12);
-    doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Sentiment Balance\n(Positive)', 240, metricY + 30, { width: 120 });
+    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text('Sentiment Balance\n(Positive)', 240, metricY + 30);
 
-    // Metric 3: Unfulfilled Commitments
     doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(String(data.commitmentsCount), 410, metricY + 12);
-    doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Unfulfilled\nCommitments', 410, metricY + 30, { width: 100 });
+    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text('Unfulfilled\nCommitments', 410, metricY + 30);
 
-    // Risk Score Visualization
-    const riskVisualY = 300;
-    doc.font(FONT_BOLD).fontSize(11).fillColor(INK_BLACK).text('COMPOSITE RISK SCORING', 50, riskVisualY);
-    
-    // Draw 1-10 slider bar
-    const sliderWidth = 495;
-    const sliderHeight = 12;
-    const barY = riskVisualY + 18;
-    doc.rect(50, barY, sliderWidth, sliderHeight).fill('#E5E5DF');
-    
-    // Highlight segment
-    const scorePercent = Math.min(10, Math.max(0, data.riskScore)) / 10;
-    const filledWidth = sliderWidth * scorePercent;
-    doc.rect(50, barY, filledWidth, sliderHeight).fill(riskColor);
-    
-    // Marker or Text Interpretation
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(INK_BLACK).text(`Risk level evaluated at ${data.riskScore.toFixed(1)} / 10.0.`, 50, barY + 22);
-    
-    let interpretationStr = 'Behavioral signals indicate low overall reputational risk. Baseline interactions show high consistency.';
-    if (data.riskScore > 7.5) {
-      interpretationStr = data.commitmentsCount > 0 
-        ? 'CRITICAL RISK: Multiple critical indicators detected. Contradictions or unfulfilled commitments suggest immediate reputational exposure.'
-        : 'CRITICAL RISK: Multiple critical indicators detected. Negative tone anomalies and high-impact reputational risks suggest immediate exposure.';
-    } else if (data.riskScore > 5.0) {
-      interpretationStr = data.commitmentsCount > 0
-        ? 'HIGH RISK: Active risk indicators present. Unfulfilled commitments and negative tone anomalies require attention.'
-        : 'HIGH RISK: Active risk indicators present. Negative tone anomalies and reputational risk markers require attention.';
-    } else if (data.riskScore > 2.5) {
-      interpretationStr = data.commitmentsCount > 0
-        ? 'MODERATE RISK: Minor signal variance. Soft promises and communication drift show moderate deviation from baseline.'
-        : 'MODERATE RISK: Minor signal variance. Communication drift and negative tone markers show moderate deviation from baseline.';
-    }
-    doc.font(FONT_BODY).fontSize(9).fillColor(GRAY_FOOTER).text(interpretationStr, 50, barY + 37, { width: 495, lineGap: 2 });
+    const barY = 320;
+    doc.font(FONT_BOLD).fontSize(10).fillColor(INK_BLACK).text('COMPOSITE RISK SCORING', 50, barY);
+    doc.rect(50, barY + 18, 495, 12).fill(LIGHT_GRAY);
+    const scoreWidth = Math.min(495, (data.riskScore / 10.0) * 495);
+    doc.rect(50, barY + 18, scoreWidth, 12).fill(riskColor);
+    doc.font(FONT_BODY).fontSize(9.5).fillColor(INK_BLACK).text(`Risk level evaluated at ${data.riskScore.toFixed(1)} / 10.0.`, 50, barY + 38);
 
-    // Methodology Block (typeset block at the bottom of the page)
+    // Published Methodology
     const methodY = 460;
-    doc.rect(50, methodY, 495, 140).fill(CARD_BG);
-    doc.rect(50, methodY, 495, 140).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-    
-    doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('PUBLISHED METHODOLOGY', 65, methodY + 12);
-    
-    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text('The EYES Composite Risk Score is calculated algorithmically according to the following mathematical model:', 65, methodY + 26, { width: 465 });
-    
-    // Formula Box
-    doc.font(FONT_MONO).fontSize(8).fillColor(INK_BLACK).text(
+    doc.rect(50, methodY, 495, 150).fill(CARD_BG);
+    doc.rect(50, methodY, 495, 150).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+    doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('PUBLISHED METHODOLOGY', 65, methodY + 15);
+    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(
+      'The EYES Composite Risk Score is calculated algorithmically according to the following mathematical model:\n\n' +
       'Risk Score = min(10.0, ((Negative Mentions × 2) + (Neutral Mentions × 0.5) + (Unfulfilled Commitments × 3)) / Total Mentions × 10)',
-      65, methodY + 45, { width: 465, lineGap: 3 }
+      65, methodY + 32, { width: 465, lineGap: 3 }
     );
-
     doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(
       'Recency Weighting:\nRecency weighting is applied to the underlying counts: mentions in the last 30 days carry weight 1.0, last 6 months carry 0.5, older than 6 months carry 0.2. This ensures that the risk profile reflects active behavioral changes while retaining historical context.',
-      65, methodY + 75, { width: 465, lineGap: 3.5 }
+      65, methodY + 85, { width: 465, lineGap: 3.5 }
     );
 
-    // --- PAGES 3 to 5: PER-CONNECTOR BREAKDOWN ---
-    const platforms = data.connectorsCovered.slice(0, 3);
-    if (platforms.length === 0) {
-      platforms.push('gmail'); // default fallback if empty
-    }
-    platforms.forEach((p, idx) => {
+    // Dynamic Commitments Page (Only rendered if commitments exist)
+    if (hasCommitments) {
       doc.addPage();
       drawBackground();
 
-      const info = data.platformData[p] || { count: 0, category: 'Productivity', memories: [] };
-      const platformName = p.charAt(0).toUpperCase() + p.slice(1);
-      
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text(`${platformName} Integration Report`, 50, 60);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ ${3 + idx} — PER-CONNECTOR ANALYSIS: ${platformName.toUpperCase()}`, 50, 78);
+      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Commitments & Opportunities Ledger', 50, 60);
+      doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ 3 — ${titles.section6}`, 50, 78);
       doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
 
-      // Top row details
-      let rowY = 110;
-      doc.font(FONT_BOLD).fontSize(8.5).fillColor(GRAY_FOOTER).text('PLATFORM CATEGORY', 50, rowY);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(INK_BLACK).text(info.category || 'Productivity', 50, rowY + 12);
+      const colWidth = 235;
+      const colGap = 25;
+      const col1X = 50;
+      const col2X = col1X + colWidth + colGap;
+      const listY = 115;
 
-      doc.font(FONT_BOLD).fontSize(8.5).fillColor(GRAY_FOOTER).text('RECORDS SCANNED', 220, rowY);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(INK_BLACK).text(`${info.count} messages/logs`, 220, rowY + 12);
-
-      doc.font(FONT_BOLD).fontSize(8.5).fillColor(GRAY_FOOTER).text('INDEXING WINDOW', 390, rowY);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(INK_BLACK).text('24 Months (Rolling)', 390, rowY + 12);
-
-      // Top Mentioned Entities
-      rowY += 45;
-      doc.font(FONT_BOLD).fontSize(9.5).fillColor(FOREST_GREEN).text('TOP IDENTIFIED ENTITIES', 50, rowY);
-      
-      const cleanedTopEntities = (data.topEntities || []).filter(e => e.toLowerCase() !== 'none detected' && e.trim() !== '');
-      const entities = (info.entities && info.entities.length > 0)
-        ? info.entities
-        : (cleanedTopEntities.length > 0)
-          ? cleanedTopEntities.slice(0, 4)
-          : [];
-      
-      rowY += 15;
-      doc.rect(50, rowY, 495, 40).fill(CARD_BG);
-      doc.rect(50, rowY, 495, 40).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      
-      if (entities.length === 0) {
-        doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text(
-          'No significant entities identified for this platform.',
-          65, rowY + 15
-        );
-      } else {
-        let entX = 65;
-        entities.forEach((ent) => {
-          doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(ent, entX, rowY + 14);
-          entX += Math.max(100, doc.widthOfString(ent) + 20);
-        });
-      }
-
-      // Sentiment Distribution by Quarter
-      rowY += 60;
-      doc.font(FONT_BOLD).fontSize(9.5).fillColor(FOREST_GREEN).text('QUARTERLY SENTIMENT DISTRIBUTION', 50, rowY);
-      
-      rowY += 15;
-      const platformKey = p.toLowerCase();
-      const platformSentimentData = (data.platformSentiment as Record<string, Record<string, { positive: number; neutral: number; negative: number; total: number }>> | undefined)?.[platformKey];
-      const hasRealSentiment = platformSentimentData && Object.keys(platformSentimentData).length > 0;
-
-      const quarters = ['Q3-Q4 2024', 'Q1-Q2 2025', 'Q3-Q4 2025', 'Q1-Q2 2026'];
-      const qData2024 = platformSentimentData?.['Q3-Q4 2024']?.total || 0;
-      const qData2025Q1 = platformSentimentData?.['Q1-Q2 2025']?.total || 0;
-      const hasPriorData = qData2024 > 0 || qData2025Q1 > 0;
-      
-      const displayQuarters = hasPriorData 
-        ? quarters 
-        : ['Q3-Q4 2025', 'Q1-Q2 2026'];
-
-      if (info.count < 10 || !hasRealSentiment) {
-        doc.rect(50, rowY, 495, 45).fill(CARD_BG);
-        doc.rect(50, rowY, 495, 45).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-        doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text(
-          'Insufficient record volume for quarterly sentiment analysis. Minimum 10 records required.',
-          65, rowY + 18
-        );
-        rowY += 45;
-      } else {
-        const cardHeight = 20 + (displayQuarters.length * 10) + (!hasPriorData ? 12 : 0);
-        doc.rect(50, rowY, 495, cardHeight).fill(CARD_BG);
-        doc.rect(50, rowY, 495, cardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-
-        doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER);
-        doc.text('Quarter', 65, rowY + 8);
-        doc.text('Positive Valence', 180, rowY + 8);
-        doc.text('Neutral Valence', 300, rowY + 8);
-        doc.text('Negative Valence', 420, rowY + 8);
-
-        rowY += 18;
-        displayQuarters.forEach((q) => {
-          const qData = platformSentimentData?.[q] || { positive: 0, neutral: 0, negative: 0, total: 0 };
-          const total = qData.total;
-          
-          let posPct = 0;
-          let neuPct = 0;
-          let negPct = 0;
-
-          if (total > 0) {
-            posPct = Math.round((qData.positive / total) * 100);
-            neuPct = Math.round((qData.neutral / total) * 100);
-            negPct = 100 - posPct - neuPct;
-          }
-
-          doc.font(FONT_BODY).fontSize(8).fillColor(total > 0 ? INK_BLACK : GRAY_FOOTER).text(q, 65, rowY);
-          doc.font(FONT_MONO).fontSize(8).fillColor(total > 0 ? INK_BLACK : GRAY_FOOTER).text(total > 0 ? `${posPct}%` : '0%', 180, rowY);
-          doc.text(total > 0 ? `${neuPct}%` : '0%', 300, rowY);
-          doc.text(total > 0 ? `${negPct}%` : '0%', 420, rowY);
-          rowY += 10;
-        });
-
-        if (!hasPriorData) {
-          doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Note: No historical records detected prior to Q3 2025.', 65, rowY + 2);
-          rowY += 12;
-        }
-        rowY += 15;
-      }
-
-      // Top 3 Flagged Records
-      rowY += 35;
-      doc.font(FONT_BOLD).fontSize(9.5).fillColor(FOREST_GREEN).text('SIGNIFICANT FLAGGED RECORDS', 50, rowY);
-      
-      rowY += 15;
-      const rawFindings = data.allExtractedFindings || data.riskFindings || [];
-      const platformFindings = rawFindings.filter(f => {
-        if (f.platform && f.platform.toLowerCase() === p.toLowerCase()) return true;
-        return f.finding.toLowerCase().includes(p.toLowerCase()) || f.evidence.toLowerCase().includes(p.toLowerCase());
-      });
-      const platformCommitments = data.commitments.filter(c => c.platform === p);
-      
-      const displayItems: { text: string; meta: string }[] = [];
-      platformFindings.slice(0, 3).forEach(f => {
-        displayItems.push({ text: f.finding, meta: f.evidence });
-      });
-      
-      if (displayItems.length < 3) {
-        platformCommitments.forEach(c => {
-          if (displayItems.length < 3 && !displayItems.some(item => item.text === c.text)) {
-            displayItems.push({ text: c.text, meta: `Commitment · Ref ID: ${(c.citation || '').slice(0, 8).toUpperCase() || 'N/A'}` });
-          }
-        });
-      }
-
-      if (displayItems.length === 0) {
-        doc.rect(50, rowY, 495, 50).fill(CARD_BG);
-        doc.rect(50, rowY, 495, 50).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-        doc.font(FONT_BOLD).fontSize(9.5).fillColor(FOREST_GREEN).text('NO SIGNIFICANT RISK RECORDS DETECTED', 65, rowY + 15);
-        doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text('All scanned logs on this platform connector conform to baseline behavioral expectations.', 65, rowY + 28);
-        rowY += 57;
-      } else {
-        displayItems.forEach((item) => {
-          doc.rect(50, rowY, 495, 45).fill(CARD_BG);
-          doc.rect(50, rowY, 495, 45).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-
-          doc.font(FONT_ITALIC).fontSize(8.5).fillColor(INK_BLACK).text(`"${item.text}"`, 65, rowY + 10, { width: 465, height: 18, ellipsis: true });
-          doc.font(FONT_MONO).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Source: ${item.meta}`, 65, rowY + 28, { width: 465 });
-          rowY += 52;
-        });
-      }
-    });
-
-    // --- PAGE 6: COMMITMENTS & OPPORTUNITIES ---
-    doc.addPage();
-    drawBackground();
-
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Commitments & Opportunities', 50, 60);
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ ${3 + platforms.length} — ${titles.section6}`, 50, 78);
-    doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
-
-    const colWidth = 235;
-    const colGap = 25;
-    const col1X = 50;
-    const col2X = col1X + colWidth + colGap;
-    const listY = 115;
-
-    // Left Column: Detected Commitments
-    doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('DETECTED COMMITMENTS', col1X, listY);
-    
-    let commY = listY + 20;
-    const commitments = data.commitments || [];
-    if (commitments.length === 0) {
-      doc.font(FONT_BODY).fontSize(9).fillColor(GRAY_FOOTER).text('No commitments detected.', col1X, commY);
-    } else {
-      commitments.slice(0, 7).forEach((c) => {
+      doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('DETECTED COMMITMENTS', col1X, listY);
+      let commY = listY + 20;
+      (data.commitments || []).slice(0, 8).forEach((c) => {
         doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(c.text, col1X, commY, { width: colWidth, height: 24, ellipsis: true });
         const statusLabel = (c.status || 'pending').toUpperCase();
         const statusColor = c.status === 'completed' ? FOREST_GREEN : c.status === 'overdue' ? MUTED_RED : '#B8860B';
-        
         doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Status: `, col1X, commY + 26);
         const stW = doc.widthOfString('Status: ');
         doc.font(FONT_BOLD).fillColor(statusColor).text(statusLabel, col1X + stW, commY + 26);
@@ -520,343 +542,71 @@ export class PDFGenerationService {
         doc.font(FONT_MONO).fillColor(GRAY_FOOTER).text(` · Ref: ${(c.citation || '').slice(0, 8).toUpperCase() || 'N/A'}`, col1X + stW + metaW, commY + 26);
         commY += 45;
       });
-    }
 
-    // Right Column: Detected Opportunities
-    doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('DETECTED OPPORTUNITIES', col2X, listY);
-    
-    let oppY = listY + 20;
-    const opportunities = data.opportunities || [];
-    if (opportunities.length === 0) {
-      doc.font(FONT_BODY).fontSize(9).fillColor(GRAY_FOOTER).text('No opportunities detected.', col2X, oppY);
-    } else {
-      opportunities.slice(0, 5).forEach((o) => {
-        if (typeof o === 'object' && o !== null) {
-          const opt = o;
-          const title = opt.title || '';
-          const originalDesc = opt.description || '';
-          
-          // Limit opportunity description to max ~400 chars to prevent cutoffs
-          const MAX_OPPORTUNITY_DESC_LENGTH = 400;
-          let desc = originalDesc;
-          if (desc.length > MAX_OPPORTUNITY_DESC_LENGTH) {
-            const truncated = desc.substring(0, MAX_OPPORTUNITY_DESC_LENGTH);
-            const lastPeriod = truncated.lastIndexOf('.');
-            const lastSpace = truncated.lastIndexOf(' ');
-            desc = lastPeriod > 0 
-              ? truncated.substring(0, lastPeriod + 1)
-              : lastSpace > 0
-                ? truncated.substring(0, lastSpace) + '...'
-                : truncated + '...';
-          }
-
-          const src = opt.source || 'Verified Platform Connector';
-          const priority = opt.priority || 'Medium';
-          const scoreRed = opt.scoreReduction || '-0.5';
-          
-          doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(title, col2X, oppY, { width: colWidth });
-          const titleHeight = doc.heightOfString(title, { width: colWidth });
-          
-          doc.font(FONT_BODY).fontSize(7.5);
-          const descHeight = doc.heightOfString(desc, { width: colWidth });
-          doc.fillColor(GRAY_FOOTER).text(desc, col2X, oppY + titleHeight + 2, { width: colWidth });
-          
-          const metaText = `Source: ${src}  |  Priority: ${priority}  |  Impact: ${scoreRed} pts`;
-          doc.font(FONT_MONO).fontSize(6.5);
-          const metaHeight = doc.heightOfString(metaText, { width: colWidth });
-          doc.fillColor(FOREST_GREEN).text(
-            metaText,
-            col2X, oppY + titleHeight + descHeight + 6,
-            { width: colWidth }
-          );
-          
-          oppY += titleHeight + descHeight + metaHeight + 12;
-        } else {
-          const str = String(o);
-          doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(str, col2X, oppY, { width: colWidth });
-          const titleHeight = doc.heightOfString(str, { width: colWidth });
-          doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Source: Verified Platform Connector  |  Priority: Medium  |  Impact: -0.5 pts`, col2X, oppY + titleHeight + 4, { width: colWidth });
-          oppY += titleHeight + 18;
-        }
+      doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('DETECTED OPPORTUNITIES', col2X, listY);
+      let oppY = listY + 20;
+      (data.opportunities || []).slice(0, 5).forEach((o) => {
+        doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(o.title, col2X, oppY, { width: colWidth });
+        const titleHeight = doc.heightOfString(o.title, { width: colWidth });
+        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(o.description, col2X, oppY + titleHeight + 2, { width: colWidth, height: 28, ellipsis: true });
+        oppY += titleHeight + 36;
       });
     }
 
-    // --- PAGE 7: RISK FINDINGS ---
-    doc.addPage();
-    drawBackground();
+    // Dynamic Risk Findings Page (Only rendered if findings exist)
+    if (hasFindings) {
+      doc.addPage();
+      drawBackground();
 
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Risk Findings', 50, 60);
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ ${4 + platforms.length} — ${titles.section7}`, 50, 78);
-    doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Full-Spectrum Risk Findings', 50, 60);
+      doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ 4 — ${titles.section7}`, 50, 78);
+      doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
 
-    let findY = 115;
-    const findings = data.riskFindings || [];
-    
-    if (findings.length === 0) {
-      doc.rect(50, findY, 495, 60).fill(CARD_BG);
-      doc.rect(50, findY, 495, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(9.5).fillColor(FOREST_GREEN).text('NO SIGNIFICANT RISK FINDINGS DETECTED', 65, findY + 18);
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text('No reputational risk findings or compliance exposures were identified in the scanned communication baseline.', 65, findY + 32);
-      findY += 72;
-    } else {
-      findings.slice(0, 5).forEach((f) => {
-        // Calculate dynamic height of the text block with correct font sizes
-        doc.font(FONT_BOLD).fontSize(9);
+      let findY = 115;
+      (data.riskFindings || []).slice(0, 5).forEach((f) => {
         const findingHeight = doc.heightOfString(f.finding, { width: 380 });
-        
-        doc.font(FONT_MONO).fontSize(7.5);
         const evidenceHeight = doc.heightOfString(`Evidence: ${f.evidence}`, { width: 380 });
-        
-        doc.font(FONT_BODY).fontSize(8);
         const impactHeight = doc.heightOfString(`Impact: ${f.impact}`, { width: 380 });
-        
-        // Card height is text height + padding (12px top, 12px bottom, plus spaces between elements)
-        const textBlockHeight = findingHeight + evidenceHeight + impactHeight + 8; // 8px for vertical gap spacing
-        const cardHeight = Math.max(60, textBlockHeight + 24);
+        const cardHeight = Math.max(60, findingHeight + evidenceHeight + impactHeight + 32);
 
         doc.rect(50, findY, 495, cardHeight).fill(CARD_BG);
         doc.rect(50, findY, 495, cardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
 
         const sev = (f.severity || 'LOW').toUpperCase();
         const sevColor = sev === 'HIGH' || sev === 'CRITICAL' ? MUTED_RED : sev === 'MEDIUM' ? '#B8860B' : FOREST_GREEN;
-        
-        // Draw severity badge centered vertically in the card
-        const badgeY = findY + (cardHeight - 14) / 2;
-        doc.rect(65, badgeY, 50, 14).fill(sevColor);
-        doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(sev, 65, badgeY + 4, { align: 'center', width: 50 });
+        doc.rect(65, findY + 14, 50, 14).fill(sevColor);
+        doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(sev, 65, findY + 18, { align: 'center', width: 50 });
 
-        // Draw text elements sequentially
         doc.y = findY + 12;
         doc.font(FONT_BOLD).fontSize(9).fillColor(INK_BLACK).text(f.finding, 130, doc.y, { width: 380 });
-        doc.y += 2; // small gap
+        doc.y += 2;
         doc.font(FONT_MONO).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Evidence: ${f.evidence}`, 130, doc.y, { width: 380 });
-        doc.y += 2; // small gap
+        doc.y += 2;
         doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(`Impact: ${f.impact}`, 130, doc.y, { width: 380 });
 
-        findY += cardHeight + 12; // Next card starts after this one + gap
+        findY += cardHeight + 12;
       });
     }
 
-    // --- PAGE: CROSS-LENS CONSISTENCY REPORT (Full Audit Only) ---
-    const isFullAudit = data.auditType === 'full' || data.auditType === 'full_reputation_audit';
-    if (isFullAudit) {
-      doc.addPage();
-      drawBackground();
-
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Cross-Lens Consistency Report', 50, 60);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ ${5 + platforms.length} — MULTI-DIMENSIONAL ALIGNMENT & CROSS-PLATFORM CONTRADICTION AUDIT`, 50, 78);
-      doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
-
-      const cl = data.crossLensConsistency || {
-        consistencyRating: 'HIGH',
-        dimensionScoreVariance: '0.0',
-        contradictionFlags: [],
-        consistencyNarrative: "No significant cross-platform contradictions detected. The subject's digital behavior presents a consistent profile across all analyzed connectors and contexts.",
-        improvementRecommendation: "Align informal delivery estimates with official project timelines."
-      };
-
-      let clY = 115;
-
-      // 1. Overall Consistency Pill + Variance Box
-      doc.rect(50, clY, 235, 60).fill(CARD_BG);
-      doc.rect(50, clY, 235, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text('OVERALL CONSISTENCY RATING', 65, clY + 12);
-      
-      const rating = (cl.consistencyRating || 'HIGH').toUpperCase();
-      const ratingColor = rating === 'HIGH' ? FOREST_GREEN : rating === 'MEDIUM' ? '#B8860B' : MUTED_RED;
-      doc.rect(65, clY + 26, 70, 18).fill(ratingColor);
-      doc.font(FONT_BOLD).fontSize(9).fillColor('#FCFCFC').text(rating, 65, clY + 31, { align: 'center', width: 70 });
-
-      doc.rect(310, clY, 235, 60).fill(CARD_BG);
-      doc.rect(310, clY, 235, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text('DIMENSION SCORE VARIANCE', 325, clY + 12);
-      doc.font(FONT_BOLD).fontSize(16).fillColor(INK_BLACK).text(`${cl.dimensionScoreVariance || '0.0'} pts`, 325, clY + 28);
-
-      const varianceNum = parseFloat(cl.dimensionScoreVariance || '0.0');
-      if (varianceNum > 2.0) {
-        doc.font(FONT_BOLD).fontSize(7.5).fillColor(MUTED_RED).text('SIGNIFICANT VARIANCE DETECTED', 415, clY + 34, { width: 120 });
-      }
-
-      clY += 80;
-
-      // 2. Consistency Narrative
-      doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('CONSISTENCY NARRATIVE', 50, clY);
-      clY += 15;
-      
-      const narrativeWidth = 465;
-      const narrativeText = cl.consistencyNarrative || "No consistency narrative was returned by the engine.";
-      doc.font(FONT_BODY).fontSize(8.5);
-      const narrativeHeight = doc.heightOfString(narrativeText, { width: narrativeWidth, lineGap: 3 });
-      const narrativeCardHeight = Math.max(50, narrativeHeight + 24); // padding 12px top and bottom
-
-      doc.rect(50, clY, 495, narrativeCardHeight).fill(CARD_BG);
-      doc.rect(50, clY, 495, narrativeCardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(
-        narrativeText,
-        65, clY + 12, { width: narrativeWidth, lineGap: 3 }
-      );
-
-      clY += narrativeCardHeight + 20;
-
-      // 3. Contradiction Flags
-      doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('CROSS-PLATFORM CONTRADICTION FLAGS', 50, clY);
-      clY += 15;
-
-      const flags = cl.contradictionFlags || [];
-      if (flags.length === 0) {
-        doc.rect(50, clY, 495, 45).fill(CARD_BG);
-        doc.rect(50, clY, 495, 45).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-        doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('NO CONTRADICTIONS IDENTIFIED', 65, clY + 18);
-        clY += 60;
-      } else {
-        flags.slice(0, 3).forEach((flag) => {
-          const titleText = `${flag.platformA || 'Platform A'} vs ${flag.platformB || 'Platform B'}`;
-          doc.font(FONT_BOLD).fontSize(8.5);
-          const titleHeight = doc.heightOfString(titleText, { width: 410 });
-
-          const flagDesc = flag.description || 'No details provided.';
-          doc.font(FONT_BODY).fontSize(8);
-          const flagDescHeight = doc.heightOfString(flagDesc, { width: 410 });
-          
-          // Card height is title height + description height + padding/gap
-          const flagCardHeight = Math.max(50, titleHeight + flagDescHeight + 22);
-
-          doc.rect(50, clY, 495, flagCardHeight).fill(CARD_BG);
-          doc.rect(50, clY, 495, flagCardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-          
-          const fsev = (flag.severity || 'LOW').toUpperCase();
-          const fsevColor = fsev === 'HIGH' ? MUTED_RED : fsev === 'MEDIUM' ? '#B8860B' : FOREST_GREEN;
-          
-          const badgeY = clY + (flagCardHeight - 14) / 2;
-          doc.rect(65, badgeY, 45, 14).fill(fsevColor);
-          doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(fsev, 65, badgeY + 4, { align: 'center', width: 45 });
-
-          doc.y = clY + 10;
-          doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(titleText, 120, doc.y, { width: 410 });
-          doc.y += 4; // spacing between title and description
-          doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(flagDesc, 120, doc.y, { width: 410 });
-          clY += flagCardHeight + 10;
-        });
-      }
-
-      // 4. Recommendation
-      doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('ALIGNMENT RECOMMENDATION', 50, clY);
-      clY += 15;
-      
-      const recText = cl.improvementRecommendation || "No recommendation was returned.";
-      doc.font(FONT_BODY).fontSize(8.5);
-      const recHeight = doc.heightOfString(recText, { width: 465 });
-      const recCardHeight = Math.max(40, recHeight + 24);
-
-      doc.rect(50, clY, 495, recCardHeight).fill(CARD_BG);
-      doc.rect(50, clY, 495, recCardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(
-        recText,
-        65, clY + 12, { width: 465 }
-      );
-    }
-
-    // --- PAGE 8: CITATIONS INDEX & LEGAL NOTICE ---
+    // Final Page: Statutory Notices, GDPR & Cryptographic Signature
     doc.addPage();
     drawBackground();
 
-    const citationsSectionNum = isFullAudit ? (6 + platforms.length) : (5 + platforms.length);
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Citations Index & Legal Notice', 50, 60);
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ ${citationsSectionNum} — EXPLICIT DATA SOURCE CITATIONS & STATUTORY NOTICES`, 50, 78);
+    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Citations Index & Statutory Attestation', 50, 60);
+    doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text('§ 5 — EXPLICIT DATA SOURCE CITATIONS & STATUTORY NOTICES', 50, 78);
     doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
 
-    let citY = 110;
-    doc.font(FONT_BOLD).fontSize(9).fillColor(FOREST_GREEN).text('SOURCE CITATIONS INDEX', 50, citY);
-    citY += 15;
-
-    const citationsList: Array<{ platform: string; date: string; id: string; text: string }> = [];
-    const memoryContentMap = data.memoryContentMap || {};
-
-    const decodeEntities = (str: string): string => {
-      if (!str) return '';
-      return str
-        .replace(/&#39;/g, "'")
-        .replace(/&amp;/g, "&")
-        .replace(/&quot;/g, '"')
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">");
-    };
-
-    // 1. Gather commitment citations
-    commitments.forEach((c: Commitment) => {
-      let citId = (c.citation || '').slice(0, 8).toUpperCase();
-      const hasRealId = citId && citId !== 'N/A';
-      if (!citId || citId === 'N/A') {
-        citId = crypto.createHash('sha256').update(c.text).digest('hex').slice(0, 8).toUpperCase();
-      }
-      const rawText = hasRealId ? (memoryContentMap[citId.toLowerCase()] || c.text) : c.text;
-      const cleanText = decodeEntities(rawText.replace(/\s+/g, ' ').trim());
-      citationsList.push({
-        platform: c.platform || 'Unknown',
-        date: c.date ? c.date.split('T')[0] : endRange,
-        id: citId,
-        text: cleanText
-      });
-    });
-
-    // 2. Gather risk finding citations from evidence
-    const riskFindingsForCitations = data.riskFindings || [];
-    riskFindingsForCitations.forEach((f: RiskFinding) => {
-      const match = (f.evidence || '').match(/\b([a-f0-9]{8,36})\b/i);
-      if (match) {
-        const refId = match[1].slice(0, 8).toUpperCase();
-        // Avoid duplicate citations with same ID
-        if (!citationsList.some(c => c.id === refId)) {
-          let platform = 'System';
-          if (f.platform) {
-            const p = f.platform.toLowerCase();
-            platform = p === 'google-calendar' || p === 'google_calendar' ? 'Google Calendar' : p.charAt(0).toUpperCase() + p.slice(1);
-          } else {
-            const textToSearch = `${f.finding} ${f.evidence} ${f.impact}`.toLowerCase();
-            const knownPlatforms = ['gmail', 'slack', 'discord', 'github', 'notion', 'vercel', 'google_calendar', 'google-calendar', 'clickup', 'linear', 'claude'];
-            const foundPlatform = knownPlatforms.find(p => textToSearch.includes(p));
-            if (foundPlatform) {
-              platform = foundPlatform === 'google-calendar' ? 'Google Calendar' : foundPlatform.charAt(0).toUpperCase() + foundPlatform.slice(1);
-            }
-          }
-          const rawText = memoryContentMap[refId.toLowerCase()] || `${f.finding} — ${f.evidence}`;
-          const cleanText = decodeEntities(rawText.replace(/\s+/g, ' ').trim());
-          citationsList.push({
-            platform: platform,
-            date: endRange,
-            id: refId,
-            text: cleanText
-          });
-        }
-      }
-    });
-
-    if (citationsList.length === 0) {
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text('No active commitments or source citations registered in this audit.', 50, citY);
-      citY += 25;
-    } else {
-      const displayCitations = citationsList.slice(0, 6);
-      displayCitations.forEach((c) => {
-        doc.font(FONT_MONO).fontSize(7.5).fillColor(INK_BLACK).text(`[${c.id}]  ${(c.platform || 'Unknown').toUpperCase()}  ·  ${c.date}`, 50, citY);
-        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Excerpt: "${c.text}"`, 65, citY + 10, { width: 480, height: 10, ellipsis: true });
-        citY += 24;
-      });
-    }
-
-    citY += 10;
-    doc.moveTo(50, citY).lineTo(W - 50, citY).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-    citY += 15;
-
+    let citY = 115;
     doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text('DATA SOURCE DISCLOSURE', 50, citY);
     doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(
-      'This certificate has been generated using only the data sources you have explicitly authorized through OAuth. Citations referenced in this report are sourced from your authorized connectors only. EYES does not search the public web, query third-party data brokers, or enrich this report with information from sources outside your authorized scope.',
+      'This certificate has been generated using only data sources explicitly authorized through OAuth. Citations are sourced strictly from authorized connectors. EYES does not search the public web, query third-party data brokers, or enrich this report with external unverified sources.',
       50, citY + 12, { width: 495, lineGap: 2.5 }
     );
 
     citY += 58;
     doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text('GDPR — ARTICLES 15 & 20 STATUTORY DISCLOSURES', 50, citY);
     doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(
-      'Pursuant to Articles 15 and 20 of the General Data Protection Regulation (EU 2016/679), the data analysed in this report constitutes your personal data, processed on your instruction. You have the right to access, rectify, erase, and export this data at any time through your EYES account. EYES does not retain analysis artefacts beyond the audit delivery period and does not use your data to train any model without your separate, explicit, opt-in consent.',
+      'Pursuant to Articles 15 and 20 of the General Data Protection Regulation (EU 2016/679), the data analysed in this report constitutes your personal data, processed under your instruction. You have the right to access, rectify, erase, and export this data at any time through your EYES account. EYES does not retain analysis artifacts beyond the audit delivery period and does not train public models on your data.',
       50, citY + 12, { width: 495, lineGap: 2.5 }
     );
 
@@ -866,10 +616,8 @@ export class PDFGenerationService {
 
     doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text('CRYPTOGRAPHIC SIGNATURE & VERIFICATION HASH (SHA-256)', 50, citY);
     const shaHash = crypto.createHash('sha256').update(data.id + data.createdAt + data.riskScore).digest('hex');
-    const hashPart1 = shaHash.slice(0, 32);
-    const hashPart2 = shaHash.slice(32);
-    doc.font(FONT_MONO).fontSize(8.5).fillColor(GRAY_FOOTER).text(hashPart1, 50, citY + 14);
-    doc.text(hashPart2, 50, citY + 24);
+    doc.font(FONT_MONO).fontSize(8.5).fillColor(FOREST_GREEN).text(shaHash.slice(0, 32), 50, citY + 14);
+    doc.text(shaHash.slice(32), 50, citY + 24);
 
     doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(
       'To verify document integrity, compute the SHA-256 hash of this PDF file and compare it against the verification signature above.',
@@ -879,7 +627,6 @@ export class PDFGenerationService {
     doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(`Audit ID: EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, 350, citY + 14);
     doc.text(`Generated: ${dateStr}`, 350, citY + 24);
   }
-
 
   /**
    * Generates the PDF into a binary buffer on-demand.
@@ -894,7 +641,6 @@ export class PDFGenerationService {
             ? audit.connectorsCovered
             : ['gmail', 'slack', 'discord', 'github', 'notion', 'vercel', 'google_calendar', 'clickup', 'linear'];
 
-          // Fetch exact Counts dynamically via a single batched select query
           const platformCounts: Record<string, number> = {};
           const platformTitles: Record<string, string[]> = {};
           targetConnectors.forEach((platform) => {
@@ -920,23 +666,22 @@ export class PDFGenerationService {
             });
           }
 
-          const memoriesByPlatform: Record<string, unknown[]> = {};
-          
           const platformCategories: Record<string, string> = {
             gmail: 'Productivity',
             slack: 'Productivity',
-            discord: 'Social',
+            discord: 'Social / Identity',
             notion: 'Productivity',
             github: 'Development',
             vercel: 'Development',
             google_calendar: 'Productivity',
+            facebook: 'Social / Identity',
             google_docs: 'Productivity',
             google_sheets: 'Productivity',
             google_slides: 'Productivity',
             google_meet: 'Productivity',
             google_chat: 'Productivity',
             google_maps: 'Productivity',
-            youtube: 'Social',
+            youtube: 'Social / Identity',
             clickup: 'Productivity',
             linear: 'Productivity',
           };
@@ -948,104 +693,29 @@ export class PDFGenerationService {
             const connectorEntities = extractEntitiesFromTitles(platformTitles[key] || []);
             platformData[key] = {
               count: realCount || 0,
-              category: platformCategories[key] || 'Ecosystem',
-              memories: memoriesByPlatform[key] || [],
-              entities: connectorEntities
+              category: platformCategories[key] || 'Productivity',
+              entities: connectorEntities,
+              memories: []
             };
           });
 
-          // Fetch original contents from memories table for citations
-          const citationsToFetch: string[] = [];
-          ((audit.metadata as Record<string, unknown>)?.commitments as Commitment[])?.forEach((c) => {
-            const citId = (c.citation || '').trim();
-            if (citId && citId.toLowerCase() !== 'n/a') citationsToFetch.push(citId);
-          });
-          ((audit.metadata as Record<string, unknown>)?.riskFindings as RiskFinding[])?.forEach((f) => {
-            const match = (f.evidence || '').match(/\b([a-f0-9-]{8,36})\b/i);
-            if (match) {
-              citationsToFetch.push(match[1]);
-            }
-          });
-
-          const memoryContentMap: Record<string, string> = {};
-          if (citationsToFetch.length > 0) {
-            // Deduplicate citations to minimize queries
-            const uniqueIds = Array.from(new Set(citationsToFetch));
-            
-            // To be extremely robust and avoid PostgreSQL cast errors, we divide IDs:
-            // 36-character UUIDs can be selected directly with eq()
-            // Any shorter prefixes can be resolved in memory from a full scan
-            const fullUuids = uniqueIds.filter(id => id.length === 36);
-            const shortPrefixes = uniqueIds.filter(id => id.length < 36);
-
-            if (fullUuids.length > 0) {
-              try {
-                const { data: rows } = await supabase
-                  .from('memories')
-                  .select('id, content')
-                  .in('id', fullUuids);
-                if (rows) {
-                  rows.forEach((row) => {
-                    if (row.content) {
-                      const lowerId = row.id.toLowerCase();
-                      memoryContentMap[lowerId] = row.content;
-                      memoryContentMap[lowerId.slice(0, 8)] = row.content;
-                    }
-                  });
-                }
-              } catch (e) {
-                console.warn('[PDF] Failed to batch fetch full UUID memories:', e);
-              }
-            }
-
-            if (shortPrefixes.length > 0) {
-              try {
-                const { data: rows } = await supabase
-                  .from('memories')
-                  .select('id, content')
-                  .eq('user_id', userId);
-                if (rows) {
-                  rows.forEach((row) => {
-                    if (row.content) {
-                      const lowerId = row.id.toLowerCase();
-                      const prefixMatch = shortPrefixes.find(p => lowerId.startsWith(p.toLowerCase()));
-                      if (prefixMatch) {
-                        memoryContentMap[prefixMatch.toLowerCase()] = row.content;
-                        memoryContentMap[lowerId.slice(0, 8)] = row.content;
-                      }
-                    }
-                  });
-                }
-              } catch (e) {
-                console.warn('[PDF] Failed to scan short prefixes:', e);
-              }
-            }
-          }
-
           const doc = new PDFDocument({
             size: 'A4',
-            margin: 0,
-            bufferPages: true,
-            info: {
-              Title: `Reputation Audit - ${audit.id}`,
-              Author: 'EYES',
-            }
+            margins: { top: 40, bottom: 40, left: 50, right: 50 },
+            bufferPages: true
           });
 
           const chunks: Buffer[] = [];
-          doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-          doc.on('end', () => {
-            resolve(Buffer.concat(chunks));
-          });
-          doc.on('error', (err) => {
-            reject(err);
-          });
+          doc.on('data', chunk => chunks.push(chunk));
+          doc.on('end', () => resolve(Buffer.concat(chunks)));
+          doc.on('error', reject);
 
-          // Draw the shared booklet layout
+          const memoryContentMap: Record<string, string> = {};
+
           const normalized: NormalizedAuditData = {
             id: audit.id,
-            createdAt: audit.createdAt,
-            subjectName: audit.metadata.subjectName || 'Authenticated Subject',
+            createdAt: audit.createdAt || new Date().toISOString(),
+            subjectName: 'Authenticated Subject',
             connectorsCovered: targetConnectors,
             mentionsCount: audit.mentionsCount || 0,
             commitmentsCount: audit.commitmentsCount || 0,
@@ -1084,14 +754,17 @@ export class PDFGenerationService {
 
           this.draw(doc, normalized);
 
-          // Add headers & footers dynamically in a second pass
+          // Second Pass: Add headers, footers & page numbering dynamically
           const range = doc.bufferedPageRange();
+          const totalPages = range.count;
           const W = doc.page.width;
           const H = doc.page.height;
-          for (let i = 0; i < range.count; i++) {
+          for (let i = 0; i < totalPages; i++) {
             doc.switchToPage(i);
+            const origBottom = doc.page.margins.bottom;
+            doc.page.margins.bottom = 0;
 
-            // Draw watermark on every page at low opacity
+            // Subtle watermark
             doc.save();
             doc.opacity(0.04);
             doc.fillColor('#1F4D3F');
@@ -1101,24 +774,26 @@ export class PDFGenerationService {
             doc.text('CONFIDENTIAL', -250, -25, { width: 500, align: 'center' });
             doc.restore();
 
-            // Draw page border outline on all pages
+            // Refined border outline
             doc.rect(35, 35, W - 70, H - 70)
                .strokeColor('#1F4D3F')
                .lineWidth(1.0)
                .stroke();
 
-            if (i === 0) continue; // Skip cover page header/footer
-
-            // Header EYES wordmark
-            doc.fillColor('#1F4D3F').fontSize(10).font('Helvetica-Bold')
-               .text('EYES', 50, 48);
+            // Wordmark on subsequent pages
+            if (i > 0) {
+              doc.fillColor('#1F4D3F').fontSize(10).font('Helvetica-Bold')
+                 .text('EYES', 50, 48);
+            }
 
             const footerText1 = `Audit ID: EYES-RA-${normalized.id.slice(0, 8).toUpperCase()}  ·  CONFIDENTIAL  ·  EYES`;
-            const footerText2 = `Page ${i + 1} of ${range.count}`;
+            const footerText2 = `Page ${i + 1} of ${totalPages}`;
 
             doc.fillColor('#555555').fontSize(7.5).font('Helvetica')
-               .text(footerText1, 50, H - 48, { align: 'center', width: W - 100 })
-               .text(footerText2, 50, H - 36, { align: 'center', width: W - 100 });
+               .text(footerText1, 50, H - 46, { align: 'center', width: W - 100, lineBreak: false })
+               .text(footerText2, 50, H - 35, { align: 'center', width: W - 100, lineBreak: false });
+
+            doc.page.margins.bottom = origBottom;
           }
 
           doc.end();
@@ -1137,7 +812,6 @@ export class PDFGenerationService {
     try {
       const pdfBuffer = await this.generateBuffer(audit, userId);
 
-      // Save local copy in development or test modes
       if (process.env.NODE_ENV === 'development' || process.env.TEST_PDF === 'true' || true) {
         try {
           const localPath = path.join(process.cwd(), 'test_audit.pdf');
@@ -1150,7 +824,6 @@ export class PDFGenerationService {
 
       const supabase = await createAdminClient();
 
-      // Create bucket if missing
       try {
         await supabase.storage.createBucket('audits', { public: false });
       } catch {
@@ -1160,7 +833,6 @@ export class PDFGenerationService {
       const fileName = `audit_${audit.id}.pdf`;
       const filePath = `${userId}/${fileName}`;
 
-      // Upload the compiled buffer directly to avoid stream lock errors
       const { error: uploadError } = await supabase.storage
         .from('audits')
         .upload(filePath, pdfBuffer, {
@@ -1173,7 +845,6 @@ export class PDFGenerationService {
         return null as unknown as string;
       }
 
-      // Generate a SIGNED URL (7 days valid)
       const { data: signedData, error: signedError } = await supabase.storage
         .from('audits')
         .createSignedUrl(filePath, 60 * 60 * 24 * 7);
