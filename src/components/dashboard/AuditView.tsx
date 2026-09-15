@@ -226,6 +226,20 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </button>
           <span className={styles.breadcrumbSep}>/</span>
           <span className={styles.breadcrumbCurrent}>REPUTATION AUDIT</span>
+
+          {activeAudit && activeAudit.status === 'completed' && (
+            <button 
+              className={styles.viewLatestBtn}
+              onClick={() => setAuditMode('completed')}
+              style={{ marginLeft: 'auto' }}
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              VIEW LATEST CERTIFICATE
+            </button>
+          )}
         </div>
 
         {/* Hero Section */}
@@ -275,19 +289,19 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
             <div className={styles.featureList}>
               <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span>Sentiment & tone analysis across 100% of memories</span>
               </div>
               <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span>Broken promises & unfulfilled commitments extraction</span>
               </div>
               <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span>Cryptographically verifiable PDF compliance certificate</span>
               </div>
               <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" className={styles.checkIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 <span>Actionable remediation steps with risk scoring</span>
               </div>
             </div>
