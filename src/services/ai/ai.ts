@@ -11,12 +11,27 @@ import crypto from 'crypto';
  */
 
 // ── Gateway config (K1) ─────────────────────────────────────────────────────
-const getGatewayKey = () => 
-  process.env.GROQ_API_KEY ||
-  process.env.OPENROUTER_API_KEY || 
-  process.env.EYES_GATEWAY_KEY || 
-  process.env.LITELLM_KEY || 
-  '';
+export function findGatewayKey(): string {
+  const candidates = [
+    process.env.GROQ_API_KEY,
+    process.env.LITELLM_KEY,
+    process.env.EYES_GATEWAY_KEY,
+    process.env.OPENROUTER_API_KEY,
+  ].filter(Boolean) as string[];
+
+  // Priority 1: Groq key (working high-throughput free tier)
+  const groqKey = candidates.find(k => k.startsWith('gsk_'));
+  if (groqKey) return groqKey;
+
+  // Priority 2: OpenRouter key
+  const openRouterKey = candidates.find(k => k.startsWith('sk-or-v1-'));
+  if (openRouterKey) return openRouterKey;
+
+  // Priority 3: Any other gateway key (e.g. LiteLLM proxy)
+  return candidates[0] || '';
+}
+
+const getGatewayKey = () => findGatewayKey();
 
 const getGatewayBase = () => {
   const key = getGatewayKey();
