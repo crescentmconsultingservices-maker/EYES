@@ -245,8 +245,64 @@ async function gatewayEmbedBatch(texts: string[], signal?: AbortSignal): Promise
   return null;
 }
 
-// ── Embedding (gateway ONLY) ────────────────────────────────
+async function geminiEmbed(text: string, signal?: AbortSignal): Promise<number[] | null> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) return null;
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/gemini-embedding-001',
+        content: { parts: [{ text: text.slice(0, 8000) }] },
+        outputDimensionality: 1024,
+      }),
+      signal,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.embedding?.values ?? null;
+    }
+  } catch (err) {
+    console.warn('[Gemini Embed] Failed:', err);
+  }
+  return null;
+}
+
+async function geminiEmbedBatch(texts: string[], signal?: AbortSignal): Promise<number[][] | null> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey || !texts.length) return null;
+  try {
+    const requests = texts.map((t) => ({
+      model: 'models/gemini-embedding-001',
+      content: { parts: [{ text: t.slice(0, 8000) }] },
+      outputDimensionality: 1024,
+    }));
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${geminiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests }),
+      signal,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return (data?.embeddings || []).map((e: any) => e?.values ?? null);
+    }
+  } catch (err) {
+    console.warn('[Gemini Embed Batch] Failed:', err);
+  }
+  return null;
+}
+
+// ── Embedding (gateway & Gemini fallback) ────────────────────
 async function handleEmbedding(text: string, signal?: AbortSignal): Promise<EmbedResult | null> {
+  if (process.env.GEMINI_API_KEY) {
+    const geminiResult = await geminiEmbed(text, signal);
+    if (geminiResult && geminiResult.length === EMBED_DIMS) {
+      return { embedding: geminiResult };
+    }
+  }
+
   const gatewayResult = await gatewayEmbed(text, signal);
   if (gatewayResult && Array.isArray(gatewayResult)) {
     const isTest = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
@@ -398,6 +454,12 @@ export async function generateEmbedding(text: string) {
 }
 
 export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][] | null> {
+  if (process.env.GEMINI_API_KEY) {
+    const geminiBatch = await geminiEmbedBatch(texts);
+    if (geminiBatch && geminiBatch.length === texts.length) {
+      return geminiBatch;
+    }
+  }
   return gatewayEmbedBatch(texts);
 }
 
