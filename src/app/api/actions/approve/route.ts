@@ -107,7 +107,7 @@ export async function POST(req: Request) {
       success: finalStatus === 'executed',
       finalStatus,
       executionResult,
-    });
+    }, { status: finalStatus === 'executed' ? 200 : 400 });
   } catch (err) {
     console.error('[Approve] Fatal error:', err);
     return NextResponse.json({ error: 'Approval failed' }, { status: 500 });

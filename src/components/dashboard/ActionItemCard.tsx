@@ -141,13 +141,14 @@ export function ActionItemCard({
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         setIsExecuted(true);
         setIsEditing(false);
         if (onExecuted) onExecuted(action.id);
       } else {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Failed to execute action.');
+        const errorMsg = data.executionResult?.details || data.executionResult?.error || data.error || 'Failed to execute action.';
+        alert(errorMsg);
       }
     } catch (err) {
       console.error('[ActionCard] Execute error:', err);
