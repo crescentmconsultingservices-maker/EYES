@@ -160,10 +160,10 @@ export function ActionItemCard({
   const handleDismiss = async () => {
     setIsProcessing(true);
     try {
-      const res = await fetch('/api/actions/dismiss', {
-        method: 'POST',
+      const res = await fetch('/api/actions/queue', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: action.id }),
+        body: JSON.stringify({ id: action.id, status: 'dismissed' }),
       });
       if (res.ok) {
         setIsDismissed(true);
@@ -184,14 +184,13 @@ export function ActionItemCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: editedAction || action.suggested_action,
-          tone,
-          context: action.description,
+          type: tone,
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.refinedText) {
-          setEditedAction(data.refinedText);
+        if (data.refined) {
+          setEditedAction(data.refined);
         }
       }
     } catch (err) {

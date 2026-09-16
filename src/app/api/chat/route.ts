@@ -553,27 +553,85 @@ async function handleChat(request: Request): Promise<Response> {
     const { evidence, citations, insightsText, graphText } = await retrieveEvidence(supabase, user.id, plan, message);
 
     // ── Fetch pending action items if relevant or requested ───────────────────
-    const isActionInquiry = /action|task|todo|pending|queue|follow up|schedule|reply|approve|gst|email/i.test(message);
+    const isActionInquiry = /action|task|todo|pending|queue|follow[\s-]?up|schedule|reply|approve|gst|email|what.*do|what.*plate|what.*miss/i.test(message);
     let pendingActions: any[] = [];
     if (isActionInquiry) {
-      const { data: actionsData } = await supabase
-        .from('action_queue')
-        .select('id, memory_id, source_id, platform_link, platform, title, description, suggested_action, action_type, confidence, status, extracted_at')
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .order('extracted_at', { ascending: false })
-        .limit(4);
+      try {
+        const { data: actionsData, error: actionsError } = await supabase
+          .from('action_queue')
+          .select('*')
+          .eq('user_id', user.id)
+          .in('status', ['pending', 'PENDING'])
+          .order('confidence', { ascending: false })
+          .order('extracted_at', { ascending: false })
+          .limit(8);
 
-      if (actionsData && actionsData.length > 0) {
-        pendingActions = actionsData;
+        if (actionsError) {
+          console.warn('[Chat] Failed to query action_queue:', actionsError);
+        } else if (actionsData && actionsData.length > 0) {
+          const memoryIds = actionsData
+            .map(a => a.memory_id)
+            .filter((id): id is string => !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+
+          const memoriesMap: Record<string, { source_id: string | null; thread_id?: string }> = {};
+          if (memoryIds.length > 0) {
+            const { data: memories } = await supabase
+              .from('memories')
+              .select('id, source_id, metadata')
+              .in('id', memoryIds);
+
+            (memories ?? []).forEach(m => {
+              const meta = (m.metadata as Record<string, unknown>) || {};
+              memoriesMap[m.id] = {
+                source_id: m.source_id || null,
+                thread_id: typeof meta.thread_id === 'string' ? meta.thread_id : undefined
+              };
+            });
+          }
+
+          pendingActions = actionsData.map(a => {
+            const mem = a.memory_id ? memoriesMap[a.memory_id] : null;
+            const sourceId = mem?.source_id || null;
+            let platformLink: string | null = null;
+            const platform = (a.platform || '').toLowerCase();
+
+            if (platform === 'gmail') {
+              const threadId = mem?.thread_id || sourceId;
+              platformLink = threadId
+                ? `https://mail.google.com/mail/u/0/#all/${threadId}`
+                : `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(a.title)}`;
+            } else if (platform === 'slack') {
+              platformLink = sourceId && !sourceId.startsWith('test_')
+                ? `https://slack.com/app_redirect?channel=${sourceId}`
+                : 'https://slack.com';
+            } else if (platform === 'linear') {
+              platformLink = sourceId ? `https://linear.app/issue/${sourceId}` : 'https://linear.app';
+            }
+
+            return {
+              ...a,
+              source_id: sourceId,
+              platform_link: platformLink
+            };
+          });
+        }
+      } catch (err) {
+        console.warn('[Chat] Exception fetching action items:', err);
       }
     }
 
     let actionsEvidence = '';
     if (pendingActions.length > 0) {
-      actionsEvidence = `\n\n[ACTIVE PENDING ACTIONS IN USER'S ACTION QUEUE]:\n` + pendingActions.map(a =>
-        `- [${a.platform.toUpperCase()}] "${a.title}" -> Proposed: "${a.suggested_action}" (Context: ${(a.description || '').slice(0, 120)})`
-      ).join('\n') + `\n(Note: Interactive Action Cards with Execute/Refine/Schedule buttons are rendered directly below your message in the user's chat bubble. Tell the user about these pending actions and mention that they can click Execute or adjust the time right below.)`;
+      actionsEvidence = `\n\n[ACTIVE PENDING ACTIONS IN USER'S ACTION QUEUE (${pendingActions.length} item${pendingActions.length > 1 ? 's' : ''})]:\n` + pendingActions.map((a, idx) =>
+        `${idx + 1}. [${a.platform.toUpperCase()}] "${a.title}"
+   - Suggested Action: "${a.suggested_action}"
+   - Details: ${a.description || 'None'}
+   - Confidence: ${a.confidence || 90}%`
+      ).join('\n') + `\n\nCRITICAL INSTRUCTION FOR ASSISTANT:
+The user explicitly inquired about their pending actions/tasks. The above items are currently waiting in their Action Queue for approval and execution.
+1. You MUST list and describe these pending items directly to the user (mention the platform, title, and suggested action for each).
+2. Inform the user that interactive Action Cards are displayed directly below your message in the chat where they can click "Execute", "Auto-Approve", "Refine", or adjust the date/time.
+3. NEVER say that there are no pending records or that you cannot see any items when the above list is provided.`;
     }
 
     // ── Step 5: EYES persona system prompt ────────────────────────────────────

@@ -20,6 +20,7 @@ import type { Message, Citation, ActionItem } from '@/types/dashboard';
 import { ActionItemCard } from './ActionItemCard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { createClient } from '@/utils/supabase/client';
 
 type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'history' | 'action-queue' | 'intelligence';
 
@@ -139,11 +140,11 @@ export function SynthesisView({
   // ── Pending Action Items State ────────────────────────────────────────────
   const [pendingActions, setPendingActions] = React.useState<ActionItem[]>([]);
   const fetchActions = React.useCallback(() => {
-    fetch('/api/actions')
+    fetch('/api/actions/queue')
       .then(r => r.json())
       .then(d => {
-        if (d.items && Array.isArray(d.items)) {
-          setPendingActions(d.items.filter((a: ActionItem) => a.status === 'pending'));
+        if (d.actions && Array.isArray(d.actions)) {
+          setPendingActions(d.actions.filter((a: ActionItem) => a.status?.toLowerCase() === 'pending'));
         }
       })
       .catch(() => {});
@@ -153,6 +154,25 @@ export function SynthesisView({
     fetchActions();
     const interval = setInterval(fetchActions, 15000);
     return () => clearInterval(interval);
+  }, [fetchActions]);
+
+  // Realtime subscription for instant action queue sync in chat
+  React.useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel('chat_action_queue_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'action_queue' },
+        () => {
+          fetchActions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchActions]);
 
   // ── Right panel state ─────────────────────────────────────────────────────
