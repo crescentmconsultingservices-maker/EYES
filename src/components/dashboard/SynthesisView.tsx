@@ -265,11 +265,10 @@ export function SynthesisView({
         {/* Chat Header Toolbar */}
         <div style={{
           width: '100%',
-          maxWidth: '800px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '4px 20px 10px',
+          padding: '12px 28px',
           borderBottom: messages.length > 0 ? '1px solid var(--border-subtle)' : 'none',
           marginBottom: messages.length > 0 ? '12px' : '0',
         }}>
