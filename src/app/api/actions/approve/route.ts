@@ -60,13 +60,17 @@ export async function POST(req: Request) {
     if (approveError) throw approveError;
 
     // ── Step 3: Execute via internal handler ──────────────────────────────────
+    const effectiveActionType = (body.startTime || body.endTime)
+      ? 'CALENDAR'
+      : (action.action_type || 'REMINDER');
+
     const executePayload = {
       ...action,            // carry over all original fields (memory_id, platform, etc.)
-      ...body,              // apply any user edits (title, suggested_action)
+      ...body,              // apply any user edits (title, suggested_action, startTime, endTime)
       id: body.id,
       actionId: body.id,
-      action_type: action.action_type,
-      actionType: action.action_type,
+      action_type: effectiveActionType,
+      actionType: effectiveActionType,
     };
 
     let finalStatus: 'executed' | 'failed' = 'failed';

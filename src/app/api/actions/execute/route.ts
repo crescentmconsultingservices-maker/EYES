@@ -393,7 +393,10 @@ export async function POST(req: Request) {
     }
 
     const body = (await req.json()) as ActionBody & { action_type?: string };
-    const actionType = body.actionType || body.action_type;
+    let actionType = body.actionType || body.action_type;
+    if ((body.startTime || body.endTime || body.reminderDate) && actionType !== 'CALENDAR' && actionType !== 'REMINDER') {
+      actionType = 'CALENDAR';
+    }
     console.log(`[Execute API] Received actionType: ${actionType}, body:`, JSON.stringify(body).slice(0, 500));
 
     if (actionType === 'CALENDAR') {
