@@ -42,11 +42,15 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 
 // K2: No literal model strings — probe via gateway alias (auto-chat) when available.
 async function runGatewayProbe(): Promise<ReadinessCheck> {
-  const key  = process.env.OPENROUTER_API_KEY || process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
+  const key  = process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY || process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
+  const isGroq = key.startsWith('gsk_');
   const isOpenRouter = key.startsWith('sk-or-v1-');
   let base = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
   let model = 'auto-chat';
-  if (isOpenRouter) {
+  if (isGroq) {
+    base = (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+    model = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+  } else if (isOpenRouter) {
     base = (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
     model = process.env.OPENROUTER_MODEL || 'liquid/lfm-2.5-2.6b:free';
   }

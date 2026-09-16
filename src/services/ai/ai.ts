@@ -12,6 +12,7 @@ import crypto from 'crypto';
 
 // ── Gateway config (K1) ─────────────────────────────────────────────────────
 const getGatewayKey = () => 
+  process.env.GROQ_API_KEY ||
   process.env.OPENROUTER_API_KEY || 
   process.env.EYES_GATEWAY_KEY || 
   process.env.LITELLM_KEY || 
@@ -19,11 +20,22 @@ const getGatewayKey = () =>
 
 const getGatewayBase = () => {
   const key = getGatewayKey();
+  if (key.startsWith('gsk_')) {
+    return (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+  }
   if (key.startsWith('sk-or-v1-')) {
     return (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   }
   return (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
 };
+
+const GROQ_MODELS = [
+  process.env.GROQ_MODEL,
+  'qwen/qwen3.8-27b',
+  'openai/gpt-oss-20b',
+  'groq/compound-mini',
+  'openai/gpt-oss-120b',
+].filter(Boolean) as string[];
 
 const OPENROUTER_MODELS = [
   process.env.OPENROUTER_MODEL,
@@ -33,6 +45,9 @@ const OPENROUTER_MODELS = [
 ].filter(Boolean) as string[];
 
 function getModelsForRequest(key: string, alias: string): string[] {
+  if (key.startsWith('gsk_')) {
+    return GROQ_MODELS;
+  }
   if (key.startsWith('sk-or-v1-')) {
     return OPENROUTER_MODELS;
   }
