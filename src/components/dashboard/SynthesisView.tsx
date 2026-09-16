@@ -206,12 +206,12 @@ export function SynthesisView({
   }, [rightPanelOpen]);
 
   // ── Tab definitions (Actions, Mind Map, Loops, Drift, People & Places) ───
-  const TABS: { id: RightPanelTab; label: string; icon: string }[] = [
-    { id: 'actions', label: pendingActions.length > 0 ? `Actions (${pendingActions.length})` : 'Actions', icon: '⚡' },
-    { id: 'mind-map', label: 'Mind Map', icon: '🧠' },
-    { id: 'loops', label: 'Loops', icon: '🔁' },
-    { id: 'drift', label: 'Drift', icon: '📊' },
-    { id: 'people', label: 'People & Places', icon: '👥' },
+  const TABS: { id: RightPanelTab; label: string }[] = [
+    { id: 'actions', label: pendingActions.length > 0 ? `Actions (${pendingActions.length})` : 'Actions' },
+    { id: 'mind-map', label: 'Mind Map' },
+    { id: 'loops', label: 'Loops' },
+    { id: 'drift', label: 'Drift' },
+    { id: 'people', label: 'People & Places' },
   ];
 
   const chatInputEl = (
@@ -304,7 +304,6 @@ export function SynthesisView({
                 }}
                 title="View and execute pending actions"
               >
-                <span>⚡</span>
                 <span>Actions</span>
                 <span style={{
                   background: 'var(--accent-primary)',
@@ -337,7 +336,6 @@ export function SynthesisView({
                 transition: 'all 0.2s'
               }}
             >
-              <span>🧠</span>
               <span>Intelligence</span>
             </button>
           </div>
@@ -526,7 +524,7 @@ export function SynthesisView({
                 borderRadius: '8px 8px 0 0', cursor: 'pointer',
                 whiteSpace: 'nowrap', transition: 'all 0.2s',
               }}>
-                <span style={{ marginRight: '4px' }}>{tab.icon}</span>{tab.label}
+                {tab.label}
               </button>
             ))}
           </div>
