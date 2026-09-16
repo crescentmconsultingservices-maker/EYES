@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import styles from './MainContent.module.css';
-import type { AuditSummary, Citation, PlatformStatus, FeedItem, Message } from '@/types/dashboard';
+import type { AuditSummary, Citation, PlatformStatus, FeedItem, Message, ActionItem } from '@/types/dashboard';
 
 // Modular View Components
 import { DashboardHomeView } from './dashboard/DashboardHomeView';
@@ -293,6 +293,20 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
           }
         }
 
+        const actionItemsHeader = response.headers.get('X-Action-Items');
+        let actionItems: ActionItem[] = [];
+        if (actionItemsHeader) {
+          try {
+            let base64 = actionItemsHeader.replace(/-/g, '+').replace(/_/g, '/');
+            while (base64.length % 4) {
+              base64 += '=';
+            }
+            actionItems = JSON.parse(decodeURIComponent(escape(atob(base64)))) as ActionItem[];
+          } catch (e) {
+            console.warn('[Dashboard] Failed to parse action items header:', e);
+          }
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let streamedReply = '';
@@ -310,7 +324,8 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
                 role: 'assistant' as const, 
                 content: streamedReply, 
                 pending: true,
-                citations: citations.length > 0 ? citations : undefined
+                citations: citations.length > 0 ? citations : undefined,
+                actionItems: actionItems.length > 0 ? actionItems : undefined,
               }];
             }
             return prev;
@@ -324,7 +339,8 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
             role: 'assistant' as const, 
             content: streamedReply, 
             pending: false,
-            citations: citations.length > 0 ? citations : undefined
+            citations: citations.length > 0 ? citations : undefined,
+            actionItems: actionItems.length > 0 ? actionItems : undefined,
           }
         ];
         setMessages(finalMessages);

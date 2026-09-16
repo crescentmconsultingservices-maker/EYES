@@ -552,9 +552,33 @@ async function handleChat(request: Request): Promise<Response> {
     // ── Steps 3–4: Retrieve and assemble evidence ─────────────────────────────
     const { evidence, citations, insightsText, graphText } = await retrieveEvidence(supabase, user.id, plan, message);
 
+    // ── Fetch pending action items if relevant or requested ───────────────────
+    const isActionInquiry = /action|task|todo|pending|queue|follow up|schedule|reply|approve|gst|email/i.test(message);
+    let pendingActions: any[] = [];
+    if (isActionInquiry) {
+      const { data: actionsData } = await supabase
+        .from('action_queue')
+        .select('id, memory_id, source_id, platform_link, platform, title, description, suggested_action, action_type, confidence, status, extracted_at')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('extracted_at', { ascending: false })
+        .limit(4);
+
+      if (actionsData && actionsData.length > 0) {
+        pendingActions = actionsData;
+      }
+    }
+
+    let actionsEvidence = '';
+    if (pendingActions.length > 0) {
+      actionsEvidence = `\n\n[ACTIVE PENDING ACTIONS IN USER'S ACTION QUEUE]:\n` + pendingActions.map(a =>
+        `- [${a.platform.toUpperCase()}] "${a.title}" -> Proposed: "${a.suggested_action}" (Context: ${(a.description || '').slice(0, 120)})`
+      ).join('\n') + `\n(Note: Interactive Action Cards with Execute/Refine/Schedule buttons are rendered directly below your message in the user's chat bubble. Tell the user about these pending actions and mention that they can click Execute or adjust the time right below.)`;
+    }
+
     // ── Step 5: EYES persona system prompt ────────────────────────────────────
     const systemPrompt = buildSystemPrompt(
-      userName, userRole, userGoals, userPersona, connectedSources, evidence, insightsText, prevSummary, today, message, graphText, environmentalContext
+      userName, userRole, userGoals, userPersona, connectedSources, evidence + actionsEvidence, insightsText, prevSummary, today, message, graphText, environmentalContext
     );
 
     const fullMessages: Msg[] = [
@@ -562,18 +586,23 @@ async function handleChat(request: Request): Promise<Response> {
       { role: 'user', content: message },
     ];
 
-    // ── Citation header for client ────────────────────────────────────────────
+    // ── Citation & Action headers for client ──────────────────────────────────
     const citationHeader = citations.length > 0
       ? Buffer.from(JSON.stringify(citations.slice(0, 5)), 'utf8').toString('base64url')
+      : '';
+
+    const actionHeader = pendingActions.length > 0
+      ? Buffer.from(JSON.stringify(pendingActions), 'utf8').toString('base64url')
       : '';
 
     const needInsights = plan.intent === 'pattern' || plan.intent === 'contradiction';
     const commonHeaders: Record<string, string> = {
       'X-Citations': citationHeader,
-      'X-Context-Used': (citations.length > 0).toString(),
-      'X-Context-Count': citations.length.toString(),
+      'X-Action-Items': actionHeader,
+      'X-Context-Used': (citations.length > 0 || pendingActions.length > 0).toString(),
+      'X-Context-Count': (citations.length + pendingActions.length).toString(),
       'X-Retrieval-Status': 'success',
-      'X-Grounded-Score': (citations.length > 0 ? 0.95 : 0.0).toString(),
+      'X-Grounded-Score': (citations.length > 0 || pendingActions.length > 0 ? 0.95 : 0.0).toString(),
       'X-Plan-Queries': plan.search_queries.length.toString(),
       'X-Need-Insights': needInsights.toString(),
     };

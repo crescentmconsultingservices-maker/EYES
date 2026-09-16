@@ -70,11 +70,30 @@ export interface Citation {
   sourceUrl?: string | null;
 }
 
+export interface ActionItem {
+  id: string;
+  memory_id: string | null;
+  source_id?: string | null;
+  platform_link?: string | null;
+  platform: string;
+  title: string;
+  description: string;
+  suggested_action: string;
+  action_type: string;
+  method?: 'POST' | 'PATCH' | 'DELETE';
+  confidence: number;
+  status: string;
+  extracted_at: string;
+  startTime?: string;
+  endTime?: string;
+}
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
   pending?: boolean;
   citations?: Citation[];
+  actionItems?: ActionItem[];
   diagnostics?: {
     confidenceScore: number;
     latencyMs: number;

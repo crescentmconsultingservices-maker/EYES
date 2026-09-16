@@ -16,11 +16,10 @@ import {
   DropboxIconOfficial,
   VercelIconOfficial
 } from '../common/icons/PlatformIcons';
-import type { Message, Citation } from '@/types/dashboard';
+import type { Message, Citation, ActionItem } from '@/types/dashboard';
+import { ActionItemCard } from './ActionItemCard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
-
 
 type ViewMode = 'dashboard' | 'synthesis' | 'audit' | 'timeline' | 'feed' | 'readiness' | 'connectors' | 'history' | 'action-queue' | 'intelligence';
 
@@ -33,7 +32,7 @@ type Alert = {
   created_at: string;
 };
 
-type RightPanelTab = 'mind-map' | 'loops' | 'drift' | 'people';
+type RightPanelTab = 'actions' | 'mind-map' | 'loops' | 'drift' | 'people';
 
 type StateCluster = {
   id: string; title: string; description: string;
@@ -137,6 +136,25 @@ export function SynthesisView({
     fetch('/api/alerts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }).catch(() => { });
   };
 
+  // ── Pending Action Items State ────────────────────────────────────────────
+  const [pendingActions, setPendingActions] = React.useState<ActionItem[]>([]);
+  const fetchActions = React.useCallback(() => {
+    fetch('/api/actions')
+      .then(r => r.json())
+      .then(d => {
+        if (d.items && Array.isArray(d.items)) {
+          setPendingActions(d.items.filter((a: ActionItem) => a.status === 'pending'));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    fetchActions();
+    const interval = setInterval(fetchActions, 15000);
+    return () => clearInterval(interval);
+  }, [fetchActions]);
+
   // ── Right panel state ─────────────────────────────────────────────────────
   const [rightPanelOpen, setRightPanelOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<RightPanelTab>('mind-map');
@@ -167,8 +185,9 @@ export function SynthesisView({
     }).finally(() => setCogLoading(false));
   }, [rightPanelOpen]);
 
-  // ── Tab definitions (spec: Mind Map, Loops, Drift, People & Places) ─────
+  // ── Tab definitions (Actions, Mind Map, Loops, Drift, People & Places) ───
   const TABS: { id: RightPanelTab; label: string; icon: string }[] = [
+    { id: 'actions', label: pendingActions.length > 0 ? `Actions (${pendingActions.length})` : 'Actions', icon: '⚡' },
     { id: 'mind-map', label: 'Mind Map', icon: '🧠' },
     { id: 'loops', label: 'Loops', icon: '🔁' },
     { id: 'drift', label: 'Drift', icon: '📊' },
@@ -214,7 +233,7 @@ export function SynthesisView({
       <div
         className={styles.centerPane}
         style={{
-          paddingTop: messages.length > 0 ? '20px' : '0',
+          paddingTop: messages.length > 0 ? '16px' : '0',
           alignItems: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -223,6 +242,87 @@ export function SynthesisView({
           width: '100%',
         }}
       >
+        {/* Chat Header Toolbar */}
+        <div style={{
+          width: '100%',
+          maxWidth: '800px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '4px 20px 10px',
+          borderBottom: messages.length > 0 ? '1px solid var(--border-subtle)' : 'none',
+          marginBottom: messages.length > 0 ? '12px' : '0',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {messages.length > 0 && (
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.02em' }}>
+                EYES Neural Chat
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {pendingActions.length > 0 && (
+              <button
+                onClick={() => {
+                  setActiveTab('actions');
+                  setRightPanelOpen(true);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(99, 102, 241, 0.12)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  borderRadius: '20px',
+                  padding: '5px 12px',
+                  color: 'var(--accent-primary)',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(99, 102, 241, 0.12)'
+                }}
+                title="View and execute pending actions"
+              >
+                <span>⚡</span>
+                <span>Actions</span>
+                <span style={{
+                  background: 'var(--accent-primary)',
+                  color: '#fff',
+                  borderRadius: '10px',
+                  padding: '1px 6px',
+                  fontSize: '10px',
+                  fontWeight: 800
+                }}>
+                  {pendingActions.length}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setRightPanelOpen(!rightPanelOpen);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: rightPanelOpen ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                color: rightPanelOpen ? '#fff' : 'var(--text-secondary)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '20px',
+                padding: '5px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <span>🧠</span>
+              <span>Intelligence</span>
+            </button>
+          </div>
+        </div>
+
         {/* Hero (no messages) */}
         {messages.length === 0 ? (
           <div style={{
@@ -332,6 +432,39 @@ export function SynthesisView({
                 {m.role === 'assistant' && !m.pending && m.citations && m.citations.length > 0 && (
                   <CitationDock citations={m.citations.slice(0, 4)} setView={setView} />
                 )}
+
+                {/* Inline Action Queue cards */}
+                {m.role === 'assistant' && !m.pending && m.actionItems && m.actionItems.length > 0 && (
+                  <div style={{
+                    marginTop: '14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                    width: '100%',
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: 'var(--accent-primary)',
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}>
+                      <span>⚡ Action Queue Suggestions ({m.actionItems.length})</span>
+                    </div>
+                    {m.actionItems.map(item => (
+                      <ActionItemCard
+                        key={item.id}
+                        action={item}
+                        compact={true}
+                        onExecuted={() => fetchActions()}
+                        onDismissed={() => fetchActions()}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
             <div ref={messagesEndRef} />
@@ -386,6 +519,49 @@ export function SynthesisView({
               </div>
             ) : (
               <>
+                {/* ── ACTIONS TAB ─────────────────────────────────────── */}
+                {activeTab === 'actions' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '4px'
+                    }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Pending Actions ({pendingActions.length})
+                      </span>
+                      <button
+                        onClick={() => onSubmit('What are my high-priority pending actions?')}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--accent-primary)',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        Ask in chat 💬
+                      </button>
+                    </div>
+
+                    {pendingActions.length === 0 ? (
+                      <PendingMsg text="All caught up! No pending actions in queue." />
+                    ) : (
+                      pendingActions.map(item => (
+                        <ActionItemCard
+                          key={item.id}
+                          action={item}
+                          compact={true}
+                          onExecuted={() => fetchActions()}
+                          onDismissed={() => fetchActions()}
+                        />
+                      ))
+                    )}
+                  </div>
+                )}
+
                 {/* ── MIND MAP TAB ─────────────────────────────────────── */}
                 {activeTab === 'mind-map' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
