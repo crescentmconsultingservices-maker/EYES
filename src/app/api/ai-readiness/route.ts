@@ -42,16 +42,30 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
 
 // K2: No literal model strings — probe via gateway alias (auto-chat) when available.
 async function runGatewayProbe(): Promise<ReadinessCheck> {
-  const base = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
-  const key  = process.env.LITELLM_KEY || '';
+  const key  = process.env.OPENROUTER_API_KEY || process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
+  const isOpenRouter = key.startsWith('sk-or-v1-');
+  let base = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+  let model = 'auto-chat';
+  if (isOpenRouter) {
+    base = (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+    model = process.env.OPENROUTER_MODEL || 'liquid/lfm-2.5-2.6b:free';
+  }
   if (!base || !key) return { status: 'skip', latencyMs: 0, error: 'LITELLM_BASE_URL or LITELLM_KEY not set.' };
   const started = Date.now();
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${key}`,
+    };
+    if (isOpenRouter) {
+      headers['HTTP-Referer'] = process.env.NEXT_PUBLIC_SITE_URL || 'https://eyes-app-sigma.vercel.app';
+      headers['X-Title'] = 'EYES';
+    }
     const res = await withTimeout(
       fetch(`${base}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({ model: 'auto-chat', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+        headers,
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
       }),
       4500,
     );

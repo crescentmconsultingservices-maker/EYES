@@ -11,8 +11,45 @@ import crypto from 'crypto';
  */
 
 // ── Gateway config (K1) ─────────────────────────────────────────────────────
-const getGatewayBase = () => (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
-const getGatewayKey = () => process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
+const getGatewayKey = () => 
+  process.env.OPENROUTER_API_KEY || 
+  process.env.EYES_GATEWAY_KEY || 
+  process.env.LITELLM_KEY || 
+  '';
+
+const getGatewayBase = () => {
+  const key = getGatewayKey();
+  if (key.startsWith('sk-or-v1-')) {
+    return (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+  }
+  return (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+};
+
+const OPENROUTER_MODELS = [
+  process.env.OPENROUTER_MODEL,
+  'liquid/lfm-2.5-2.6b:free',
+  'nvidia/nemotron-3.5-lightning:free',
+  'google/gemma-4-26b-a4b-it:free',
+].filter(Boolean) as string[];
+
+function getModelsForRequest(key: string, alias: string): string[] {
+  if (key.startsWith('sk-or-v1-')) {
+    return OPENROUTER_MODELS;
+  }
+  return [alias];
+}
+
+function getGatewayHeaders(key: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${key}`,
+  };
+  if (key.startsWith('sk-or-v1-')) {
+    headers['HTTP-Referer'] = process.env.NEXT_PUBLIC_SITE_URL || 'https://eyes-app-sigma.vercel.app';
+    headers['X-Title'] = 'EYES';
+  }
+  return headers;
+}
 
 // ── Four gateway aliases (K2) ────────────────────────────────────────────────
 const ALIAS_CHAT = 'auto-chat';
@@ -67,15 +104,16 @@ async function gatewayChat(
   const key = getGatewayKey();
   if (!base || !key) return null;
 
-  for (let attempt = 0; attempt < GATEWAY_MAX_RETRIES; attempt++) {
+  const models = getModelsForRequest(key, alias);
+  const totalAttempts = Math.max(models.length, GATEWAY_MAX_RETRIES);
+
+  for (let attempt = 0; attempt < totalAttempts; attempt++) {
+    const model = models[attempt % models.length];
     try {
       const res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
-        },
-        body: JSON.stringify({ model: alias, messages, max_tokens: maxTokens, temperature: 0.1 }),
+        headers: getGatewayHeaders(key),
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.1 }),
         signal,
       });
       if (res.ok) {
@@ -84,17 +122,17 @@ async function gatewayChat(
       }
       // Don't retry on 4xx client errors (except 429 rate-limit)
       if (res.status < 500 && res.status !== 429) {
-        console.warn(`[AI Gateway] ${alias} returned ${res.status} — not retriable.`);
-        return null;
+        console.warn(`[AI Gateway] ${model} returned ${res.status} — trying next model.`);
+      } else {
+        console.warn(`[AI Gateway] ${model} returned ${res.status} — retry ${attempt + 1}/${totalAttempts}`);
       }
-      console.warn(`[AI Gateway] ${alias} returned ${res.status} — retry ${attempt + 1}/${GATEWAY_MAX_RETRIES}`);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return null; // Clean cancellation — no retry
-      console.warn(`[AI Gateway] fetch failed (attempt ${attempt + 1}):`, err instanceof Error ? err.message : err);
+      console.warn(`[AI Gateway] fetch failed for ${model} (attempt ${attempt + 1}):`, err instanceof Error ? err.message : err);
     }
-    if (attempt < GATEWAY_MAX_RETRIES - 1) await retryDelay(attempt);
+    if (attempt < totalAttempts - 1) await retryDelay(attempt);
   }
-  console.error(`[AI Gateway] ${alias} exhausted ${GATEWAY_MAX_RETRIES} retries.`);
+  console.error(`[AI Gateway] ${alias} exhausted ${totalAttempts} retries.`);
   return null;
 }
 
@@ -265,23 +303,27 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
   const base = getGatewayBase();
   const key = getGatewayKey();
   if (base && key) {
-    try {
-      const res = await fetch(`${base}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({ model: ALIAS_CHAT, messages: fullMessages, max_tokens: 1024, temperature: 0.1, stream: true }),
-        signal, // propagate AbortSignal so timeout cancels the stream
-      });
-      if (res.ok && res.body) {
-        console.log('[AI Stream] Gateway streaming');
-        return sseToReadable(res.body, encoder);
+    const models = getModelsForRequest(key, ALIAS_CHAT);
+    for (const model of models) {
+      try {
+        const res = await fetch(`${base}/chat/completions`, {
+          method: 'POST',
+          headers: getGatewayHeaders(key),
+          body: JSON.stringify({ model, messages: fullMessages, max_tokens: 1024, temperature: 0.1, stream: true }),
+          signal, // propagate AbortSignal so timeout cancels the stream
+        });
+        if (res.ok && res.body) {
+          console.log(`[AI Stream] Gateway streaming via ${model}`);
+          return sseToReadable(res.body, encoder);
+        }
+        console.warn(`[AI Stream] Model ${model} returned ${res.status} — trying fallback if available.`);
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          // Clean cancellation — return an empty stream
+          return new ReadableStream({ start(c) { c.close(); } });
+        }
+        console.warn(`[AI Stream] Model ${model} stream failed:`, err instanceof Error ? err.message : err);
       }
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        // Clean cancellation — return an empty stream
-        return new ReadableStream({ start(c) { c.close(); } });
-      }
-      console.warn('[AI Stream] Gateway stream failed:', err instanceof Error ? err.message : err);
     }
   }
 
