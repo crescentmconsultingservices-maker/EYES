@@ -175,7 +175,7 @@ export default function ReceiptPanel({ receipt, onClose }: ReceiptPanelProps) {
                 Layer 2 · Exact Highlighted Span
               </span>
               <div style={{ margin: '14px 0 0 0', fontStyle: 'normal', color: 'var(--ink-deep, #1a1714)', fontSize: '15px', lineHeight: '1.7', fontFamily: 'var(--font-serif-display, serif)' }}>
-                "<mark style={{ background: 'var(--accent-soft, #f0d9cd)', color: 'var(--accent-ink, #7a2a0e)', padding: '2px 6px', borderRadius: '4px' }}>{spanText}</mark>"
+                &quot;<mark style={{ background: 'var(--accent-soft, #f0d9cd)', color: 'var(--accent-ink, #7a2a0e)', padding: '2px 6px', borderRadius: '4px' }}>{spanText}</mark>&quot;
               </div>
             </div>
           )}

@@ -1,6 +1,7 @@
-import modal
+# pyright: reportMissingImports=false
+import modal  # type: ignore
 from typing import List, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel  # type: ignore
 
 # 1. Define the Modal Environment
 # We install gliner and its dependencies.
@@ -25,7 +26,7 @@ class GlinerEngine:
     def load_model(self):
         """This runs exactly once when a new Modal container spins up."""
         print("Downloading and Loading GLiNER Model into RAM...")
-        from gliner import GLiNER
+        from gliner import GLiNER  # type: ignore
         
         # We use CPU on Modal's free tier because it's cheaper and perfectly fine for text extraction.
         # If you ever want GPU, you just add `gpu="T4"` to the @app.cls decorator!

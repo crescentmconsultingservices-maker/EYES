@@ -116,7 +116,7 @@ export default function Signals() {
           Signals
         </h1>
         <p style={{ color: 'var(--ink-soft, #3b372f)', fontSize: '15px', margin: 0, lineHeight: 1.5 }}>
-          The company's shared Instagram feed. Only decision-relevant real events (score &gt; 5) with consequence lines render here.
+          The company&apos;s shared Instagram feed. Only decision-relevant real events (score &gt; 5) with consequence lines render here.
         </p>
       </header>
 

@@ -294,8 +294,28 @@ async function geminiEmbedBatch(texts: string[], signal?: AbortSignal): Promise<
   return null;
 }
 
-// ── Embedding (gateway & Gemini fallback) ────────────────────
+// ── Embedding (Sovereign GPU, Gemini & Gateway fallback) ────────────────────
 async function handleEmbedding(text: string, signal?: AbortSignal): Promise<EmbedResult | null> {
+  const gpuEmbedUrl = process.env.GPU_EMBED_URL;
+  if (gpuEmbedUrl) {
+    try {
+      const res = await fetch(gpuEmbedUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.embedding && data.embedding.length === EMBED_DIMS) {
+          return { embedding: data.embedding };
+        }
+      }
+    } catch (err) {
+      console.warn('[AI] Sovereign GPU embed failed, falling back:', err);
+    }
+  }
+
   if (process.env.GEMINI_API_KEY) {
     const geminiResult = await geminiEmbed(text, signal);
     if (geminiResult && geminiResult.length === EMBED_DIMS) {
@@ -315,7 +335,50 @@ async function handleEmbedding(text: string, signal?: AbortSignal): Promise<Embe
   console.error('[AI] Gateway embedding failed.');
   return null;
 }
-// ── Chat (gateway ONLY) ─────────────────────────
+// ── Sovereign GPU Helpers ──────────────────────────────────────────────────
+async function gpuEmbedBatch(texts: string[], signal?: AbortSignal): Promise<number[][] | null> {
+  const gpuEmbedUrl = process.env.GPU_EMBED_URL;
+  if (!gpuEmbedUrl || !texts.length) return null;
+  try {
+    const res = await fetch(gpuEmbedUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts }),
+      signal,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.embeddings) && data.embeddings.length === texts.length) {
+        return data.embeddings;
+      }
+    }
+  } catch (err) {
+    console.warn('[AI] Sovereign GPU embed batch failed, falling back:', err);
+  }
+  return null;
+}
+
+async function gpuChat(messages: Array<{ role: string; content: string }>, maxTokens: number, signal?: AbortSignal): Promise<string | null> {
+  const gpuChatUrl = process.env.GPU_CHAT_URL;
+  if (!gpuChatUrl) return null;
+  try {
+    const res = await fetch(gpuChatUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, max_tokens: maxTokens }),
+      signal,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content ?? null;
+    }
+  } catch (err) {
+    console.warn('[AI] Sovereign GPU chat failed, falling back:', err);
+  }
+  return null;
+}
+
+// ── Chat (Sovereign GPU & gateway fallback) ──────────────────────────────────
 async function handleChat(
   messages: AIHistoryMessage[],
   system: string,
@@ -336,7 +399,11 @@ async function handleChat(
     ...history,
   ];
 
-  // 1. Gateway (K1)
+  // 1. Sovereign GPU (Qwen 2.5 3B) if configured
+  const gpuResult = await gpuChat(fullMessages, maxTokens, signal);
+  if (gpuResult) { console.log('[AI] Sovereign GPU Chat OK'); return gpuResult; }
+
+  // 2. Gateway (K1)
   const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens, signal);
   if (gatewayResult) { console.log(`[AI] Gateway (${alias}) OK`); return gatewayResult; }
 
@@ -454,6 +521,10 @@ export async function generateEmbedding(text: string) {
 }
 
 export async function generateEmbeddingsBatch(texts: string[]): Promise<number[][] | null> {
+  const gpuBatch = await gpuEmbedBatch(texts);
+  if (gpuBatch && gpuBatch.length === texts.length) {
+    return gpuBatch;
+  }
   if (process.env.GEMINI_API_KEY) {
     const geminiBatch = await geminiEmbedBatch(texts);
     if (geminiBatch && geminiBatch.length === texts.length) {

@@ -1221,7 +1221,7 @@ export default function SettingsPage() {
                       {/* Section 2: Team Member Management */}
                       <div>
                         <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 8px 0' }}>Workspace Members</h4>
-                        <p className={styles.fieldDesc} style={{ marginBottom: '16px' }}>List of personnel with access to the organization's shared memory pool.</p>
+                        <p className={styles.fieldDesc} style={{ marginBottom: '16px' }}>List of personnel with access to the organization&apos;s shared memory pool.</p>
 
                         <div className={styles.listContainer}>
                           {orgDetails.members.map((member) => {

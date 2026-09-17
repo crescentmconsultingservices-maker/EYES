@@ -467,7 +467,7 @@ export default function DeskBentoGrid() {
                       </span>
                     </div>
                     <p className="fraunces-title" style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--accent)', margin: 0, lineHeight: 1.35 }}>
-                      "{item.delayNote}"
+                      &quot;{item.delayNote}&quot;
                     </p>
                   </div>
                 ))}

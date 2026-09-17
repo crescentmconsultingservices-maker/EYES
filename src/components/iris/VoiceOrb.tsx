@@ -24,6 +24,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTextRef = useRef<string>('');
   const accumulatedTextRef = useRef<string>('');
+  const startListeningRef = useRef<() => void>(() => {});
 
   const stopCurrentAudio = () => {
     if (audioRef.current) {
@@ -66,7 +67,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
     if (isActiveSessionRef.current) {
       setTimeout(() => {
         if (isActiveSessionRef.current) {
-          startListening();
+          startListeningRef.current();
         }
       }, 500);
     }
@@ -312,6 +313,10 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
       if (onVoiceStateChange) onVoiceStateChange(false);
     }
   };
+
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  });
 
   const toggleVoiceSession = () => {
     setErrorMessage(null);

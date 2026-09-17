@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import styles from './KnowledgeGraph.module.css';
 
+import SpriteText from 'three-spritetext';
+
 // ForceGraph3D requires canvas/window so it must be dynamically imported in Next.js
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
 
@@ -157,8 +159,6 @@ export default function KnowledgeGraph({ userId, width, height }: { userId?: str
         linkWidth={(link: any) => highlightLinks.has(link) ? 2 : 1}
         nodeThreeObjectExtend={true}
         nodeThreeObject={(node: any) => {
-          // Dynamic import inside the render loop for SSR safety
-          const SpriteText = require('three-spritetext').default;
           const sprite = new SpriteText(node.name || '');
           
           // Apply highlight fading to text as well
@@ -169,7 +169,7 @@ export default function KnowledgeGraph({ userId, width, height }: { userId?: str
           }
           
           sprite.textHeight = node === selectedNode ? 6 : 4;
-          sprite.position.y = 8;
+          (sprite as any).position.y = 8;
           return sprite;
         }}
         onNodeClick={handleNodeClick}

@@ -62,6 +62,7 @@ export function SourceReadinessView({ platforms: initialPlatforms, totalMemories
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReadiness();
     const handleRefresh = () => loadReadiness();
     window.addEventListener('eyes-realtime-refresh', handleRefresh);
@@ -70,6 +71,7 @@ export function SourceReadinessView({ platforms: initialPlatforms, totalMemories
 
   useEffect(() => {
     if (initialPlatforms) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReadinessPlatforms(initialPlatforms);
     }
   }, [initialPlatforms]);

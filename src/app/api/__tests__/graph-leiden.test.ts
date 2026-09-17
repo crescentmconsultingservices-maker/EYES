@@ -108,4 +108,128 @@ describe('Graph Community Detection (Leiden / Louvain)', () => {
     expect(upsertedClusters[0].is_current).toBe(true);
     expect(upsertedClusters[0].characteristics).toEqual(['Modal Cloud', 'GLiNER Engine', 'NER Service']);
   });
+
+  it('delegates to Modal GPU worker when threshold is met and MODAL_LEIDEN_URL is set', async () => {
+    const originalEnv = process.env.MODAL_LEIDEN_URL;
+    const originalThreshold = process.env.MODAL_LEIDEN_THRESHOLD;
+
+    process.env.MODAL_LEIDEN_URL = 'https://modal.test/cluster';
+    process.env.MODAL_LEIDEN_THRESHOLD = '2'; // Lower threshold for test
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, clustersFound: 5 }),
+    });
+    const originalFetch = global.fetch;
+    global.fetch = mockFetch;
+
+    const mockEdges = [
+      { head_node_id: 'n1', tail_node_id: 'n2', relation_label: 'CONNECTS_TO', confidence: 0.9 },
+      { head_node_id: 'n2', tail_node_id: 'n3', relation_label: 'DEPENDS_ON', confidence: 0.9 },
+    ];
+
+    const mockSupabase = {
+      from: vi.fn((table: string) => {
+        if (table === 'chronic_edges') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            range: vi.fn().mockResolvedValue({ data: mockEdges, error: null }),
+          };
+        }
+        if (table === 'chronic_nodes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return {};
+      }),
+    };
+
+    try {
+      const count = await runGraphCommunityClustering(mockSupabase as any, 'user-large');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://modal.test/cluster',
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+      expect(count).toBe(5);
+    } finally {
+      process.env.MODAL_LEIDEN_URL = originalEnv;
+      process.env.MODAL_LEIDEN_THRESHOLD = originalThreshold;
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('gracefully falls back to local clustering if Modal GPU worker fails', async () => {
+    const originalEnv = process.env.MODAL_LEIDEN_URL;
+    const originalThreshold = process.env.MODAL_LEIDEN_THRESHOLD;
+
+    process.env.MODAL_LEIDEN_URL = 'https://modal.test/cluster-failing';
+    process.env.MODAL_LEIDEN_THRESHOLD = '2';
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error('Connection timeout to Modal GPU worker'));
+    const originalFetch = global.fetch;
+    global.fetch = mockFetch;
+
+    const mockEdges = [
+      { head_node_id: 'n1', tail_node_id: 'n2', relation_label: 'CONNECTS_TO', confidence: 0.9 },
+      { head_node_id: 'n2', tail_node_id: 'n3', relation_label: 'DEPENDS_ON', confidence: 0.9 },
+    ];
+
+    const mockNodes = [
+      { id: 'n1', name: 'Node 1', label: 'Entity' },
+      { id: 'n2', name: 'Node 2', label: 'Entity' },
+      { id: 'n3', name: 'Node 3', label: 'Entity' },
+    ];
+
+    const upsertedClusters: any[] = [];
+    const mockSupabase = {
+      from: vi.fn((table: string) => {
+        if (table === 'chronic_edges') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            is: vi.fn().mockReturnThis(),
+            range: vi.fn().mockResolvedValue({ data: mockEdges, error: null }),
+          };
+        }
+        if (table === 'chronic_nodes') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: mockNodes, error: null }),
+          };
+        }
+        if (table === 'cognitive_clusters') {
+          return {
+            update: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            like: vi.fn().mockResolvedValue({ data: null, error: null }),
+            upsert: vi.fn((items: any[]) => {
+              upsertedClusters.push(...items);
+              return Promise.resolve({ data: items, error: null });
+            }),
+          };
+        }
+        return {};
+      }),
+    };
+
+    try {
+      const count = await runGraphCommunityClustering(mockSupabase as any, 'user-fallback');
+      // Even though Modal threw an error, fallback to local clustering succeeded
+      expect(count).toBeGreaterThanOrEqual(1);
+      expect(upsertedClusters.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      process.env.MODAL_LEIDEN_URL = originalEnv;
+      process.env.MODAL_LEIDEN_THRESHOLD = originalThreshold;
+      global.fetch = originalFetch;
+    }
+  });
 });
+

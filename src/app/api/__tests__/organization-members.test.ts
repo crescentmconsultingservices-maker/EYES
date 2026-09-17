@@ -18,7 +18,7 @@ vi.mock('@/utils/supabase/server', () => ({
   })),
 }));
 
-let mockDbData = {
+const mockDbData = {
   user_profiles: [
     { user_id: 'owner-1', organization_id: 'org-1' },
     { user_id: 'admin-1', organization_id: 'org-1' },

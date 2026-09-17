@@ -10,9 +10,9 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
 
     const { searchParams } = new URL(request.url);
-    let targetUserId = searchParams.get('userId') || user?.id;
+    const targetUserId = searchParams.get('userId') || user?.id;
 
-    let userIds = targetUserId ? [targetUserId] : (user ? [user.id] : []);
+    const userIds = targetUserId ? [targetUserId] : (user ? [user.id] : []);
 
     const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';

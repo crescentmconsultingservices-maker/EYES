@@ -226,6 +226,39 @@ export async function fetchNodesByIds(
 }
 
 /**
+ * Offload graph community detection to Modal serverless worker.
+ */
+export async function offloadToModalLeiden(
+  userId: string,
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  resolution: number = 1.0
+): Promise<{ success: boolean; clustersFound: number }> {
+  const modalUrl = process.env.MODAL_LEIDEN_URL;
+  if (!modalUrl) {
+    throw new Error('MODAL_LEIDEN_URL is not configured');
+  }
+
+  const response = await fetch(modalUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId,
+      nodes,
+      edges,
+      resolution,
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Modal Leiden endpoint returned ${response.status}: ${errText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Executes graph community detection on chronic_edges for a user and writes clusters
  * into cognitive_clusters.
  */
@@ -249,6 +282,24 @@ export async function runGraphCommunityClustering(
     if (e.tail_node_id) nodeIdsSet.add(e.tail_node_id);
   }
   const allNodeIds = Array.from(nodeIdsSet);
+
+  // 2b. Check if edge count meets threshold for Modal GPU offloading
+  const modalUrl = process.env.MODAL_LEIDEN_URL;
+  const threshold = Number(process.env.MODAL_LEIDEN_THRESHOLD || 50000);
+
+  if (modalUrl && edges.length >= threshold) {
+    console.log(`[Leiden] Graph has ${edges.length} edges (>= threshold ${threshold}). Offloading to Modal GPU worker...`);
+    try {
+      const nodeMap = await fetchNodesByIds(supabase, userId, allNodeIds);
+      const nodesList = allNodeIds.map(id => nodeMap.get(id) || { id, name: id, label: 'Entity' });
+      const modalResult = await offloadToModalLeiden(userId, nodesList, edges);
+      console.log(`[Leiden] Modal GPU worker clustered ${modalResult.clustersFound} communities successfully.`);
+      return modalResult.clustersFound;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[Leiden] Modal GPU offload failed (${msg}), falling back to local TypeScript clustering.`);
+    }
+  }
 
   // 3. Run Community Detection
   const communities = detectCommunities(allNodeIds, edges);

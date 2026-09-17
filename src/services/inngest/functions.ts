@@ -54,6 +54,200 @@ export const investigateChurn = inngest.createFunction(
   }
 );
 
+export const proactiveChurnInvestigation = inngest.createFunction(
+  {
+    id: "proactive-churn-investigation",
+    name: "Proactive Churn & Leak Investigation",
+    triggers: [
+      { cron: "0 6 * * *" },
+      { event: "iris/churn.proactive" },
+    ],
+  },
+  async ({ event, step }) => {
+    const targetUserId = (event.data as Record<string, any>)?.userId;
+
+    // 1. Scan users for churn indicators
+    const candidateUsers = await step.run("scan-users-for-churn", async () => {
+      const supabase = createAdminClient();
+      if (targetUserId) {
+        return [{ user_id: targetUserId, eligible: 1 }];
+      }
+
+      // Query recent leak scans with eligible threads
+      const { data: recentScans } = await supabase
+        .from('leak_scans')
+        .select('user_id, threads_eligible, threads_found')
+        .gt('threads_eligible', 0)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const uniqueUserMap = new Map<string, { user_id: string; eligible: number }>();
+      (recentScans || []).forEach((scan) => {
+        if (scan.user_id && !uniqueUserMap.has(scan.user_id)) {
+          uniqueUserMap.set(scan.user_id, { user_id: scan.user_id, eligible: scan.threads_eligible || 1 });
+        }
+      });
+
+      return Array.from(uniqueUserMap.values());
+    });
+
+    // 2. Generate and publish proactive alerts & queued actions
+    const results = await step.run("publish-proactive-alerts", async () => {
+      if (!candidateUsers.length) {
+        return { alertedUsers: 0, alertsCreated: 0 };
+      }
+
+      const supabase = createAdminClient();
+      let alertsCreated = 0;
+
+      for (const candidate of candidateUsers) {
+        const userId = candidate.user_id;
+
+        // Check if an unread alert of this type was already created today
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: existingAlerts } = await supabase
+          .from('alerts')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('alert_type', 'ask')
+          .gte('created_at', oneDayAgo)
+          .limit(1);
+
+        if (!existingAlerts || existingAlerts.length === 0) {
+          const title = 'Proactive Churn Risk Detected';
+          const body = `Unclosed customer commitments and stalled threads detected in your workspace (${candidate.eligible} eligible). Review recovery opportunities.`;
+
+          await supabase.from('alerts').insert({
+            user_id: userId,
+            alert_type: 'ask',
+            title,
+            body,
+            is_dismissed: false,
+          });
+
+          // Insert high-priority re-engagement action in action_queue
+          await supabase.from('action_queue').insert({
+            user_id: userId,
+            action_type: 'EMAIL_REPLY',
+            title: 'Re-engage Stalled Customer Accounts',
+            body: 'Draft follow-up messages for clients who have gone quiet without a formal close.',
+            confidence: 0.9,
+            status: 'pending',
+          });
+
+          alertsCreated++;
+        }
+      }
+
+      return { alertedUsers: candidateUsers.length, alertsCreated };
+    });
+
+    return { status: "completed", results };
+  }
+);
+
+export const staleCommitmentAlerts = inngest.createFunction(
+  {
+    id: "stale-commitment-alerts",
+    name: "Stale Commitment & Slippage Monitor",
+    triggers: [
+      { cron: "0 8 * * *" },
+      { event: "iris/commitments.stale" },
+    ],
+  },
+  async ({ event, step }) => {
+    const targetUserId = (event.data as Record<string, any>)?.userId;
+
+    // 1. Fetch active commitments older than 5 days
+    const staleCommitments = await step.run("fetch-stale-commitments", async () => {
+      const supabase = createAdminClient();
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+      let query = supabase
+        .from('chronic_edges')
+        .select(`
+          id,
+          user_id,
+          valid_from,
+          tail:chronic_nodes!tail_node_id(name, label)
+        `)
+        .eq('relation_label', 'commitment')
+        .is('valid_to', null)
+        .lt('valid_from', fiveDaysAgo)
+        .order('valid_from', { ascending: true })
+        .limit(25);
+
+      if (targetUserId) {
+        query = query.eq('user_id', targetUserId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn('[Stale Commitments] Query error:', error.message);
+        return [];
+      }
+
+      return (data || []).map((edge: { id: string; user_id: string; valid_from: string; tail: any }) => ({
+        edgeId: edge.id,
+        userId: edge.user_id,
+        validFrom: edge.valid_from,
+        commitmentName: (edge.tail as { name?: string })?.name || 'Unspecified commitment',
+      }));
+    });
+
+    // 2. Dispatch alerts and reminder actions
+    const dispatchResult = await step.run("dispatch-commitment-alerts", async () => {
+      if (!staleCommitments.length) {
+        return { processed: 0, alertsDispatched: 0 };
+      }
+
+      const supabase = createAdminClient();
+      let alertsDispatched = 0;
+
+      for (const item of staleCommitments) {
+        const dateStr = item.validFrom ? new Date(item.validFrom).toLocaleDateString() : 'recent days';
+
+        // Check if an alert for this commitment was already created
+        const { data: existing } = await supabase
+          .from('alerts')
+          .select('id')
+          .eq('user_id', item.userId)
+          .eq('alert_type', 'commitment')
+          .ilike('title', `%${item.commitmentName.slice(0, 20)}%`)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          await supabase.from('alerts').insert({
+            user_id: item.userId,
+            alert_type: 'commitment',
+            title: `Slipping: ${item.commitmentName.slice(0, 40)}`,
+            body: `Open promise made around ${dateStr} has not been completed. Risk of slippage.`,
+            is_dismissed: false,
+          });
+
+          // Propose calendar block or reminder in action_queue
+          await supabase.from('action_queue').insert({
+            user_id: item.userId,
+            action_type: 'CALENDAR',
+            title: `Resolve Commitment: ${item.commitmentName.slice(0, 30)}`,
+            body: `Schedule focused time to close open promise from ${dateStr}.`,
+            confidence: 0.85,
+            status: 'pending',
+          });
+
+          alertsDispatched++;
+        }
+      }
+
+      return { processed: staleCommitments.length, alertsDispatched };
+    });
+
+    return { status: "completed", dispatchResult };
+  }
+);
+
 export const functions = [
   investigateChurn,
+  proactiveChurnInvestigation,
+  staleCommitmentAlerts,
 ];

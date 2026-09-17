@@ -276,7 +276,7 @@ export class PDFGenerationService {
       doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Top 15% of Founders & Operators (Industry Benchmark: 1.8)', 280, scoreBoxY + 31, { align: 'right', width: 250 });
 
       // Section 2: Executive Summary
-      let execY = scoreBoxY + 68;
+      const execY = scoreBoxY + 68;
       doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(13).text('Executive Summary', 50, execY);
       doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(`§ 2 — ${titles.section2}`, 50, execY + 15);
       doc.moveTo(50, execY + 26).lineTo(W - 50, execY + 26).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();

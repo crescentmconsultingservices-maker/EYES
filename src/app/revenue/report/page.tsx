@@ -132,7 +132,7 @@ export default function FullReportPage() {
               <div className={styles.receipt}>
                 <span className={styles.rmeta}>RECEIPT R-{(idx + 1).toString().padStart(2, '0')}</span><br/>
                 <span className={styles.rl}>Date:</span> {new Date(leak.last_activity_date).toLocaleDateString()}<br/>
-                <span className={styles.rq}>"{leak.evidence.quoted_line}"</span>
+                <span className={styles.rq}>&quot;{leak.evidence.quoted_line}&quot;</span>
               </div>
 
               <div className={styles.recovery}>

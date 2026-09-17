@@ -156,7 +156,7 @@ export default function RevenueScanPage() {
         <>
           <div className={styles.titleblock}>
             <div className={styles.kicker}>Scan complete — here is your number</div>
-            <h1 className={styles.title}>Your inbox is holding money<br/>you can't see.</h1>
+            <h1 className={styles.title}>Your inbox is holding money<br/>you can&apos;t see.</h1>
             <div className={styles.clientline}>
               WINDOW &nbsp;<b>182 days</b> &nbsp;·&nbsp; SCANNED &nbsp;<b>{report.manifest?.threads_eligible || 0} threads</b>
             </div>
@@ -177,14 +177,14 @@ export default function RevenueScanPage() {
           </div>
 
           <section className={styles.section}>
-            <h2 className={styles.h2}>Top receipts, so you know it's real.</h2>
+            <h2 className={styles.h2}>Top receipts, so you know it&apos;s real.</h2>
             <p className={styles.soft}>These are your emails. Every flagged thread in the full report carries a receipt exactly like these.</p>
 
             {report.leaks.slice(0, 3).map((leak: any, idx: number) => (
               <div key={idx} className={styles.receipt}>
                 <span className={styles.receiptRmeta}>{leak.leak_type} · est. €{leak.est_value_eur} · silent {leak.days_silent} days</span><br/>
                 {leak.counterparty_name && <><span className={styles.receiptRl}>From:</span> {leak.counterparty_name} · {new Date(leak.last_activity_date).toLocaleDateString()}<br/></>}
-                <span className={styles.receiptRq}>"{leak.evidence.quoted_line}"</span><br/>
+                <span className={styles.receiptRq}>&quot;{leak.evidence.quoted_line}&quot;</span><br/>
                 <span className={styles.receiptRl}>— {leak.evidence.context_summary}</span>
               </div>
             ))}
