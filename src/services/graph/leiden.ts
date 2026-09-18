@@ -321,7 +321,6 @@ export async function runGraphCommunityClustering(
       .filter((n): n is GraphNode => Boolean(n));
 
     const entityNames = memberNodes.map(n => n.name).slice(0, 10);
-    const dominantLabels = memberNodes.map(n => n.label).slice(0, 5);
 
     // Heuristic label and description
     let label = `Cognitive Subgraph #${clusterIndex}`;

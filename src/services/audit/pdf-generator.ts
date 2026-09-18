@@ -59,15 +59,6 @@ export interface NormalizedAuditData {
   memoryContentMap?: Record<string, string>;
 }
 
-function decodeEntities(str: string): string {
-  return (str || '')
-    .replace(/&amp;/g, '&')
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
-}
-
 function formatPlatformName(platform: string): string {
   const p = platform.toLowerCase().replace(/[_-]/g, ' ');
   if (p === 'google calendar') return 'Google Calendar';
@@ -155,7 +146,6 @@ export class PDFGenerationService {
     const FONT_BODY = 'Helvetica';
     const FONT_BOLD = 'Helvetica-Bold';
     const FONT_MONO = 'Courier';
-    const FONT_ITALIC = 'Helvetica-Oblique';
 
     const BG_CREAM = '#FAFAF7';
     const INK_BLACK = '#0A0A0A';

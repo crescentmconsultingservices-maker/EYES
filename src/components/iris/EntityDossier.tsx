@@ -5,7 +5,6 @@ import UnderstandingCard from './UnderstandingCard';
 import KnowledgeGraph from '@/components/dashboard/KnowledgeGraph';
 import HonestEmptyState from './HonestEmptyState';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 
 interface Entity {
   id: string;
@@ -17,7 +16,6 @@ interface Entity {
 }
 
 export default function EntityDossier() {
-  const router = useRouter();
   const { user } = useAuth();
   const userName = user?.name || (user?.email ? user.email.split('@')[0] : 'Founder');
 
@@ -123,7 +121,18 @@ export default function EntityDossier() {
       </header>
 
       {/* Entity Selector Tabs (Section 09 Spec) */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '28px', overflowX: 'auto', borderBottom: '1px solid #e7e1d4', paddingBottom: '14px' }}>
+      {loading ? (
+        <div style={{ padding: '32px 0', color: 'var(--ink-faint, #6b6557)', fontSize: '14px' }}>
+          Synthesizing entity dossiers from memory graph...
+        </div>
+      ) : !currentEntity ? (
+        <HonestEmptyState
+          headline="No entity dossiers formed yet."
+          subtext="Entity dossiers materialize as living wikis as your connected sources sync commitments and communications."
+        />
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '28px', overflowX: 'auto', borderBottom: '1px solid #e7e1d4', paddingBottom: '14px' }}>
         {entities.map((ent) => (
           <button
             key={ent.id}
@@ -261,8 +270,9 @@ export default function EntityDossier() {
             </div>
           )}
         </div>
-
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import UnderstandingCard from './UnderstandingCard';
 import HonestEmptyState from './HonestEmptyState';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 
 interface Post {
   id: string;
@@ -20,7 +19,6 @@ interface Post {
 }
 
 export default function Signals() {
-  const router = useRouter();
   const { user } = useAuth();
   const userName = user?.name || (user?.email ? user.email.split('@')[0] : 'Founder');
 

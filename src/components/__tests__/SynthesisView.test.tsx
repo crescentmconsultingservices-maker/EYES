@@ -84,6 +84,7 @@ describe('SynthesisView', () => {
 
     expect(screen.getByText('Everything You Ever Said')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Ask me anything about your life...')).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   });
 
   it('renders chat messages when messages are provided', async () => {
@@ -107,6 +108,7 @@ describe('SynthesisView', () => {
     expect(screen.getByText('What did I promise last week?')).toBeInTheDocument();
     // The assistant message is rendered via ReactMarkdown mock
     expect(screen.getByText('You promised to send the quarterly report to John by Friday.')).toBeInTheDocument();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   });
 
   it('fetches and renders alerts on mount', async () => {
@@ -129,7 +131,7 @@ describe('SynthesisView', () => {
     });
   });
 
-  it('disables input and send button while streaming', () => {
+  it('disables input and send button while streaming', async () => {
     const ref = { current: null };
     render(
       <SynthesisView
@@ -146,9 +148,10 @@ describe('SynthesisView', () => {
 
     const textarea = screen.getByPlaceholderText('Ask a follow up...');
     expect(textarea).toBeDisabled();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   });
 
-  it('calls onSubmit when Enter is pressed (non-shift)', () => {
+  it('calls onSubmit when Enter is pressed (non-shift)', async () => {
     const ref = { current: null };
     const onSubmit = vi.fn();
     render(
@@ -167,5 +170,6 @@ describe('SynthesisView', () => {
     const textarea = screen.getByPlaceholderText('Ask me anything about your life...');
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false });
     expect(onSubmit).toHaveBeenCalledWith('my question');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
   });
 });

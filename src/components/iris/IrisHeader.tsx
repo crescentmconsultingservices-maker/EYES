@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import styles from '../layout/Header.module.css'; // Reusing existing CSS
-import EyesLogo from '../common/EyesLogo';
 
 export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const router = useRouter();
@@ -26,8 +25,6 @@ export default function IrisHeader({ onMenuToggle }: { onMenuToggle?: () => void
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const brandAccent = theme === 'ember' ? '#e06a3b' : theme === 'light' ? '#0f172a' : '#ffffff';
 
   return (
     <header 

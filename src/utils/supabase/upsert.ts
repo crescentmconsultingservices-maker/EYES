@@ -283,14 +283,6 @@ export async function fireEntityExtraction(supabase: SupabaseClient, events: Raw
 
         // Save relationships to the Bi-Temporal Graph table (Phase 2)
         if (relations.length > 0) {
-          const findEntityLabel = (text: string): string => {
-            const cleanText = text.toLowerCase().trim();
-            const match = (entities as { text: string; label: string }[]).find(
-              (e) => e.text.toLowerCase().trim() === cleanText
-            );
-            return match ? match.label : 'other';
-          };
-
           for (const rel of relations) {
             if (!rel.head || !rel.label || !rel.tail) continue;
             try {

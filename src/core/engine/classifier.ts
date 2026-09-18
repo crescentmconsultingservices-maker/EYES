@@ -68,7 +68,7 @@ export async function classifyThread(
       const match = content.match(/\{[\s\S]*\}/);
       if (!match) throw new Error('No JSON object found in response');
       parsed = JSON.parse(match[0]);
-    } catch (e) {
+    } catch {
       return { leak_type: 'INVALID', confidence: 0, error: `JSON Parse Error: ${content}` };
     }
 

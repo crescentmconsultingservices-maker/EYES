@@ -208,7 +208,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorMessage('Browser does not support SpeechRecognition. Please use Chrome/Edge.');
+      setErrorMessage('Continuous duplex speech is supported in Chrome & Edge. You can also type directly in Chat Workstation.');
       setVoiceState('idle');
       isActiveSessionRef.current = false;
       if (onVoiceStateChange) onVoiceStateChange(false);

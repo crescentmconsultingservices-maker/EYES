@@ -51,6 +51,7 @@ export default function IntentCards({ intent, intentData, onReceiptClick }: Inte
             const head = edge.head?.name || 'Task / Obligation';
             const tail = edge.tail?.name || 'Recipient';
             const dateStr = edge.valid_from ? new Date(edge.valid_from).toLocaleDateString() : 'Active';
+            const receipt = buildReceipt(edge, `Committed to ${tail}: ${head}`);
             return (
               <UnderstandingCard
                 key={i}
@@ -60,7 +61,8 @@ export default function IntentCards({ intent, intentData, onReceiptClick }: Inte
                 statusBadge="Active"
                 badgeType="good"
                 timestamp={`Since ${dateStr}`}
-                receipt={buildReceipt(edge, `Committed to ${tail}: ${head}`)}
+                receipt={receipt}
+                onClick={() => onReceiptClick(receipt)}
               />
             );
           })}
@@ -69,6 +71,7 @@ export default function IntentCards({ intent, intentData, onReceiptClick }: Inte
             const head = edge.head?.name || 'Item';
             const tail = edge.tail?.name || 'Blocker / Dependency';
             const dateStr = edge.valid_from ? new Date(edge.valid_from).toLocaleDateString() : 'Recent';
+            const receipt = buildReceipt(edge, `${head} delayed on ${tail}`);
             return (
               <UnderstandingCard
                 key={i}
@@ -78,7 +81,8 @@ export default function IntentCards({ intent, intentData, onReceiptClick }: Inte
                 statusBadge="Check-in Needed"
                 badgeType="accent"
                 timestamp={`Delayed since ${dateStr}`}
-                receipt={buildReceipt(edge, `${head} delayed on ${tail}`)}
+                receipt={receipt}
+                onClick={() => onReceiptClick(receipt)}
               />
             );
           })}
@@ -87,6 +91,7 @@ export default function IntentCards({ intent, intentData, onReceiptClick }: Inte
             const head = edge.head?.name || 'Entity';
             const tail = edge.tail?.name || 'Property';
             const dateStr = edge.valid_to ? new Date(edge.valid_to).toLocaleDateString() : 'Recent';
+            const receipt = buildReceipt(edge, `Belief update: ${head} to ${tail}`);
             return (
               <UnderstandingCard
                 key={i}
@@ -96,7 +101,8 @@ export default function IntentCards({ intent, intentData, onReceiptClick }: Inte
                 statusBadge="Superseded"
                 badgeType="slate"
                 timestamp={`Updated ${dateStr}`}
-                receipt={buildReceipt(edge, `Belief update: ${head} to ${tail}`)}
+                receipt={receipt}
+                onClick={() => onReceiptClick(receipt)}
               />
             );
           })}
