@@ -15,6 +15,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'speaking'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
+  const [voiceEngine, setVoiceEngine] = useState<'kokoro' | 'fallback' | null>(null);
 
   const isActiveSessionRef = useRef<boolean>(false);
   const isCommittingRef = useRef<boolean>(false);
@@ -92,13 +93,14 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
           const audioUrl = URL.createObjectURL(blob);
           const audio = new Audio(audioUrl);
           audioRef.current = audio;
-          audio.onplay = () => setVoiceState('speaking');
+          audio.onplay = () => { setVoiceState('speaking'); setVoiceEngine('kokoro'); };
           audio.onended = () => {
             audioRef.current = null;
             URL.revokeObjectURL(audioUrl);
             handleSpeechFinished();
           };
           audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
             audioRef.current = null;
             handleSpeechFinished();
           };
@@ -110,6 +112,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
       }
 
       // 2. Web Speech Synthesis fallback
+      setVoiceEngine('fallback');
       if (!synthRef.current) {
         handleSpeechFinished();
         return;
@@ -171,7 +174,7 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
     if (isActiveSessionRef.current) {
       setTimeout(() => {
         if (isActiveSessionRef.current) {
-          startListening();
+          startListeningRef.current();
         }
       }, 500);
     } else {
@@ -387,6 +390,29 @@ const VoiceOrb = forwardRef<VoiceOrbRef, VoiceOrbProps>(({ onTranscribe, onVoice
           100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
+
+      {/* TTS degraded-state badge — shown when Kokoro is unavailable */}
+      {voiceEngine === 'fallback' && voiceState !== 'idle' && (
+        <div style={{
+          position: 'absolute',
+          bottom: '76px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#fdf3e3',
+          color: '#92600a',
+          border: '1px solid #e8c97a',
+          borderRadius: '10px',
+          padding: '3px 10px',
+          fontSize: '10px',
+          fontFamily: 'var(--font-jetbrains, monospace)',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          letterSpacing: '0.06em',
+          zIndex: 99
+        }}>
+          ⚡ Using fallback voice
+        </div>
+      )}
 
       {/* Live transcript or error popup */}
       {(liveTranscript || errorMessage) && (

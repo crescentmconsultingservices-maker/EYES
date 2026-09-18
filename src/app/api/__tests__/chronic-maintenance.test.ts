@@ -101,6 +101,13 @@ describe('Chronic Graph Maintenance (Dedupe & Decay)', () => {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             is: vi.fn().mockResolvedValue({ data: mockEdges, error: null }),
+            in: vi.fn().mockImplementation((_col: string, ids: string[]) => {
+              return Promise.resolve({
+                data: mockEdges.filter(e => ids.includes(e.id)),
+                error: null,
+              });
+            }),
+            insert: vi.fn().mockResolvedValue({ data: null, error: null }),
             update: vi.fn((payload: any) => ({
               in: vi.fn((col: string, ids: string[]) => {
                 ids.forEach(id => {
@@ -119,9 +126,13 @@ describe('Chronic Graph Maintenance (Dedupe & Decay)', () => {
 
     expect(res.escalatedCount).toBe(1);
     expect(res.decayedCount).toBe(1);
-    expect(updatedEdges['edge-commit-stale']?.relation_label).toBe('delayed_on');
-    expect(updatedEdges['edge-mention-stale']?.valid_to).toBeDefined();
+    // After v3 bi-temporal fix: commitment is closed (valid_to set), NOT mutated in-place
+    expect(updatedEdges['edge-commit-stale']?.valid_to).toBeDefined();
+    // Factual relations (works_at) are immune to decay
     expect(updatedEdges['edge-fact-stale']).toBeUndefined();
+    // Stale mention should be expired (valid_to set)
+    expect(updatedEdges['edge-mention-stale']?.valid_to).toBeDefined();
+    // Recent mention untouched
     expect(updatedEdges['edge-mention-recent']).toBeUndefined();
   });
 

@@ -161,58 +161,58 @@ export async function executeDiscordSync(actor: SyncActor, mode: string = 'delta
 
     const dmHistories = await Promise.all(messagePromises);
 
-    // 4b. Best-effort guild channel history (requires permissions/scope that may not be present for all users)
+    // 4b. Best-effort guild channel history (concurrent, capped at 5 parallel guild fetches)
     const guildLimit = depth === 'deep' ? 8 : 3;
     const guildMessageLimit = depth === 'deep' ? 60 : 20;
     const guildHistories: Array<{ guild: DiscordGuild; channel: DiscordGuildChannel; messages: DiscordMessage[] }> = [];
 
-    for (const guild of discordGuilds.slice(0, guildLimit)) {
-      if (excludedGuilds.has(guild.id.toLowerCase()) || excludedGuilds.has(guild.name.toLowerCase())) {
-        continue;
-      }
-      const channelsResponse = await fetch(`https://discord.com/api/v10/guilds/${guild.id}/channels`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      });
-
-      if (!channelsResponse.ok) {
-        continue;
-      }
-
-      const guildChannels = (await channelsResponse.json()) as DiscordGuildChannel[];
-      const textChannels = guildChannels
-        .filter((channel) => DISCORD_GUILD_TEXT_CHANNEL_TYPES.has(channel.type || -1))
-        .slice(0, depth === 'deep' ? 8 : 3);
-
-      for (const channel of textChannels) {
-        const guildCursorKey = `guild:${guild.id}:channel:${channel.id}`;
-        const cursor = readCursorEntry(channelCursors[guildCursorKey]);
-
-        const messagesUrl = new URL(`https://discord.com/api/v10/channels/${channel.id}/messages`);
-        messagesUrl.searchParams.set('limit', String(guildMessageLimit));
-        
-        if (mode === 'delta' && cursor?.after_id) {
-          messagesUrl.searchParams.set('after', cursor.after_id);
-        } else if (mode === 'backfill' && cursor?.before_id) {
-          messagesUrl.searchParams.set('before', cursor.before_id);
-        }
-
-        const messagesResponse = await fetch(messagesUrl.toString(), {
+    const guildFetchTasks = discordGuilds
+      .slice(0, guildLimit)
+      .filter((guild) => !excludedGuilds.has(guild.id.toLowerCase()) && !excludedGuilds.has(guild.name.toLowerCase()))
+      .map(async (guild) => {
+        const channelsResponse = await fetch(`https://discord.com/api/v10/guilds/${guild.id}/channels`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: 'no-store',
         });
+        if (!channelsResponse.ok) return;
 
-        if (!messagesResponse.ok) {
-          continue;
-        }
+        const guildChannels = (await channelsResponse.json()) as DiscordGuildChannel[];
+        const textChannels = guildChannels
+          .filter((channel) => DISCORD_GUILD_TEXT_CHANNEL_TYPES.has(channel.type || -1))
+          .slice(0, depth === 'deep' ? 8 : 3);
 
-        const messageData = (await messagesResponse.json()) as unknown;
-        guildHistories.push({
-          guild,
-          channel,
-          messages: Array.isArray(messageData) ? (messageData as DiscordMessage[]) : [],
-        });
-      }
+        // Fetch all channels in this guild concurrently
+        const channelResults = await Promise.allSettled(
+          textChannels.map(async (channel) => {
+            const guildCursorKey = `guild:${guild.id}:channel:${channel.id}`;
+            const cursor = readCursorEntry(channelCursors[guildCursorKey]);
+
+            const messagesUrl = new URL(`https://discord.com/api/v10/channels/${channel.id}/messages`);
+            messagesUrl.searchParams.set('limit', String(guildMessageLimit));
+            if (mode === 'delta' && cursor?.after_id) messagesUrl.searchParams.set('after', cursor.after_id);
+            else if (mode === 'backfill' && cursor?.before_id) messagesUrl.searchParams.set('before', cursor.before_id);
+
+            const messagesResponse = await fetch(messagesUrl.toString(), {
+              headers: { Authorization: `Bearer ${accessToken}` },
+              cache: 'no-store',
+            });
+            if (!messagesResponse.ok) return;
+
+            const messageData = (await messagesResponse.json()) as unknown;
+            guildHistories.push({
+              guild,
+              channel,
+              messages: Array.isArray(messageData) ? (messageData as DiscordMessage[]) : [],
+            });
+          })
+        );
+        void channelResults; // results captured via push above
+      });
+
+    // Run guild fetches with a concurrency limit of 5
+    const CONCURRENCY = 5;
+    for (let i = 0; i < guildFetchTasks.length; i += CONCURRENCY) {
+      await Promise.allSettled(guildFetchTasks.slice(i, i + CONCURRENCY));
     }
 
     // 5. Transform to Events

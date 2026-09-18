@@ -186,26 +186,47 @@ export async function POST(request: Request) {
     let edgesWritten = 0;
     const edgeErrors: string[] = [];
 
-    // Helper function to find entity label
-    const findEntityLabel = (text: string): string => {
+    // Helper function to find entity label and span offsets
+    const findEntityMeta = (text: string): { label: string; start: number; end: number } => {
       const cleanText = text.toLowerCase().trim();
       const match = entities.find((e) => e.text.toLowerCase().trim() === cleanText);
-      return match ? match.label : 'other';
+      return match ? { label: match.label, start: match.start, end: match.end } : { label: 'other', start: 0, end: 0 };
     };
 
-    for (const rel of relations) {
-      if (!rel.head || !rel.label || !rel.tail) continue;
+    // Batch node lookups — collect all unique node names across all relations first
+    const validRelations = relations.filter((r) => r.head && r.label && r.tail);
+    const uniqueNodeNames = [...new Set(validRelations.flatMap((r) => [r.head, r.tail]))];
 
+    // Fetch existing nodes in one query
+    const nodeIdCache = new Map<string, string>();
+    if (uniqueNodeNames.length > 0) {
+      const { data: existingNodes } = await admin
+        .from('chronic_nodes')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .in('name', uniqueNodeNames);
+
+      for (const node of existingNodes || []) {
+        nodeIdCache.set(node.name.toLowerCase().trim(), node.id);
+      }
+    }
+
+    // Create any missing nodes
+    const missingNames = uniqueNodeNames.filter((n) => !nodeIdCache.has(n.toLowerCase().trim()));
+    for (const name of missingNames) {
+      const { label } = findEntityMeta(name);
+      const id = await getOrCreateNodeId(admin, user.id, name, label);
+      nodeIdCache.set(name.toLowerCase().trim(), id);
+    }
+
+    for (const rel of validRelations) {
       try {
-        const headLabel = findEntityLabel(rel.head);
-        const tailLabel = findEntityLabel(rel.tail);
+        const headNodeId = nodeIdCache.get(rel.head.toLowerCase().trim());
+        const tailNodeId = nodeIdCache.get(rel.tail.toLowerCase().trim());
+        if (!headNodeId || !tailNodeId) continue;
 
-        const headNodeId = await getOrCreateNodeId(admin, user.id, rel.head, headLabel);
-        const tailNodeId = await getOrCreateNodeId(admin, user.id, rel.tail, tailLabel);
-
+        const { start: startChar, end: endChar } = findEntityMeta(rel.head);
         const recordId = sourceMemoryId || 'manual';
-        const startChar = 0;
-        const endChar = 0;
 
         // Check if this exact edge already exists (active)
         const { data: existing } = await admin

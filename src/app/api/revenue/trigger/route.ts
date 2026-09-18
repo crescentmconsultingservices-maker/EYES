@@ -92,7 +92,11 @@ export async function POST(req: Request) {
 
     // 5. Publish chunks to QStash for background ingestion
     const { Client } = await import('@upstash/qstash');
-    const qstashToken = process.env.QSTASH_TOKEN || 'dummy_token'; 
+    const qstashToken = process.env.QSTASH_TOKEN;
+    if (!qstashToken) {
+      await supabase.from('leak_scans').update({ status: 'failed' }).eq('scan_id', scanId);
+      return NextResponse.json({ error: 'QSTASH_TOKEN not configured — cannot queue scan jobs.' }, { status: 503 });
+    }
     const qstash = new Client({ token: qstashToken });
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
     const workerUrl = `${baseUrl}/api/revenue/ingest-worker`;
@@ -132,8 +136,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, manifest });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
     console.error('[Leak Scan Ingest] Uncaught exception:', err);
-    return NextResponse.json({ error: 'Internal Server Error', details: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', details: detail }, { status: 500 });
   }
 }

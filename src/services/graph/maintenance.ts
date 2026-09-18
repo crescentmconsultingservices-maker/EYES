@@ -187,15 +187,45 @@ export async function runChronicDecay(
 
   const now = new Date().toISOString();
 
-  // Escalate stale commitments to 'delayed_on'
+  // Escalate stale commitments: close old edge + insert new 'delayed_on' edge
+  // This preserves bi-temporal history — valid_to marks when the commitment went silent.
   if (edgesToEscalate.length > 0) {
     const chunkSize = 100;
     for (let i = 0; i < edgesToEscalate.length; i += chunkSize) {
       const chunk = edgesToEscalate.slice(i, i + chunkSize);
+
+      // 1. Close the existing commitment edges
       await supabase
         .from('chronic_edges')
-        .update({ relation_label: 'delayed_on', updated_at: now })
+        .update({ valid_to: now, updated_at: now })
         .in('id', chunk);
+
+      // 2. Fetch the closed edges so we can copy them as new delayed_on edges
+      const { data: closedEdges } = await supabase
+        .from('chronic_edges')
+        .select('head_node_id, tail_node_id, user_id, confidence, observed_from')
+        .in('id', chunk);
+
+      if (closedEdges && closedEdges.length > 0) {
+        const newEdges = closedEdges.map((e: {
+          head_node_id: string;
+          tail_node_id: string;
+          user_id: string;
+          confidence?: number;
+          observed_from?: string;
+        }) => ({
+          head_node_id:  e.head_node_id,
+          tail_node_id:  e.tail_node_id,
+          user_id:       e.user_id,
+          relation_label: 'delayed_on',
+          valid_from:    now,
+          valid_to:      null,
+          observed_from: e.observed_from,
+          confidence:    e.confidence ?? 0.7,
+          updated_at:    now,
+        }));
+        await supabase.from('chronic_edges').insert(newEdges);
+      }
     }
   }
 

@@ -80,39 +80,45 @@ export async function executeGoogleCalendarSync(actor: SyncActor, mode: string =
 
     let allEvents: CalendarItem[] = [];
     let nextPageToken: string | undefined = currentStatus?.cursor || undefined;
-    let hasMore = true;
+    let hasMore = false;
+    const MAX_PAGES = mode === 'backfill' ? 1 : (depth === 'deep' ? 10 : 1); // 1 page per backfill chunk to avoid Vercel timeout; auto-chains via QStash
+    let pagesLoaded = 0;
 
     // --- PAGINATION LOOP ---
-    // Fetch a batch of events
-    const fetchUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-    fetchUrl.searchParams.set('maxResults', maxResults.toString());
-    fetchUrl.searchParams.set('singleEvents', 'true');
-    fetchUrl.searchParams.set('orderBy', 'startTime');
-    fetchUrl.searchParams.set('timeMin', timeMin);
-    if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
+    do {
+      const fetchUrl = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+      fetchUrl.searchParams.set('maxResults', maxResults.toString());
+      fetchUrl.searchParams.set('singleEvents', 'true');
+      fetchUrl.searchParams.set('orderBy', 'startTime');
+      fetchUrl.searchParams.set('timeMin', timeMin);
+      if (nextPageToken) fetchUrl.searchParams.set('pageToken', nextPageToken);
 
-    const response = await fetch(fetchUrl.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      cache: 'no-store',
-    });
+      const response = await fetch(fetchUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
 
-    if (!response.ok) {
-      const providerError = await response.text();
-      return { status: 502, error:  `Calendar API failed (${response.status})`, detail:  providerError.slice(0, 300) 
-       };
-    }
+      if (!response.ok) {
+        const providerError = await response.text();
+        return { status: 502, error: `Calendar API failed (${response.status})`, detail: providerError.slice(0, 300) };
+      }
 
-    const body = (await response.json()) as CalendarListResponse;
-    allEvents = body.items ?? [];
-    nextPageToken = body.nextPageToken;
-    hasMore = !!nextPageToken;
+      const body = (await response.json()) as CalendarListResponse;
+      allEvents = [...allEvents, ...(body.items ?? [])];
+      nextPageToken = body.nextPageToken;
+      hasMore = !!nextPageToken;
+      pagesLoaded++;
+    } while (hasMore && pagesLoaded < MAX_PAGES);
 
     const events = allEvents.map((item) => {
       const title = item.summary || 'Untitled event';
       const description = item.description || '';
       const ts = item.start?.dateTime || item.start?.date || new Date().toISOString();
       const content = `${title} ${description}`.trim();
-      const isFlagged = /interview|confidential|medical|legal/i.test(content);
+      const isHighRisk = /medical|legal|malpractice|lawsuit/i.test(content);
+      const isMedRisk  = /confidential|restricted|private/i.test(content);
+      const isLowRisk  = /interview|performance review/i.test(content);
+      const isFlagged  = isHighRisk || isMedRisk || isLowRisk;
 
       return {
         user_id: userId,
@@ -129,7 +135,7 @@ export async function executeGoogleCalendarSync(actor: SyncActor, mode: string =
           htmlLink: item.htmlLink,
         },
         is_flagged: isFlagged,
-        flag_severity: isFlagged ? 'LOW' : 'LOW',
+        flag_severity: isHighRisk ? 'HIGH' : isMedRisk ? 'MEDIUM' : isFlagged ? 'LOW' : null,
         flag_reason: isFlagged ? 'Potentially sensitive calendar event' : null,
       };
     });

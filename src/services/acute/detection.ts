@@ -63,11 +63,10 @@ export function classifyContentType(event: {
   if (platform === 'gmail' && isOutbound && contentLength > 300) return 'stated';
   if (platform === 'discord' && isOutbound && contentLength > 200) return 'stated';
 
-  // Lived: behavioral signals
-  if (platform === 'google-calendar' || platform === 'google_calendar') return 'lived';
+  // Lived: behavioral signals — uses exact platform keys from sync services
+  if (platform === 'google_calendar') return 'lived';
   if (platform === 'github' && event.event_type === 'commit') return 'lived';
   if (platform === 'github') return 'lived';
-  if (platform === 'vercel') return 'lived';
 
   return 'mixed';
 }

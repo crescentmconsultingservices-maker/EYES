@@ -107,6 +107,8 @@ export interface AIInvokeOptions {
   preference?: AIPreference;
   capture?: boolean;
   maxTokens?: number;
+  /** Temperature for chat calls. Defaults to 0.1. Use higher values (0.7–1.0) for creative tasks. */
+  temperature?: number;
   /** AbortSignal to cancel the in-flight request (e.g. when the chat timeout fires). */
   signal?: AbortSignal;
 }
@@ -129,6 +131,7 @@ async function gatewayChat(
   messages: { role: string; content: string }[],
   maxTokens = 1024,
   signal?: AbortSignal,
+  temperature = 0.1,
 ): Promise<string | null> {
   const base = getGatewayBase();
   const key = getGatewayKey();
@@ -143,7 +146,7 @@ async function gatewayChat(
       const res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
         headers: getGatewayHeaders(key),
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.1 }),
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
         signal,
       });
       if (res.ok) {
@@ -385,6 +388,7 @@ async function handleChat(
   capability: AICapability,
   overrideMaxTokens?: number,
   signal?: AbortSignal,
+  temperature = 0.1,
 ): Promise<string | null> {
   const isClassify = capability === 'classify' ||
     /return.*json|json only|valid json/i.test(system);
@@ -404,7 +408,7 @@ async function handleChat(
   if (gpuResult) { console.log('[AI] Sovereign GPU Chat OK'); return gpuResult; }
 
   // 2. Gateway (K1)
-  const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens, signal);
+  const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens, signal, temperature);
   if (gatewayResult) { console.log(`[AI] Gateway (${alias}) OK`); return gatewayResult; }
 
   console.error('[AI] Gateway chat failed.');
@@ -414,14 +418,14 @@ async function handleChat(
 // ── Public interface ─────────────────────────────────────────────────────────
 export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResult> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal } = options;
+  const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal, temperature } = options;
 
   if (capability === 'embed') {
     return handleEmbedding(messages[0]?.content || '', signal);
   }
 
   const startedAt = Date.now();
-  const result = await handleChat(messages, system, capability, options.maxTokens, signal);
+  const result = await handleChat(messages, system, capability, options.maxTokens, signal, temperature);
 
   if (capture && result) {
     setTimeout(() => {

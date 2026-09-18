@@ -166,7 +166,19 @@ async function runClusteringForUser(supabase: SupabaseAdminClient, userId: strin
   let umapCoords: number[][] | null = null;
 
   try {
-    const numericalVectors = typedVectors.map(vectorToArray);
+    const rawVectors = typedVectors.map(vectorToArray);
+
+    // Min-max normalize each dimension so no single feature (e.g. message_volume)
+    // dominates the DBSCAN epsilon distance.
+    const dims = rawVectors[0].length;
+    const mins = Array.from({ length: dims }, (_, d) => Math.min(...rawVectors.map((v) => v[d])));
+    const maxs = Array.from({ length: dims }, (_, d) => Math.max(...rawVectors.map((v) => v[d])));
+    const numericalVectors = rawVectors.map((row) =>
+      row.map((val, d) => {
+        const range = maxs[d] - mins[d];
+        return range === 0 ? 0 : (val - mins[d]) / range;
+      })
+    );
 
     // UMAP: reduce 11-dim state vectors → 2D for mind map visualization
     const nNeighbors = Math.min(10, numericalVectors.length - 1);
@@ -182,7 +194,7 @@ async function runClusteringForUser(supabase: SupabaseAdminClient, userId: strin
     // DBSCAN: cluster on full-dimensional vectors (not UMAP reduced)
     // epsilon = neighborhood radius, minPts = min points to form cluster
     const dbscan = new DBSCAN();
-    const minClusterSize = 5; // minimum points to form a cluster
+    const minClusterSize = Math.max(2, Math.floor(numericalVectors.length / 4)); // scales with dataset size
     const epsilon = 2.5; // tuned for normalized 11-dim state vectors
     const clusters = dbscan.run(numericalVectors, epsilon, minClusterSize);
 
@@ -310,7 +322,7 @@ async function runClusteringForUser(supabase: SupabaseAdminClient, userId: strin
     clustersWritten++;
   }
 
-  console.log(`[Clustering] ✓ user=${userId.slice(0, 8)} clusters=${clustersWritten} v${nextVersion} (Modal=${!!labels})`);
+  console.log(`[Clustering] ✓ user=${userId.slice(0, 8)} clusters=${clustersWritten} v${nextVersion} (JS-UMAP+DBSCAN=${!!labels})`);
   return clustersWritten;
 }
 
@@ -525,16 +537,17 @@ function buildWeekSummaries(vectors: StateVector[]): string {
 
 async function detectTriggerPattern(supabase: SupabaseAdminClient, userId: string, runs: { start: string }[]): Promise<string> {
   // Look at what happened in the 3 days before each run started
+  // state_vectors holds dominant_topic; memories does not have this column.
   const triggers: string[] = [];
   for (const run of runs.slice(0, 3)) {
     const beforeDate = new Date(run.start);
     beforeDate.setDate(beforeDate.getDate() - 3);
     const { data } = await supabase
-      .from('memories')
-      .select('dominant_topic, platform')
+      .from('state_vectors')
+      .select('dominant_topic')
       .eq('user_id', userId)
-      .gte('date_bucket', beforeDate.toISOString().split('T')[0])
-      .lt('date_bucket', run.start)
+      .gte('date', beforeDate.toISOString().split('T')[0])
+      .lt('date', run.start)
       .limit(5);
     if (data?.length) {
       triggers.push(data.map((d: { dominant_topic: string }) => d.dominant_topic).filter(Boolean).join(', '));
@@ -591,16 +604,41 @@ async function runEntityCorrelationsForUser(supabase: SupabaseAdminClient, userI
 
   let correlationsWritten = 0;
 
-  for (const entity of entities) {
-    const { data: mentions } = await supabase
-      .from('memories')
-      .select('date_bucket')
-      .eq('user_id', userId)
-      .contains('entities_extracted', [{ canonical_id: entity.canonical_id }])
-      .not('date_bucket', 'is', null)
-      .limit(100);
+  // Batch: fetch ALL mention date_buckets for all entities in one query,
+  // keyed by canonical_id — eliminates 200 sequential DB roundtrips.
+  const canonicalIds = entities.map((e: { canonical_id?: string | null }) => e.canonical_id).filter(Boolean) as string[];
+  const allMentionsMap = new Map<string, string[]>(); // canonical_id -> date_buckets[]
 
-    if (!mentions?.length) continue;
+  if (canonicalIds.length > 0) {
+    // Supabase doesn't support OR on jsonb contains, so we fetch memories with any entity hit
+    // within the window using a broader query, then filter in memory by canonical_id.
+    const { data: allMentions } = await supabase
+      .from('memories')
+      .select('date_bucket, entities_extracted')
+      .eq('user_id', userId)
+      .not('date_bucket', 'is', null)
+      .not('entities_extracted', 'is', null)
+      .limit(5000); // upper bound for in-memory grouping
+
+    for (const m of allMentions || []) {
+      const extracted = (m.entities_extracted || []) as Array<{ canonical_id?: string }>;
+      const bucket = m.date_bucket as string;
+      for (const ent of extracted) {
+        if (!ent.canonical_id || !canonicalIds.includes(ent.canonical_id)) continue;
+        const existing = allMentionsMap.get(ent.canonical_id) || [];
+        existing.push(bucket);
+        allMentionsMap.set(ent.canonical_id, existing);
+      }
+    }
+  }
+
+  const upsertBuffer: Record<string, unknown>[] = [];
+
+  for (const entity of entities) {
+    const mentions = (allMentionsMap.get(entity.canonical_id) || [])
+      .map((b) => ({ date_bucket: b }));
+
+    if (!mentions.length) continue;
 
     const clusterCoOccurrence: Record<string, number> = {};
     let matched = 0;
@@ -622,19 +660,24 @@ async function runEntityCorrelationsForUser(supabase: SupabaseAdminClient, userI
       const lift = Math.round((pClusterGivenEntity / pCluster) * 100) / 100;
       if (lift <= 1.2 || coCount < 2) continue;
 
-      await supabase
-        .from('entity_correlations')
-        .upsert({
-          user_id:     userId,
-          entity_id:   entity.id,
-          cluster_id:  clusterId,
-          lift_score:  lift,
-          sample_size: matched,
-          computed_at: new Date().toISOString(),
-        }, { onConflict: 'entity_id,cluster_id' });
-
+      upsertBuffer.push({
+        user_id:     userId,
+        entity_id:   entity.id,
+        cluster_id:  clusterId,
+        lift_score:  lift,
+        sample_size: matched,
+        computed_at: new Date().toISOString(),
+      });
       correlationsWritten++;
     }
+  }
+
+  // Batch upsert all correlations in chunks of 100
+  const CHUNK = 100;
+  for (let i = 0; i < upsertBuffer.length; i += CHUNK) {
+    await supabase
+      .from('entity_correlations')
+      .upsert(upsertBuffer.slice(i, i + CHUNK), { onConflict: 'entity_id,cluster_id' });
   }
 
   console.log(`[EntityCorr] ✓ user=${userId.slice(0, 8)} correlations=${correlationsWritten}`);

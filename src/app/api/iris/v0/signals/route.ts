@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
 
+// Per-user signals cache: avoids an LLM call on every page load.
+// TTL is 5 minutes — short enough to remain fresh, long enough to be cost-effective.
+const SIGNALS_CACHE_TTL_MS = 5 * 60 * 1000;
+const signalsCache = new Map<string, { signals: any[]; cachedAt: number }>();
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -39,7 +44,14 @@ export async function GET() {
     }
 
     if (!alerts || alerts.length === 0) {
-      return NextResponse.json({ signals: [] }, { status: 200 });
+      return NextResponse.json({ signals: [], cached: false }, { status: 200 });
+    }
+
+    // Check per-user cache before calling LLM
+    const cacheKey = user.id;
+    const cached = signalsCache.get(cacheKey);
+    if (cached && Date.now() - cached.cachedAt < SIGNALS_CACHE_TTL_MS) {
+      return NextResponse.json({ signals: cached.signals, cached: true }, { status: 200 });
     }
 
     // 2. Format for Strict AI Filter
@@ -96,8 +108,11 @@ ${evidenceText}`;
       console.error('Failed to parse Signals AI response:', e);
     }
 
+    // Store result in cache before returning
+    signalsCache.set(user.id, { signals, cachedAt: Date.now() });
+
     // Return the strictly filtered signals
-    return NextResponse.json({ signals }, { status: 200 });
+    return NextResponse.json({ signals, cached: false }, { status: 200 });
 
   } catch (err) {
     console.error('Signals API error:', err);

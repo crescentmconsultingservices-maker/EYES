@@ -26,15 +26,15 @@ export async function GET() {
 
     const isOrgMode = profile?.account_type === 'organization' && profile?.organization_id;
 
-    // Build base queries
-    const changesQuery = supabase
+    // Build base queries — must reassign to preserve filter chain (Supabase builders are immutable)
+    let changesQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
       .gte('updated_at', yesterdayIso)
       .order('updated_at', { ascending: false })
       .limit(5);
 
-    const commitmentsQuery = supabase
+    let commitmentsQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
       .eq('relation_label', 'commitment')
@@ -42,7 +42,7 @@ export async function GET() {
       .order('valid_from', { ascending: false })
       .limit(10);
 
-    const slippingQuery = supabase
+    let slippingQuery = supabase
       .from('chronic_edges')
       .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
       .eq('relation_label', 'delayed_on')
@@ -50,20 +50,21 @@ export async function GET() {
       .order('valid_from', { ascending: false })
       .limit(10);
 
+    // Horizon: query upcoming calendar events from memories table (not future graph edges which never exist)
     const nowIso = new Date().toISOString();
-    const horizonQuery = supabase
-      .from('chronic_edges')
-      .select('*, head:chronic_nodes!head_node_id(name, label), tail:chronic_nodes!tail_node_id(name, label)')
-      .is('valid_to', null)
-      .gt('valid_from', nowIso)
-      .order('valid_from', { ascending: true })
+    let horizonQuery = supabase
+      .from('memories')
+      .select('id, title, content, timestamp, metadata')
+      .eq('event_type', 'calendar_event')
+      .gt('timestamp', nowIso)
+      .order('timestamp', { ascending: true })
       .limit(5);
 
     if (!isOrgMode) {
-      changesQuery.eq('user_id', user.id);
-      commitmentsQuery.eq('user_id', user.id);
-      slippingQuery.eq('user_id', user.id);
-      horizonQuery.eq('user_id', user.id);
+      changesQuery = changesQuery.eq('user_id', user.id);
+      commitmentsQuery = commitmentsQuery.eq('user_id', user.id);
+      slippingQuery = slippingQuery.eq('user_id', user.id);
+      horizonQuery = horizonQuery.eq('user_id', user.id);
     }
 
     const [changesRes, commitmentsRes, slippingRes, horizonRes] = await Promise.all([

@@ -6,9 +6,16 @@ export async function runAgentOrchestrator(task: string, onOutput: (data: string
   if (agentDaemonUrl) {
     try {
       onOutput(`[INFO] Connecting to external agent daemon at ${agentDaemonUrl}...\n`);
+      const agentSecret = process.env.MCP_AGENT_SECRET;
+      if (!agentSecret) {
+        onOutput(`[WARN] MCP_AGENT_SECRET is not set — request will be unauthenticated.\n`);
+      }
       const response = await fetch(`${agentDaemonUrl}/run`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(agentSecret ? { 'Authorization': `Bearer ${agentSecret}` } : {}),
+        },
         body: JSON.stringify({ task })
       });
       if (response.ok) {

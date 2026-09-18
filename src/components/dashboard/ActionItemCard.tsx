@@ -148,11 +148,40 @@ export function ActionItemCard({
         if (onExecuted) onExecuted(action.id);
       } else {
         const errorMsg = data.executionResult?.details || data.executionResult?.error || data.error || 'Failed to execute action.';
-        alert(errorMsg);
+        console.error('[ActionCard] Execute error response:', errorMsg);
       }
     } catch (err) {
       console.error('[ActionCard] Execute error:', err);
-      alert('Network error while executing action.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // AUTO-APPROVE: executes with original (un-edited) content and flags auto_approved=true
+  const handleAutoApprove = async () => {
+    setIsProcessing(true);
+    try {
+      const res = await fetch('/api/actions/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: action.id,
+          title: action.title,
+          suggested_action: action.suggested_action,
+          auto_approved: true,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setIsExecuted(true);
+        if (onExecuted) onExecuted(action.id);
+      } else {
+        const errorMsg = data.executionResult?.details || data.executionResult?.error || data.error || 'Auto-approve failed.';
+        console.error('[ActionCard] Auto-approve error:', errorMsg);
+      }
+    } catch (err) {
+      console.error('[ActionCard] Auto-approve network error:', err);
     } finally {
       setIsProcessing(false);
     }
@@ -366,7 +395,7 @@ export function ActionItemCard({
               className={styles.editBtn}
               style={{ color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', padding: '6px 14px', fontSize: '0.8rem' }}
               disabled={isProcessing}
-              onClick={(e) => { e.stopPropagation(); handleApprove(); }}
+              onClick={(e) => { e.stopPropagation(); handleAutoApprove(); }}
             >
               AUTO-APPROVE
             </button>

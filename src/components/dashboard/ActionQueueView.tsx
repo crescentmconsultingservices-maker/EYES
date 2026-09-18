@@ -8,7 +8,7 @@ import { BoltIcon } from '../common/icons/PlatformIcons';
 import { createClient } from '@/utils/supabase/client';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { ActionItemCard } from './ActionItemCard';
+import { ActionItemCard, getConversationalSummary } from './ActionItemCard';
 import type { ActionItem } from '@/types/dashboard';
 
 interface RecentlyHandledItem {
@@ -47,37 +47,6 @@ function useCountdown(lastRunAt: string | null, intervalMs = 30 * 60 * 1000) {
     return () => clearInterval(id);
   }, [lastRunAt, intervalMs]);
   return remaining;
-}
-
-function getConversationalSummary(action: ActionItem) {
-  const platformName = action.platform.toLowerCase() === 'gmail' ? 'an email' : `a ${action.platform} message`;
-  let sender = 'Someone';
-  
-  const match = action.description?.match(/^([a-zA-Z0-9\s\-_]+)\s+asked:/i);
-  if (match) {
-    sender = match[1];
-  } else if (action.description?.includes('asked:')) {
-    sender = action.description.split('asked:')[0].trim();
-  } else {
-    const firstWord = action.title.split(' ')[0] || '';
-    const actionVerbs = ['review', 'send', 'create', 'reply', 'submit', 'schedule', 'update', 'approve', 'dismiss', 'check', 'verify', 'vote', 'invite', 'trade', 'resolve', 'attend'];
-    if (firstWord && !actionVerbs.includes(firstWord.toLowerCase())) {
-      sender = firstWord;
-    } else {
-      sender = 'Someone';
-    }
-  }
-
-  let cleanDesc = action.description || '';
-  if (cleanDesc.includes('Citations:')) {
-    cleanDesc = cleanDesc.split('Citations:')[0].trim();
-  }
-  cleanDesc = cleanDesc.replace(/^.*asked:\s*/i, '').replace(/^"|"$/g, '').trim();
-  if (!cleanDesc) {
-    cleanDesc = action.title;
-  }
-
-  return { sender, platformName, cleanDesc };
 }
 
 function parseCitations(desc: string) {

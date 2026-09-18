@@ -200,12 +200,19 @@ ${evidenceText || 'No records found.'}`;
     }
 
     // 5. Return the strict IRIS API v0 Schema
+    // Derive believed_since from oldest supporting evidence, not current wall-clock time
+    const believedSince = finalReceipts.length > 0
+      ? (finalReceipts[0] as any).valid_from ?? new Date().toISOString()
+      : (intentData.length > 0
+        ? (intentData[0] as any).valid_from ?? new Date().toISOString()
+        : new Date().toISOString());
+
     return NextResponse.json({
       understanding: {
         answer,
         confidence,
         temporal_validity: {
-          believed_since: new Date().toISOString(),
+          believed_since: believedSince,
           is_current: true
         },
         receipts: finalReceipts,

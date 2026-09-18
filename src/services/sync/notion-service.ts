@@ -124,6 +124,7 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
       console.error('notion sync auth error: token invalid or corrupted');
       return { status: 401, error:  'Unable to authenticate Notion connection.'  };
     }
+
     const accessToken = decryptedToken;
 
     const isBackfill = mode === 'backfill';
@@ -164,8 +165,13 @@ export async function executeNotionSync(actor: SyncActor, mode: string = 'delta'
 
       if (!searchResponse.ok) {
         if (searchResponse.status === 401 || searchResponse.status === 403) {
-          const detail = await searchResponse.text();
-          throw new Error(`Notion auth failed: ${searchResponse.status} ${detail}`);
+          await upsertSyncStatusSafely(supabase, {
+            user_id: userId,
+            platform: 'notion',
+            status: 'error',
+            error_message: 'Notion token revoked or expired. Please reconnect Notion in Settings.',
+          });
+          return { status: 401, error: 'Notion authentication failed. Please reconnect Notion in Settings.' };
         }
 
         hasMore = false;

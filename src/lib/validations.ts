@@ -11,6 +11,8 @@ export const ActionApproveSchema = z.object({
   suggested_action: z.string().max(10_000).optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
+  /** Set by AUTO-APPROVE path — bypasses edit flow and logs auto-approval intent */
+  auto_approved: z.boolean().optional().default(false),
 });
 export type ActionApproveInput = z.infer<typeof ActionApproveSchema>;
 

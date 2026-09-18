@@ -1,6 +1,7 @@
 import { SyncResult } from '@/services/sync/provider-registry';
 import { type SyncActor } from '@/utils/sync/actor';
 import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/upsert';
+import { decryptToken } from '@/services/auth/tokens';
 
 export interface MetaPagingCursors {
   whatsapp_after?: string;
@@ -50,7 +51,11 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       };
     }
 
-    const accessToken = tokenRow.access_token;
+    // Decrypt token at rest — consistent with Notion and other OAuth providers
+    const accessToken = decryptToken(tokenRow.access_token) || tokenRow.access_token;
+    if (!accessToken) {
+      return { status: 401, error: 'Meta token invalid or corrupted. Please reconnect.' };
+    }
     const isBackfill = mode === 'backfill';
 
     await Promise.all([
@@ -164,7 +169,8 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
 
     // 5.5 Fetch Facebook Profile and Feed
     try {
-      const fbMeUrl = new URL('https://graph.facebook.com/v19.0/me');
+      // Fetch Facebook Profile
+      const fbMeUrl = new URL('https://graph.facebook.com/v26.0/me');
       fbMeUrl.searchParams.set('access_token', accessToken);
       fbMeUrl.searchParams.set('fields', 'id,name,picture,link');
 
@@ -190,7 +196,7 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
         }
       }
 
-      const fbFeedUrl = new URL('https://graph.facebook.com/v19.0/me/posts');
+      const fbFeedUrl = new URL('https://graph.facebook.com/v26.0/me/posts');
       fbFeedUrl.searchParams.set('access_token', accessToken);
       fbFeedUrl.searchParams.set('fields', 'id,message,story,created_time');
       fbFeedUrl.searchParams.set('limit', '25');
@@ -220,26 +226,10 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       console.warn('[Meta Sync] Facebook profile/feed sync note:', fbErr);
     }
 
-    // 6. Save raw events & memories
+    // Save raw events — upsertRawEventsSafely handles memories upsert internally,
+    // so no second write loop is needed here.
     if (rawEvents.length > 0) {
       await upsertRawEventsSafely(supabase, rawEvents);
-
-      // Also upsert to memories for immediate cognitive access
-      for (const ev of rawEvents) {
-        try {
-          await supabase.from('memories').upsert({
-            user_id: ev.user_id,
-            platform: ev.platform,
-            title: ev.title,
-            content: ev.content,
-            timestamp: ev.timestamp,
-            event_type: ev.event_type,
-            author: ev.author,
-          }, { onConflict: 'user_id,platform,title,timestamp' });
-        } catch {
-          // ignore duplicate memories
-        }
-      }
     }
 
     const hasMore = hasMoreWA || hasMoreIG;

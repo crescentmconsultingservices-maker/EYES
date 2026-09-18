@@ -160,7 +160,8 @@ function maskPII(text: string): string {
   return text
     .replace(/\b(?:\d[ -]*?){13,16}\b/g, '[REDACTED_CARD]')
     .replace(/\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/g, '[REDACTED_SSN]')
-    .replace(/(password|pwd|passcode)\s*[:=]\s*([^\s]+)/gi, '$1: [REDACTED]');
+    .replace(/(password|pwd|passcode)\s*[:=]\s*([^\s]+)/gi, '$1: [REDACTED]')
+    .replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '[REDACTED_EMAIL]');
 }
 
 function normalizeHistory(raw: unknown): Msg[] {
@@ -486,6 +487,7 @@ async function storeNote(
 
 const CHAT_TIMEOUT_MS = 60_000;
 import { ChatRequestSchema, validateBody } from '@/lib/validations';
+import type { ActionItem } from '@/types/dashboard';
 
 async function handleChat(request: Request): Promise<Response> {
   try {
@@ -518,6 +520,9 @@ async function handleChat(request: Request): Promise<Response> {
       // fallback to ISO if Intl fails
     }
     const environmentalContext = `User is located in ${city}, ${country}. Their local time is ${localTime} (${timezone}).`;
+
+    // Create a shared AbortSignal for the entire request lifetime
+    const chatAbort = AbortSignal.timeout(CHAT_TIMEOUT_MS);
 
     const historyMsgs = normalizeHistory(history).slice(-8); // last 4 turns
 
@@ -564,7 +569,7 @@ async function handleChat(request: Request): Promise<Response> {
     const isActionInquiry = /action|task|todo|pending|queue|follow[\s-]?up|schedul|reply|approve|gst|email|what.*do|what.*plate|what.*miss|remind|remaind|calend|both/i.test(message) ||
       (Array.isArray(historyMsgs) && historyMsgs.some(h => /action.*queue|pending action|gst reg|tradeindia/i.test(h.content)));
 
-    let pendingActions: any[] = [];
+    let pendingActions: ActionItem[] = [];
     if (isActionInquiry) {
       try {
         const { data: actionsData, error: actionsError } = await supabase
@@ -659,8 +664,12 @@ async function handleChat(request: Request): Promise<Response> {
           if (gcalToken) {
             for (let i = 0; i < pendingActions.length; i++) {
               const act = pendingActions[i];
-              const startIso = (i === 0 ? t1 : t2).toISOString();
-              const endIso = (i === 0 ? t1End : t2End).toISOString();
+              const slotStart = new Date(Date.now() + 24 * 60 * 60 * 1000);
+              slotStart.setHours(10 + Math.floor(i * 0.5), (i % 2) * 30, 0, 0);
+              const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000);
+              const startIso = slotStart.toISOString();
+              const endIso = slotEnd.toISOString();
+
               const calRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                 method: 'POST',
                 headers: {
@@ -755,6 +764,7 @@ The user inquired about their pending actions/tasks. The above items are current
         messages: fullMessages,
         system: systemPrompt,
         preference: 'auto',
+        signal: chatAbort,
       });
 
       // Step 7: update summary after stream completes (best-effort, background)

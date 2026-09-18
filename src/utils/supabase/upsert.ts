@@ -157,44 +157,6 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
   // Fire acute detection asynchronously (non-blocking)
   fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
   fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
-  return;
-
-  const groupedIds = new Map<string, { userId: string; platform: string; ids: string[] }>();
-
-  dedupedEvents.forEach((event) => {
-    const groupKey = `${event.user_id}::${event.platform}`;
-    const group = groupedIds.get(groupKey);
-    if (!group) {
-      groupedIds.set(groupKey, {
-        userId: event.user_id,
-        platform: event.platform,
-        ids: [event.platform_id],
-      });
-      return;
-    }
-    group.ids.push(event.platform_id);
-  });
-
-  for (const group of groupedIds.values()) {
-    const uniqueIds = Array.from(new Set(group.ids));
-    if (uniqueIds.length === 0) continue;
-
-    const { error: deleteError } = await supabase
-      .from('memories')
-      .delete()
-      .eq('user_id', group.userId)
-      .eq('platform', group.platform)
-      .in('source_id', uniqueIds);
-
-    if (deleteError) throw deleteError;
-  }
-
-  const { error: insertError } = await supabase.from('memories').insert(memoryRows);
-  if (insertError) throw insertError;
-
-  // Fire acute detection asynchronously (non-blocking)
-  fireAcuteDetection(supabase, dedupedEvents).catch(() => {});
-  fireEntityExtraction(supabase, dedupedEvents).catch(() => {});
 }
 
 /**
