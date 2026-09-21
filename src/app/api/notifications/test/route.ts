@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import webpush from 'web-push';
 
-webpush.setVapidDetails(
-  'mailto:support@eyes.app',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string,
-  process.env.VAPID_PRIVATE_KEY as string
-);
+if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:support@eyes.app',
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 export async function POST(req: Request) {
   try {
