@@ -112,9 +112,6 @@ export function useAuthSession(
           const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
           if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
             console.log('[Auth] MFA Challenge Required. Pausing session hydration.');
-            if (typeof window !== 'undefined' && window.location.pathname !== '/mfa') {
-              window.location.replace('/mfa');
-            }
             if (mounted) setIsLoading(false);
             return;
           }
@@ -163,9 +160,6 @@ export function useAuthSession(
           const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
           if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
             console.log('[Auth] Initial session requires MFA Challenge. Pausing hydration.');
-            if (typeof window !== 'undefined' && window.location.pathname !== '/mfa') {
-              window.location.replace('/mfa');
-            }
             if (mounted) setIsLoading(false);
             return;
           }

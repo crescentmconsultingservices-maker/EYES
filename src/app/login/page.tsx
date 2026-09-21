@@ -270,7 +270,11 @@ export default function LoginPage() {
       } else {
         const result = await login(email, password);
         if (result.success) {
-          router.push("/");
+          if (result.mfaRequired) {
+            router.push("/mfa");
+          } else {
+            router.push("/");
+          }
         } else {
           setError(result.message || "Sign-in failed. Please check your credentials.");
         }

@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
     
     if (!exchangeError && data.session) {
       console.log('[Auth Callback] Successfully exchanged code for session.');
+      
+      // Server-side check for MFA requirements
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+        console.log('[Auth Callback] User requires MFA. Routing to /mfa');
+        return NextResponse.redirect(`${requestUrl.origin}/mfa`);
+      }
+      
       return response;
     }
     
