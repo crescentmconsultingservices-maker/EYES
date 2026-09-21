@@ -200,7 +200,7 @@ function InputField({ id, label, type, placeholder, value, onChange, icon, right
 export default function LoginPage() {
   const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { user, isLoading: isAuthLoading, login, resetPassword, loginWithGoogle, loginWithDiscord } = useAuth();
+  const { user, isLoading: isAuthLoading, login, resetPassword, loginWithGoogle, loginWithDiscord, verifyMfa, supabase } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -214,6 +214,11 @@ export default function LoginPage() {
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [backHovered, setBackHovered] = useState(false);
+
+  // MFA State
+  const [isMfaMode, setIsMfaMode] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState("");
 
   useEffect(() => {
     if (!isAuthLoading && user) {
@@ -235,6 +240,34 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
+
+    if (isMfaMode) {
+      if (!mfaCode.trim() || mfaCode.length !== 6) {
+        setError("Please enter a valid 6-digit code.");
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+        if (challengeError) {
+          setError(challengeError.message);
+          setIsLoading(false);
+          return;
+        }
+        
+        const result = await verifyMfa(mfaFactorId, challengeData.id, mfaCode);
+        if (result.success) {
+          router.push("/");
+        } else {
+          setError(result.message || "Invalid authentication code.");
+        }
+      } catch (err) {
+        setError("An unexpected network error occurred.");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     if (!email.trim() || (!isForgotPasswordMode && !password.trim())) {
       setError(isForgotPasswordMode ? "Please enter your email." : "Please enter your email and password.");
@@ -259,7 +292,23 @@ export default function LoginPage() {
       } else {
         const result = await login(email, password);
         if (result.success) {
-          router.push("/");
+          if (result.mfaRequired) {
+            // Fetch enrolled factors
+            const { data: factorData, error: factorError } = await supabase.auth.mfa.listFactors();
+            if (factorError) {
+              setError("Failed to load MFA factors.");
+              return;
+            }
+            const totpFactor = factorData.all.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
+            if (totpFactor) {
+              setMfaFactorId(totpFactor.id);
+              setIsMfaMode(true);
+            } else {
+              setError("MFA required but no verified factors found.");
+            }
+          } else {
+            router.push("/");
+          }
         } else {
           setError(result.message || "Sign-in failed. Please check your credentials.");
         }
@@ -270,7 +319,7 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, isForgotPasswordMode, login, resetPassword, router]);
+  }, [email, password, isForgotPasswordMode, login, resetPassword, router, isMfaMode, mfaCode, mfaFactorId, verifyMfa, supabase]);
 
   return (
     <div
@@ -374,7 +423,7 @@ export default function LoginPage() {
             marginBottom: 32,
           }}
         >
-          {isForgotPasswordMode ? "Reset Password" : (
+          {isMfaMode ? "Two-Factor Authentication" : isForgotPasswordMode ? "Reset Password" : (
             <>
               Sign in to your{" "}
               <em
@@ -424,7 +473,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {(!showEmailForm && !isForgotPasswordMode) ? (
+        {(!showEmailForm && !isForgotPasswordMode && !isMfaMode) ? (
           <div>
             {/* OAuth buttons */}
             <div
@@ -506,17 +555,35 @@ export default function LoginPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            {/* Email Field */}
-            <InputField
-              id="email" label="Email" type="email"
-              placeholder="you@example.com"
-              value={email} onChange={e => setEmail(e.target.value)}
-              icon={
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              }
-            />
+            {isMfaMode ? (
+              <>
+                <p style={{ color: "#aaa", fontSize: "14px", marginBottom: "20px" }}>
+                  Enter the 6-digit code from your authenticator app.
+                </p>
+                <InputField
+                  id="mfaCode" label="Authentication Code" type="text"
+                  placeholder="000000"
+                  value={mfaCode} onChange={e => setMfaCode(e.target.value)}
+                  icon={
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  }
+                />
+              </>
+            ) : (
+              <>
+                {/* Email Field */}
+                <InputField
+                  id="email" label="Email" type="email"
+                  placeholder="you@example.com"
+                  value={email} onChange={e => setEmail(e.target.value)}
+                  icon={
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  }
+                />
 
             {/* Password Field - Hide in Forgot Password mode */}
             {!isForgotPasswordMode && (
@@ -555,6 +622,8 @@ export default function LoginPage() {
                 </button>
               </div>
             )}
+            </>
+            )}
 
             {/* Submit Button */}
             <button
@@ -586,8 +655,8 @@ export default function LoginPage() {
               }}
             >
               {isLoading 
-                ? (isForgotPasswordMode ? "Sending Link..." : "Accessing Sanctum...") 
-                : (isForgotPasswordMode ? "Send Reset Link" : "Sign In to Sanctum")}
+                ? (isMfaMode ? "Verifying..." : isForgotPasswordMode ? "Sending Link..." : "Accessing Sanctum...") 
+                : (isMfaMode ? "Verify Code" : isForgotPasswordMode ? "Send Reset Link" : "Sign In to Sanctum")}
               {!isLoading && (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
@@ -602,6 +671,7 @@ export default function LoginPage() {
                 onClick={() => {
                   setShowEmailForm(false);
                   setIsForgotPasswordMode(false);
+                  setIsMfaMode(false);
                   setError("");
                   setSuccessMsg("");
                 }}

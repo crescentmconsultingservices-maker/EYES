@@ -88,10 +88,12 @@ function readExportFormat(value: string | null): ExportFormat {
   return 'json';
 }
 
-function getExportSigningKey() {
-  const key = process.env.EXPORT_SIGNING_KEY || process.env.TOKEN_ENCRYPTION_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!key) return null;
-  return key;
+function getExportSigningKey(): string | null {
+  // Priority: dedicated export key > token encryption key.
+  // NEVER fall back to the public anon key — it is publicly known and would
+  // allow any caller to forge a valid export signature.
+  const key = process.env.EXPORT_SIGNING_KEY || process.env.TOKEN_ENCRYPTION_KEY;
+  return key || null;
 }
 
 function buildSignedExportToken(payload: SignedExportPayload, signingKey: string) {

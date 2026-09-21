@@ -1,6 +1,37 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import crypto from 'node:crypto';
 import { classifyContentType, processAcuteDetection } from '@/services/acute/detection';
+import { encryptToken } from '@/services/auth/tokens';
 import { getOrCreateNodeId } from '@/utils/supabase/graph';
+
+/**
+ * Returns a SHA-256 hex digest of the content string.
+ * Used as a deduplication anchor that remains stable even after content
+ * encryption — callers can compare hashes without needing to decrypt.
+ */
+function contentHash(text: string): string {
+  return crypto.createHash('sha256').update(text, 'utf8').digest('hex');
+}
+
+/**
+ * Encrypts memory content if ENCRYPT_MEMORY_CONTENT=true is set.
+ * When active, the raw content is AES-256-GCM encrypted before persisting
+ * so a DB-level breach (service_role key stolen) yields only ciphertext.
+ *
+ * NOTE: Enabling this disables the generated FTS tsvector column and makes
+ * hybrid_search fall back to vector-only search. Toggle deliberately.
+ */
+function maybeEncryptContent(text: string): string {
+  if (process.env.ENCRYPT_MEMORY_CONTENT !== 'true') return text;
+  try {
+    return encryptToken(text);
+  } catch (err) {
+    // In production, encryptToken throws if TOKEN_ENCRYPTION_KEY is absent.
+    // We re-throw so the sync job fails loudly rather than silently storing plaintext.
+    console.error('[Upsert] Content encryption failed — aborting write:', err instanceof Error ? err.message : err);
+    throw err;
+  }
+}
 
 type PostgrestErrorLike = {
   code?: string;
@@ -115,13 +146,23 @@ export async function upsertRawEventsSafely(supabase: SupabaseClient, events: Re
       }
     }
 
+    // Compute a stable SHA-256 deduplication hash from the plaintext content.
+    // This is stored unconditionally and works without decryption.
+    const hash = contentHash(content);
+
+    // Optionally encrypt content at rest (requires ENCRYPT_MEMORY_CONTENT=true).
+    // Encryption happens AFTER the acute detection pass below reads the plaintext,
+    // but BEFORE the row is written to the database.
+    const storedContent = maybeEncryptContent(content);
+
     return {
       user_id: event.user_id,
       platform: event.platform,
       source_id: event.platform_id,
       event_type: event.event_type,
       title: title,
-      content: content,
+      content: storedContent,
+      content_hash: hash,
       author: author,
       timestamp: event.timestamp,
       metadata: event.metadata,

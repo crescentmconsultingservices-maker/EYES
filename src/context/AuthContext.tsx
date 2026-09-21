@@ -33,6 +33,7 @@ export interface User {
 export type AuthResult = {
   success: boolean;
   message?: string;
+  mfaRequired?: boolean;
 };
 
 interface AuthContextType {
@@ -47,6 +48,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<AuthResult>;
   supabase: ReturnType<typeof createClient>;
   updateUser: (updates: Partial<User>) => Promise<AuthResult>;
+  verifyMfa: (factorId: string, challengeId: string, code: string) => Promise<AuthResult>;
   theme: 'dark' | 'light' | 'paper' | 'ember';
   setGlobalTheme: (theme: 'dark' | 'light' | 'paper' | 'ember') => void;
 }
@@ -446,7 +448,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) return { success: false, message: error.message };
     if (!data.user) return { success: false, message: 'Identity missing.' };
     
+    // Check if MFA is required (AAL1 session, but user has enrolled factors)
+    const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalError) return { success: false, message: aalError.message };
+    
+    if (aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+      return { success: true, mfaRequired: true };
+    }
+    
     setUser(await syncProfile({ id: data.user.id, email: data.user.email, metadata: data.user.user_metadata }));
+    return { success: true };
+  }, [supabase, syncProfile]);
+
+  const verifyMfa = useCallback(async (factorId: string, challengeId: string, code: string): Promise<AuthResult> => {
+    const { data, error } = await supabase.auth.mfa.verify({ factorId, challengeId, code });
+    if (error) return { success: false, message: error.message };
+    
+    // Refresh session to get AAL2
+    const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !session?.user) return { success: false, message: 'Failed to refresh session after MFA.' };
+
+    setUser(await syncProfile({ id: session.user.id, email: session.user.email, metadata: session.user.user_metadata }));
     return { success: true };
   }, [supabase, syncProfile]);
 
@@ -626,7 +648,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, loginWithGoogle, loginWithGithub, loginWithDiscord, logout, resetPassword, supabase, updateUser, theme, setGlobalTheme }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, loginWithGoogle, loginWithGithub, loginWithDiscord, logout, resetPassword, supabase, updateUser, verifyMfa, theme, setGlobalTheme }}>
       {children}
     </AuthContext.Provider>
   );
