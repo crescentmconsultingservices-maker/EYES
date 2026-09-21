@@ -24,6 +24,9 @@ vi.mock('@supabase/ssr', () => ({
         data: { session: { user: { id: 'u1' } } },
         error: null,
       }),
+      mfa: {
+        getAuthenticatorAssuranceLevel: vi.fn().mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal1' } })
+      }
     },
   })),
 }));
