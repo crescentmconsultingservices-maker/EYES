@@ -133,6 +133,7 @@ export function useAuth() {
 const PUBLIC_ROUTES = [
   '/',
   '/login',
+  '/mfa',
   '/signup',
   '/privacy-policy',
   '/cookie-policy',
