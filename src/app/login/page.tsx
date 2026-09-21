@@ -226,27 +226,8 @@ export default function LoginPage() {
     }
   }, [user, isAuthLoading, router]);
 
-  // Automatic MFA Challenge Detection (for OAuth or Page Refresh)
-  useEffect(() => {
-    const checkExistingMfaRequirement = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
-        const { data: factorData } = await supabase.auth.mfa.listFactors();
-        if (factorData) {
-          const totpFactor = factorData.all.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
-          if (totpFactor) {
-            setMfaFactorId(totpFactor.id);
-            setIsMfaMode(true);
-            setIsLoading(false);
-          }
-        }
-      }
-    };
-    checkExistingMfaRequirement();
-  }, [supabase]);
+  // We removed the automatic MFA challenge detection on mount
+  // to give the user explicit control over when to proceed.
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -257,6 +238,31 @@ export default function LoginPage() {
     const t = setTimeout(() => setLoaded(true), 60);
     return () => clearTimeout(t);
   }, []);
+
+  // Intercept OAuth clicks to check if they actually just need to complete MFA
+  const handleOAuthClick = async (provider: 'github' | 'google') => {
+    setError("");
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+        const { data: factorData } = await supabase.auth.mfa.listFactors();
+        if (factorData) {
+          const totpFactor = factorData.all.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
+          if (totpFactor) {
+            setMfaFactorId(totpFactor.id);
+            setIsMfaMode(true);
+            return;
+          }
+        }
+      }
+    }
+    
+    // If no MFA required, proceed with standard OAuth
+    if (provider === 'github') loginWithGithub();
+    if (provider === 'google') loginWithGoogle();
+  };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -507,7 +513,7 @@ export default function LoginPage() {
               }}
             >
               <OAuthButton
-                onClick={() => loginWithGithub()}
+                onClick={() => handleOAuthClick('github')}
                 label="Login with GitHub"
                 icon={
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
@@ -516,7 +522,7 @@ export default function LoginPage() {
                 }
               />
               <OAuthButton
-                onClick={() => loginWithGoogle()}
+                onClick={() => handleOAuthClick('google')}
                 label="Login with Google"
                 icon={
                   <svg width="18" height="18" viewBox="0 0 24 24">
