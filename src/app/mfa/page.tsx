@@ -337,7 +337,7 @@ export default function MfaPage() {
           transition: "opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32, color: "#fff" }}>
           <EyesLogo width={110} height={26} />
         </div>
 
