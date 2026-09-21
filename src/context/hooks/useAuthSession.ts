@@ -108,6 +108,14 @@ export function useAuthSession(
         if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
 
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+          // Check for MFA requirements
+          const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+            console.log('[Auth] MFA Challenge Required. Pausing session hydration.');
+            if (mounted) setIsLoading(false);
+            return;
+          }
+
           if (lastSyncedUserIdRef.current === session.user.id) {
             console.log('[Auth] Already synced this user, skipping duplicate event.');
             return;
@@ -148,6 +156,14 @@ export function useAuthSession(
         }
 
         if (session?.user && mounted) {
+          // Check for MFA requirements
+          const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+            console.log('[Auth] Initial session requires MFA Challenge. Pausing hydration.');
+            if (mounted) setIsLoading(false);
+            return;
+          }
+
           lastSyncedUserIdRef.current = session.user.id;
           const profile = await syncProfile({
             id: session.user.id,

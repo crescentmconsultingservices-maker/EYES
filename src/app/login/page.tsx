@@ -226,6 +226,28 @@ export default function LoginPage() {
     }
   }, [user, isAuthLoading, router]);
 
+  // Automatic MFA Challenge Detection (for OAuth or Page Refresh)
+  useEffect(() => {
+    const checkExistingMfaRequirement = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+        const { data: factorData } = await supabase.auth.mfa.listFactors();
+        if (factorData) {
+          const totpFactor = factorData.all.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
+          if (totpFactor) {
+            setMfaFactorId(totpFactor.id);
+            setIsMfaMode(true);
+            setIsLoading(false);
+          }
+        }
+      }
+    };
+    checkExistingMfaRequirement();
+  }, [supabase]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlError = params.get("error");
