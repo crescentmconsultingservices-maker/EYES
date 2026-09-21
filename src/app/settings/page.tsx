@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { user, updateUser, theme, setGlobalTheme, supabase } = useAuth();
   const { openConfirm } = useConfirm();
-  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'theme' | 'feedback' | 'organization'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'privacy' | 'security' | 'notifications' | 'theme' | 'feedback' | 'organization'>('profile');
   const [riskSensitivity, setRiskSensitivity] = useState('MEDIUM');
   const [syncDepth, setSyncDepth] = useState('balanced');
   const [excludedSenders, setExcludedSenders] = useState<string[]>([]);
@@ -658,6 +658,12 @@ export default function SettingsPage() {
                 Secure Access
               </button>
               <button 
+                className={`${styles.tabBtn} ${activeTab === 'notifications' ? styles.tabActive : ''}`}
+                onClick={() => setActiveTab('notifications')}
+              >
+                Notifications
+              </button>
+              <button 
                 className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.tabActive : ''}`}
                 onClick={() => setActiveTab('feedback')}
               >
@@ -939,29 +945,6 @@ export default function SettingsPage() {
                     )}
                   </div>
                   
-                  <div className={styles.divider} style={{ margin: '32px 0' }} />
-
-                  <div className={styles.securityInfo}>
-                    <h3>Web Push Notifications</h3>
-                    <p className={styles.fieldDesc}>Receive native desktop/mobile alerts when background tasks finish or security events occur.</p>
-                    {pushMessage && <p style={{ color: pushMessage.includes('Error') || pushMessage.includes('denied') ? 'var(--accent-red)' : '#10b981', fontSize: '13px', marginTop: '8px' }}>{pushMessage}</p>}
-                    
-                    {isPushEnabled ? (
-                      <div style={{ marginTop: '16px' }}>
-                        <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 600 }}>✅ Push Notifications are active on this device.</p>
-                        <button onClick={handleTestWebPush} className={styles.saveBtn} style={{ marginTop: '12px', width: 'auto', padding: '10px 16px' }}>
-                          Send Test Notification
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={handleEnableWebPush} disabled={isPushSubscribing} className={styles.saveBtn} style={{ marginTop: '16px', width: 'auto', padding: '10px 16px' }}>
-                        {isPushSubscribing ? 'Enabling...' : 'Enable Notifications'}
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className={styles.divider} style={{ margin: '32px 0' }} />
-
                   <div className={styles.securityInfo}>
                     <h3>OAuth Connections</h3>
                     <p>Your account is currently secured via GitHub.</p>
@@ -995,6 +978,29 @@ export default function SettingsPage() {
                       </div>
                       <button className={styles.dangerBtn} onClick={handleDeleteAccount}>Delete Account</button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'notifications' && (
+                <div className={styles.securitySection}>
+                  <div className={styles.securityInfo}>
+                    <h3>Web Push Notifications</h3>
+                    <p className={styles.fieldDesc}>Receive native desktop/mobile alerts when background tasks finish or security events occur.</p>
+                    {pushMessage && <p style={{ color: pushMessage.includes('Error') || pushMessage.includes('denied') ? 'var(--accent-red)' : '#10b981', fontSize: '13px', marginTop: '8px' }}>{pushMessage}</p>}
+                    
+                    {isPushEnabled ? (
+                      <div style={{ marginTop: '16px' }}>
+                        <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 600 }}>✅ Push Notifications are active on this device.</p>
+                        <button onClick={handleTestWebPush} className={styles.saveBtn} style={{ marginTop: '12px', width: 'auto', padding: '10px 16px' }}>
+                          Send Test Notification
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={handleEnableWebPush} disabled={isPushSubscribing} className={styles.saveBtn} style={{ marginTop: '16px', width: 'auto', padding: '10px 16px' }}>
+                        {isPushSubscribing ? 'Enabling...' : 'Enable Notifications'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
