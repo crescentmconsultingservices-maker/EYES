@@ -312,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from('user_profiles')
           .upsert(newProfile, { onConflict: 'user_id' })
-          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id,full_name,pronouns')
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
         5000,
@@ -333,6 +333,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onboardingCompleted: final.onboarding_completed ?? false,
         accountType: (final.account_type as 'individual' | 'organization') || 'individual',
         organizationId: final.organization_id || null,
+        fullName: final.full_name || null,
+        pronouns: final.pronouns || null,
       };
     } catch (err) {
       syncInProgressRef.current = false;
@@ -350,6 +352,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onboardingCompleted: false,
         accountType: 'individual',
         organizationId: null,
+        fullName: null,
+        pronouns: null,
       };
     }
   }, [supabase]);
