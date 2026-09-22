@@ -809,7 +809,7 @@ export default function SettingsPage() {
                         style={{
                           width: '40px',
                           height: '24px',
-                          background: gdprConsent ? '#10b981' : 'rgba(255, 255, 255, 0.1)',
+                          background: gdprConsent ? 'var(--text-primary)' : 'var(--bg-secondary)',
                           borderRadius: '12px',
                           position: 'relative',
                           cursor: 'pointer',
@@ -882,11 +882,11 @@ export default function SettingsPage() {
                     <h3>Two-Factor Authentication (MFA)</h3>
                     <p className={styles.fieldDesc}>Add an extra layer of security to your account using an authenticator app.</p>
                     
-                    {mfaError && <p style={{ color: 'var(--accent-red)', fontSize: '13px', marginTop: '8px' }}>{mfaError}</p>}
+                    {mfaError && <p style={{ color: 'var(--text-primary)', fontSize: '13px', marginTop: '8px' }}>{mfaError}</p>}
                     
                     {mfaFactors.filter(f => f.status === 'verified').length > 0 ? (
                       <div style={{ marginTop: '16px' }}>
-                        <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 600 }}>✅ Two-Factor Authentication is active.</p>
+                        <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600 }}>Two-Factor Authentication is active.</p>
                         {mfaFactors.filter(f => f.status === 'verified').map(f => (
                           <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
                             <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Authenticator App (Added {new Date(f.created_at).toLocaleDateString()})</span>
@@ -942,7 +942,7 @@ export default function SettingsPage() {
                       <div>
                         <strong>Purge Data Archive</strong>
                         <p>Wipe all indexed memories from all connected platforms.</p>
-                        {wipeError && <p style={{ color: 'var(--accent-red, #ef4444)', fontSize: '12px', marginTop: '4px' }}>{wipeError}</p>}
+                        {wipeError && <p style={{ color: 'var(--text-primary)', fontSize: '12px', marginTop: '4px' }}>{wipeError}</p>}
                       </div>
                       <button 
                         className={styles.dangerBtnOutline}
@@ -956,7 +956,7 @@ export default function SettingsPage() {
                       <div>
                         <strong>Delete Account</strong>
                         <p>Permanently remove your account and all associated data.</p>
-                        {deleteError && <p style={{ color: 'var(--accent-red, #ef4444)', fontSize: '12px', marginTop: '4px' }}>{deleteError}</p>}
+                        {deleteError && <p style={{ color: 'var(--text-primary)', fontSize: '12px', marginTop: '4px' }}>{deleteError}</p>}
                       </div>
                       <button className={styles.dangerBtn} onClick={handleDeleteAccount}>Delete Account</button>
                     </div>
@@ -969,11 +969,11 @@ export default function SettingsPage() {
                   <div className={styles.securityInfo}>
                     <h3>Web Push Notifications</h3>
                     <p className={styles.fieldDesc}>Receive native desktop/mobile alerts when background tasks finish or security events occur.</p>
-                    {pushMessage && <p style={{ color: pushMessage.includes('Error') || pushMessage.includes('denied') ? 'var(--accent-red)' : '#10b981', fontSize: '13px', marginTop: '8px' }}>{pushMessage}</p>}
+                    {pushMessage && <p style={{ color: 'var(--text-primary)', fontSize: '13px', marginTop: '8px' }}>{pushMessage}</p>}
                     
                     {isPushEnabled ? (
                       <div style={{ marginTop: '16px' }}>
-                        <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 600 }}>✅ Push Notifications are active on this device.</p>
+                        <p style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600 }}>Push Notifications are active on this device.</p>
                         <button onClick={handleTestWebPush} className={styles.saveBtn} style={{ marginTop: '12px', width: 'auto', padding: '10px 16px' }}>
                           Send Test Notification
                         </button>
@@ -1011,8 +1011,8 @@ export default function SettingsPage() {
                           fontSize: '12.5px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          background: feedbackTab === 'submit' ? 'var(--accent-primary, #6366f1)' : 'transparent',
-                          color: feedbackTab === 'submit' ? '#ffffff' : 'var(--text-secondary)',
+                          background: feedbackTab === 'submit' ? 'var(--text-primary)' : 'transparent',
+                          color: feedbackTab === 'submit' ? 'var(--bg-primary)' : 'var(--text-secondary)',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -1028,8 +1028,8 @@ export default function SettingsPage() {
                           fontSize: '12.5px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          background: feedbackTab === 'history' ? 'var(--accent-primary, #6366f1)' : 'transparent',
-                          color: feedbackTab === 'history' ? '#ffffff' : 'var(--text-secondary)',
+                          background: feedbackTab === 'history' ? 'var(--text-primary)' : 'transparent',
+                          color: feedbackTab === 'history' ? 'var(--bg-primary)' : 'var(--text-secondary)',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -1042,9 +1042,9 @@ export default function SettingsPage() {
                     <div style={{
                       padding: '12px 16px',
                       borderRadius: '8px',
-                      background: 'rgba(34, 197, 94, 0.12)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                      color: '#16a34a',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       fontWeight: 600,
                       marginBottom: '16px',
@@ -1055,7 +1055,7 @@ export default function SettingsPage() {
                       <span>{ticketSuccess}</span>
                       <button 
                         onClick={() => setFeedbackTab('history')}
-                        style={{ background: 'transparent', border: 'none', color: '#16a34a', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
                       >
                         View in My Submissions →
                       </button>
@@ -1066,9 +1066,9 @@ export default function SettingsPage() {
                     <div style={{
                       padding: '12px 16px',
                       borderRadius: '8px',
-                      background: 'rgba(239, 68, 68, 0.12)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      color: '#dc2626',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-primary)',
                       fontSize: '13px',
                       fontWeight: 600,
                       marginBottom: '16px'
@@ -1098,13 +1098,13 @@ export default function SettingsPage() {
                                 style={{
                                   padding: '12px',
                                   borderRadius: '10px',
-                                  border: active ? '2px solid var(--accent-primary, #6366f1)' : '1px solid var(--border)',
-                                  background: active ? 'rgba(99, 102, 241, 0.08)' : 'rgba(0,0,0,0.02)',
+                                  border: active ? '1px solid var(--text-primary)' : '1px solid var(--border)',
+                                  background: active ? 'var(--bg-secondary)' : 'var(--bg-primary)',
                                   cursor: 'pointer',
                                   transition: 'all 0.15s ease',
                                 }}
                               >
-                                <div style={{ fontSize: '13.5px', fontWeight: 700, color: active ? 'var(--accent-primary, #6366f1)' : 'var(--text-primary)' }}>
+                                <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
                                   {item.label}
                                 </div>
                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -1211,8 +1211,8 @@ export default function SettingsPage() {
                           type="submit"
                           disabled={isSubmittingTicket || !feedbackSubject.trim() || !feedbackMessage.trim()}
                           style={{
-                            background: 'var(--accent-primary, #6366f1)',
-                            color: '#ffffff',
+                            background: 'var(--text-primary)',
+                            color: 'var(--bg-primary)',
                             border: 'none',
                             borderRadius: '8px',
                             padding: '12px 24px',
@@ -1250,8 +1250,8 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => setFeedbackTab('submit')}
                             style={{
-                              background: 'var(--accent-primary, #6366f1)',
-                              color: '#ffffff',
+                              background: 'var(--text-primary)',
+                              color: 'var(--bg-primary)',
                               border: 'none',
                               borderRadius: '6px',
                               padding: '8px 16px',
@@ -1284,12 +1284,8 @@ export default function SettingsPage() {
                                    borderRadius: '12px',
                                    fontSize: '11px',
                                    fontWeight: 700,
-                                   background: ticket.status === 'resolved' ? 'rgba(34, 197, 94, 0.15)' :
-                                               ticket.status === 'in_progress' ? 'rgba(234, 179, 8, 0.15)' :
-                                               ticket.status === 'closed' ? 'rgba(107, 114, 128, 0.15)' : 'rgba(56, 189, 248, 0.15)',
-                                   color: ticket.status === 'resolved' ? '#16a34a' :
-                                          ticket.status === 'in_progress' ? '#ca8a04' :
-                                          ticket.status === 'closed' ? '#6b7280' : '#0284c7',
+                                   background: 'var(--bg-secondary)',
+                                   color: 'var(--text-primary)',
                                 }}>
                                   {ticket.status.toUpperCase()}
                                 </span>
@@ -1316,10 +1312,10 @@ export default function SettingsPage() {
                                 marginTop: '8px',
                                 padding: '12px 14px',
                                 borderRadius: '8px',
-                                background: 'rgba(34, 197, 94, 0.08)',
-                                borderLeft: '3px solid #16a34a',
+                                background: 'var(--bg-secondary)',
+                                borderLeft: '3px solid var(--text-primary)',
                               }}>
-                                <div style={{ fontSize: '11px', fontWeight: 700, color: '#16a34a', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
                                   Developer Response {ticket.responded_at ? `(${new Date(ticket.responded_at).toLocaleDateString()})` : ''}:
                                 </div>
                                 <div style={{ fontSize: '12.5px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
@@ -1380,7 +1376,7 @@ export default function SettingsPage() {
                               style={{
                                 width: '40px',
                                 height: '24px',
-                                background: privacyShield ? 'var(--accent-primary, #6366f1)' : 'rgba(255, 255, 255, 0.1)',
+                                background: privacyShield ? 'var(--text-primary)' : 'var(--bg-secondary)',
                                 borderRadius: '12px',
                                 position: 'relative',
                                 cursor: 'pointer',

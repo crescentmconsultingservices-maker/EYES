@@ -65,6 +65,8 @@
 }
 
 .tabBtn {
+  width: 100%;
+  box-sizing: border-box;
   text-align: left;
   padding: 10px 14px;
   background: none;
@@ -203,9 +205,9 @@
 
 .dangerBtn {
   margin-top: 24px;
-  background: rgba(212, 106, 106, 0.1);
-  color: var(--accent-red);
-  border: 1px solid var(--accent-red);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
   padding: 10px 20px;
   border-radius: 8px;
   cursor: pointer;
@@ -215,8 +217,9 @@
 }
 
 .dangerBtn:hover {
-  background: var(--accent-red);
-  color: #fff;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
 }
 
 @media (max-width: 960px) {
@@ -232,14 +235,14 @@
 
 .successText {
   font-size: 13px;
-  color: var(--accent-green);
+  color: var(--text-primary);
   margin-bottom: 20px;
   font-weight: 600;
 }
 
 .errorText {
   font-size: 13px;
-  color: var(--accent-red);
+  color: var(--text-primary);
   margin-bottom: 20px;
   font-weight: 600;
 }
@@ -407,14 +410,14 @@
 
 /* Danger Zone Styles */
 .dangerZone {
-  border: 1px solid rgba(212, 106, 106, 0.2);
-  background: rgba(212, 106, 106, 0.02);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 16px;
 }
 
 .dangerZone h3 {
-  color: var(--accent-red);
+  color: var(--text-primary);
   font-size: 16px;
   margin-bottom: 8px;
 }
@@ -445,8 +448,8 @@
 }
 
 .dangerBtnOutline:hover {
-  border-color: var(--accent-red);
-  color: var(--accent-red);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
 }
 
 /* AI Integrations Upload Styles */
