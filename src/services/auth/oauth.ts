@@ -488,3 +488,83 @@ export async function getValidVercelToken(
   if (!tokenRow) return null;
   return decryptToken(tokenRow.access_token);
 }
+
+/**
+ * Retrieves a valid Twitter token.
+ * If expired, it uses the refresh_token to obtain a new one from Twitter.
+ */
+export async function getValidTwitterToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token,refresh_token,expires_at')
+    .eq('user_id', userId)
+    .eq('platform', 'twitter')
+    .maybeSingle();
+
+  if (!tokenRow || !tokenRow.access_token) return null;
+
+  const now = new Date();
+  const expiresAt = tokenRow.expires_at ? new Date(tokenRow.expires_at) : null;
+  
+  if (expiresAt && (expiresAt.getTime() - now.getTime()) > 5 * 60 * 1000) {
+    return decryptToken(tokenRow.access_token);
+  }
+
+  if (!tokenRow.refresh_token) {
+    return null;
+  }
+
+  const clientId = process.env.TWITTER_CLIENT_ID;
+  const clientSecret = process.env.TWITTER_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) return null;
+
+  try {
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const response = await fetch('https://api.twitter.com/2/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${basicAuth}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: decryptToken(tokenRow.refresh_token) || '',
+        client_id: clientId,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`[OAuth] Twitter refresh failed (${response.status})`);
+      return null;
+    }
+
+    const payload = await response.json();
+    if (!payload.access_token) return null;
+
+    const newAccessToken = payload.access_token;
+    const newRefreshToken = payload.refresh_token || decryptToken(tokenRow.refresh_token);
+    const newExpiresAt = payload.expires_in 
+      ? new Date(Date.now() + payload.expires_in * 1000).toISOString()
+      : null;
+
+    await supabase
+      .from('oauth_tokens')
+      .update({
+        access_token: encryptToken(newAccessToken),
+        refresh_token: encryptToken(newRefreshToken),
+        expires_at: newExpiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('platform', 'twitter');
+
+    return newAccessToken;
+  } catch (err) {
+    console.error('[OAuth] Twitter refresh error:', err);
+    return null;
+  }
+}

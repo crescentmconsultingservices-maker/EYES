@@ -359,7 +359,6 @@ export default function Sidebar() {
             <div className={styles.itemIcon}><ConnectorsIcon /></div>
             <div className={styles.itemMain}>
               <span className={styles.itemLabel}>Connectors</span>
-              <span className={styles.itemDesc}>Manage connected sources</span>
             </div>
           </div>
 
@@ -369,8 +368,7 @@ export default function Sidebar() {
           >
             <div className={styles.itemIcon}><FeedIcon /></div>
             <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Source Feed</span>
-              <span className={styles.itemDesc}>Ingested raw memories</span>
+              <span className={styles.itemLabel}>Feed</span>
             </div>
           </div>
 
@@ -383,7 +381,6 @@ export default function Sidebar() {
             <div className={styles.itemIcon}><AuditIcon /></div>
             <div className={styles.itemMain}>
               <span className={styles.itemLabel}>Audit</span>
-              <span className={styles.itemDesc}>Consistency & contradiction report</span>
             </div>
           </div>
 
@@ -393,8 +390,7 @@ export default function Sidebar() {
           >
             <div className={styles.itemIcon}><ActionIcon /></div>
             <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Action Queue <span style={{ fontSize: '8px', background: 'var(--accent-primary)', color: 'var(--bg-primary)', padding: '2px 4px', borderRadius: '4px', marginLeft: '4px', fontWeight: 800 }}>BETA</span></span>
-              <span className={styles.itemDesc}>Review and approve actions</span>
+              <span className={styles.itemLabel}>Action Queue</span>
             </div>
           </div>
 
@@ -410,7 +406,6 @@ export default function Sidebar() {
               <div className={styles.itemIcon}><GraphIcon /></div>
               <div className={styles.itemMain}>
                 <span className={styles.itemLabel} style={{ color: '#E06A3B' }}>Admin Analytics</span>
-                <span className={styles.itemDesc}>Onboarding funnel metrics</span>
               </div>
             </div>
           )}
@@ -464,7 +459,7 @@ export default function Sidebar() {
       <div className={styles.footer}>
         <div className={styles.readinessCard} onClick={() => navigateToView('readiness')}>
           <div className={styles.readinessHeader}>
-            <span className={styles.readinessTitle}>SOURCE READINESS</span>
+            <span className={styles.readinessTitle}>Status</span>
           </div>
 
           <div className={styles.readinessContent}>
@@ -486,7 +481,7 @@ export default function Sidebar() {
                 {connectedCount}/{platforms.length} Platforms
               </div>
               <div className={styles.reliabilityLabel}>
-                Reliability: <span className={reliability.className}>{reliability.label}</span>
+                <span className={reliability.className}>●</span> {reliability.label}
               </div>
             </div>
           </div>

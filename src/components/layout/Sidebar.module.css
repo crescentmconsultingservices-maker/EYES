@@ -6,24 +6,24 @@
   flex-direction: column;
   padding: 12px 10px;
   overflow: hidden;
-  border-right: 1px solid var(--border-subtle);
+  border-right: none;
 }
 
 .newChatBtn {
   width: 100%;
-  padding: 8px 14px;
+  padding: 10px 14px;
   background-color: var(--accent-primary);
   color: var(--bg-primary);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 32px;
   display: flex;
   align-items: center;
   gap: 10px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   transition: var(--transition-main);
 }
 
@@ -92,36 +92,29 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 8px 12px;
   cursor: pointer;
   color: var(--text-secondary);
   gap: 10px;
   background-color: transparent;
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  transition: var(--transition-main);
+  border-radius: 12px;
+  border: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .item:hover {
   background-color: var(--bg-card);
   color: var(--text-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-primary);
-  z-index: 10; /* Bring hovered item to front */
 }
 
 .itemActive {
-  background-color: var(--bg-card);
+  background-color: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
-  border: 1px solid var(--border-primary); /* Use border-primary for cleaner look */
-  box-shadow: var(--shadow-sm);
-  background-color: rgba(255, 255, 255, 0.08); /* Slight lift */
+  border: none;
 }
 
 [data-theme='light'] .itemActive {
-  background-color: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .itemIcon {

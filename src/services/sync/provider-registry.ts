@@ -19,6 +19,7 @@ import { executeRedditSync } from './reddit-service';
 import { executeSlackSync } from './slack-service';
 import { executeDiscordSync } from './discord-service';
 import { executeMetaSync } from './meta-service';
+import { executeTwitterSync } from './twitter-service';
 
 export const syncProviders: Record<string, SyncProvider> = {
   'github': { executeSync: executeGithubSync },
@@ -30,4 +31,5 @@ export const syncProviders: Record<string, SyncProvider> = {
   'discord': { executeSync: executeDiscordSync },
   'meta': { executeSync: executeMetaSync },
   'facebook': { executeSync: executeMetaSync },
+  'twitter': { executeSync: executeTwitterSync },
 };

@@ -127,7 +127,6 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
           {(p.id === 'chatgpt' || p.id === 'claude') && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>📤</span>}
           {isApiKey && <span className={styles.addIndicator} style={{ fontSize: '14px' }}>🔑</span>}
         </div>
-        <p className={styles.platformDesc}>{p.description || 'Connect this platform to index more of your life data.'}</p>
       </div>
     );
   };
@@ -176,9 +175,6 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
           <span style={{ fontSize: '10px', color: 'var(--text-secondary)', letterSpacing: '1px', fontWeight: 700 }}>UNAVAILABLE</span>
         </div>
       </div>
-      <p className={styles.platformDesc} style={{ color: 'var(--text-secondary)' }}>
-        {p.description || 'Integration coming soon.'}
-      </p>
     </div>
   );
 
@@ -199,18 +195,10 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
             boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
           }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-              Before connecting to Google
+              Connecting Google
             </h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '20px' }}>
-              Google may show a notice saying this app is{' '}
-              <strong style={{ color: 'var(--text-primary)' }}>&quot;not verified&quot;</strong>{' '}
-              — this appears while our OAuth verification is in review with Google (a process that takes days to weeks).
-              It does not mean the connection is unsafe.
-            </p>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '28px' }}>
-              EYES reads your <strong style={{ color: 'var(--text-primary)' }}>Gmail, Calendar, and Drive</strong> data
-              only for indexing into your personal vault. Your OAuth tokens are encrypted at rest and never shared.
-              You can disconnect at any time from Source Readiness.
+              Redirecting to secure login...
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
@@ -252,43 +240,11 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
               boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
             }}>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>
-                {isInstagram ? 'Connect with Instagram' : `Connecting ${metaInterstitial.platformName}`}
+                Connecting {metaInterstitial.platformName}
               </h2>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '16px' }}>
-                {isInstagram ? (
-                  <>
-                    You will be securely redirected to <strong style={{ color: 'var(--text-primary)' }}>Instagram&apos;s official login portal</strong>.
-                    Sign in directly using your Instagram username and password.
-                  </>
-                ) : (
-                  <>
-                    <strong style={{ color: 'var(--text-primary)' }}>{metaInterstitial.platformName}</strong> is part of the Meta ecosystem.
-                    You will be redirected to Meta&apos;s official secure authorization dialog to grant read access.
-                  </>
-                )}
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: '28px' }}>
+                Redirecting to secure login...
               </p>
-              <div style={{
-                background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-                borderRadius: '12px', padding: '14px 16px', marginBottom: '20px',
-                fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55,
-              }}>
-                <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  ℹ️ {isInstagram ? 'Direct Instagram Details:' : 'Official Integration Details:'}
-                </p>
-                {isInstagram ? (
-                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <li>Direct login screen using your <strong>Instagram credentials</strong> (no Facebook login required).</li>
-                    <li>Your personal password is never stored or visible to EYES.</li>
-                    <li>All access tokens are encrypted at rest and you can disconnect anytime.</li>
-                  </ul>
-                ) : (
-                  <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <li>Meta allows cloud API connectivity for <strong>WhatsApp Business</strong> and <strong>Facebook Pages</strong>.</li>
-                    <li>Your personal password and private chats are never shared with EYES.</li>
-                    <li>All access tokens are encrypted at rest and you can disconnect anytime.</li>
-                  </ul>
-                )}
-              </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
                   onClick={() => { window.location.href = metaInterstitial.startUrl; }}
@@ -320,7 +276,7 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
         <h1 className={styles.pageHeroTitle} style={{ textAlign: 'left', marginBottom: '16px' }}>Vault</h1>
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="stagger-1" style={{ padding: '10px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-             <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Total Memories Indexed</span>
+             <span style={{ fontSize: '9px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '2px' }}>Memories Indexed</span>
              <div style={{ fontSize: '24px', fontWeight: '900', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', lineHeight: 1 }}>
                {liveStatus ? <AnimatedNumber value={liveStatus.memoriesIndexed} /> : '---'}
              </div>
@@ -334,7 +290,7 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
       {/* Discovery Hub Layout */}
       <div className={`${styles.readinessSection} stagger-3`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap', gap: '16px' }}>
-          <h3 className={styles.subHeader} style={{ marginBottom: 0 }}>● PRIMARY CONNECTORS</h3>
+          <h3 className={styles.subHeader} style={{ marginBottom: 0 }}>Connectors</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <div className={styles.filterBar} style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
               {categories.map(cat => (
@@ -381,10 +337,7 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
 
         {apiKeyRemaining.length > 0 && (
           <div style={{ marginTop: '48px' }}>
-            <h3 className={styles.subHeader} style={{ marginBottom: '24px', opacity: 0.7 }}>● API KEY CONNECTIONS</h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '24px', letterSpacing: '0.5px' }}>
-              These platforms authenticate via API token — no OAuth flow needed. Configure their keys in your Vercel environment variables.
-            </p>
+            <h3 className={styles.subHeader} style={{ marginBottom: '24px', opacity: 0.7 }}>Developer Integrations</h3>
             <div className={styles.readinessGrid} style={{ opacity: 0.85 }}>
               {apiKeyRemaining.map(renderPlatformCard)}
             </div>
@@ -393,10 +346,7 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
 
         {comingSoonPlatforms.length > 0 && (
           <div style={{ marginTop: '64px' }}>
-            <h3 className={styles.subHeader} style={{ marginBottom: '8px', opacity: 0.6 }}>● COMING SOON</h3>
-            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '24px', letterSpacing: '0.5px' }}>
-              These integrations are being set up. Check back soon.
-            </p>
+            <h3 className={styles.subHeader} style={{ marginBottom: '24px', opacity: 0.6 }}>Upcoming</h3>
             <div className={styles.readinessGrid}>
               {comingSoonPlatforms.map(renderComingSoonCard)}
             </div>

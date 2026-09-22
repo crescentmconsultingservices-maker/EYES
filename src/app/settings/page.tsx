@@ -927,21 +927,17 @@ export default function SettingsPage() {
                     )}
                   </div>
                   
-                  <div className={styles.securityInfo}>
-                    <h3>OAuth Connections</h3>
-                    <p>Your account is currently secured via GitHub.</p>
-                  </div>
+
                   
                   <div className={styles.divider} style={{ margin: '32px 0' }} />
 
                   <div className={styles.dangerZone}>
-                    <h3>Danger Zone</h3>
-                    <p className={styles.fieldDesc}>Actions here are permanent and cannot be undone.</p>
+                    <h3>Data Archive</h3>
                     
                     <div className={styles.dangerAction}>
                       <div>
                         <strong>Purge Data Archive</strong>
-                        <p>Wipe all indexed memories from all connected platforms.</p>
+                        <p>Delete all synchronized data.</p>
                         {wipeError && <p style={{ color: 'var(--text-primary)', fontSize: '12px', marginTop: '4px' }}>{wipeError}</p>}
                       </div>
                       <button 
@@ -1000,19 +996,20 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Sub-tabs navigation */}
-                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.06)', padding: '4px', borderRadius: '10px', gap: '4px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', gap: '16px' }}>
                       <button
                         type="button"
                         onClick={() => setFeedbackTab('submit')}
                         style={{
-                          padding: '6px 14px',
-                          borderRadius: '8px',
+                          background: 'transparent',
                           border: 'none',
-                          fontSize: '12.5px',
+                          padding: 0,
+                          fontSize: '13px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          background: feedbackTab === 'submit' ? 'var(--text-primary)' : 'transparent',
-                          color: feedbackTab === 'submit' ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                          color: feedbackTab === 'submit' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          borderBottom: feedbackTab === 'submit' ? '2px solid var(--text-primary)' : '2px solid transparent',
+                          paddingBottom: '4px',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -1022,14 +1019,15 @@ export default function SettingsPage() {
                         type="button"
                         onClick={() => { setFeedbackTab('history'); fetchUserTickets(); }}
                         style={{
-                          padding: '6px 14px',
-                          borderRadius: '8px',
+                          background: 'transparent',
                           border: 'none',
-                          fontSize: '12.5px',
+                          padding: 0,
+                          fontSize: '13px',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          background: feedbackTab === 'history' ? 'var(--text-primary)' : 'transparent',
-                          color: feedbackTab === 'history' ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                          color: feedbackTab === 'history' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          borderBottom: feedbackTab === 'history' ? '2px solid var(--text-primary)' : '2px solid transparent',
+                          paddingBottom: '4px',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -1084,40 +1082,39 @@ export default function SettingsPage() {
                         <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
                           Ticket Category
                         </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {[
-                            { id: 'feedback', label: 'Feedback', desc: 'General thoughts or feedback' },
-                            { id: 'bug', label: 'Bug Report', desc: 'Something is broken or failing' },
-                            { id: 'feature', label: 'Feature Request', desc: 'Idea or improvement request' },
+                            { id: 'feedback', label: 'Feedback' },
+                            { id: 'bug', label: 'Bug Report' },
+                            { id: 'feature', label: 'Feature Request' },
                           ].map(item => {
                             const active = feedbackType === item.id;
                             return (
-                              <div
+                              <button
+                                type="button"
                                 key={item.id}
                                 onClick={() => setFeedbackType(item.id as 'bug' | 'feature' | 'feedback')}
                                 style={{
-                                  padding: '12px',
-                                  borderRadius: '10px',
-                                  border: active ? '1px solid var(--text-primary)' : '1px solid var(--border)',
-                                  background: active ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                                  padding: '8px 16px',
+                                  borderRadius: '20px',
+                                  border: active ? '1px solid var(--text-primary)' : '1px solid var(--border-subtle)',
+                                  background: active ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                                  color: active ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
                                   cursor: 'pointer',
                                   transition: 'all 0.15s ease',
                                 }}
                               >
-                                <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                  {item.label}
-                                </div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  {item.desc}
-                                </div>
-                              </div>
+                                {item.label}
+                              </button>
                             );
                           })}
                         </div>
                       </div>
 
                       {/* Area Selection & Subject */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
                         <div>
                           <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
                             Area
@@ -1127,13 +1124,16 @@ export default function SettingsPage() {
                             onChange={(e) => setFeedbackArea(e.target.value)}
                             style={{
                               width: '100%',
-                              padding: '10px 12px',
+                              height: '42px',
+                              padding: '0 12px',
                               borderRadius: '8px',
-                              border: '1px solid var(--border)',
+                              border: '1px solid var(--border-subtle)',
                               background: 'var(--bg-primary)',
                               color: 'var(--text-primary)',
                               fontSize: '13px',
                               outline: 'none',
+                              appearance: 'none',
+                              cursor: 'pointer',
                             }}
                           >
                             <option value="Chat & Neural Search">Chat & Neural Search</option>
@@ -1157,13 +1157,15 @@ export default function SettingsPage() {
                             required
                             style={{
                               width: '100%',
-                              padding: '10px 12px',
+                              height: '42px',
+                              padding: '0 12px',
                               borderRadius: '8px',
-                              border: '1px solid var(--border)',
+                              border: '1px solid var(--border-subtle)',
                               background: 'var(--bg-primary)',
                               color: 'var(--text-primary)',
                               fontSize: '13px',
                               outline: 'none',
+                              boxSizing: 'border-box'
                             }}
                           />
                         </div>
@@ -1175,7 +1177,7 @@ export default function SettingsPage() {
                           Details & Observations
                         </label>
                         <textarea
-                          rows={5}
+                          rows={4}
                           placeholder="Describe what happened, steps to reproduce, or why this feature would help you..."
                           value={feedbackMessage}
                           onChange={(e) => setFeedbackMessage(e.target.value)}
@@ -1184,13 +1186,14 @@ export default function SettingsPage() {
                             width: '100%',
                             padding: '12px',
                             borderRadius: '8px',
-                            border: '1px solid var(--border)',
+                            border: '1px solid var(--border-subtle)',
                             background: 'var(--bg-primary)',
                             color: 'var(--text-primary)',
                             fontSize: '13px',
                             fontFamily: 'inherit',
                             resize: 'vertical',
                             outline: 'none',
+                            boxSizing: 'border-box'
                           }}
                         />
                       </div>
@@ -1206,17 +1209,18 @@ export default function SettingsPage() {
                       </label>
 
                       {/* Submit button */}
-                      <div>
+                      <div style={{ marginTop: '8px' }}>
                         <button
                           type="submit"
                           disabled={isSubmittingTicket || !feedbackSubject.trim() || !feedbackMessage.trim()}
                           style={{
+                            width: '100%',
                             background: 'var(--text-primary)',
                             color: 'var(--bg-primary)',
                             border: 'none',
                             borderRadius: '8px',
                             padding: '12px 24px',
-                            fontSize: '13.5px',
+                            fontSize: '14px',
                             fontWeight: 600,
                             cursor: isSubmittingTicket ? 'not-allowed' : 'pointer',
                             opacity: isSubmittingTicket || !feedbackSubject.trim() || !feedbackMessage.trim() ? 0.6 : 1,

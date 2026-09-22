@@ -187,9 +187,8 @@ export function SynthesisView({
   const [inference, setInference] = React.useState<ForwardInference>(null);
   const [cogLoading, setCogLoading] = React.useState(false);
 
-  // Fetch cognitive data when panel opens
+  // Fetch cognitive data in the background
   React.useEffect(() => {
-    if (!rightPanelOpen) return;
     setCogLoading(true);
     Promise.all([
       fetch('/api/topic-clusters').then(r => r.json()).catch(() => ({ clusters: [] })),
@@ -203,7 +202,7 @@ export function SynthesisView({
       setCorrelations(corrData.correlations ?? []);
       setInference(inferData.inference ?? null);
     }).finally(() => setCogLoading(false));
-  }, [rightPanelOpen]);
+  }, []);
 
   // ── Tab definitions (Actions, Mind Map, Loops, Drift, People & Places) ───
   const TABS: { id: RightPanelTab; label: string }[] = [
@@ -215,9 +214,9 @@ export function SynthesisView({
   ];
 
   const chatInputEl = (
-    <div className={styles.commandContainer} style={{ maxWidth: '800px', margin: '0 auto', background: 'var(--bg-primary)' }}>
-      <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-primary)', boxShadow: 'var(--shadow-lg)', alignItems: 'flex-end' }}>
-        <div className={styles.searchIcon} style={{ paddingBottom: '12px' }}><SearchIcon /></div>
+    <div className={styles.commandContainer} style={{ maxWidth: '800px', margin: '0 auto', background: 'transparent', padding: '0 16px 24px 16px' }}>
+      <div className={styles.commandInputBox} style={{ border: '1px solid var(--border-subtle)', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', alignItems: 'flex-end', borderRadius: '32px', padding: '6px 16px', background: 'var(--bg-secondary)', transition: 'border-color 0.2s ease, box-shadow 0.2s ease' }}>
+        <div className={styles.searchIcon} style={{ paddingBottom: '14px', color: 'var(--text-muted)' }}><SearchIcon /></div>
         <textarea className={styles.commandInput}
           placeholder={messages.length > 0 ? "Ask a follow up..." : "Ask me anything about your life..."}
           value={query} 
@@ -240,6 +239,7 @@ export function SynthesisView({
           style={{ resize: 'none', overflowY: 'auto', minHeight: '44px', maxHeight: '200px', paddingTop: '12px', paddingBottom: '12px' }}
         />
         <button className={styles.commandSendBtn}
+          style={{ marginBottom: '6px', borderRadius: '50%', width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={() => { if (query.trim()) onSubmit(query.trim()); }}
           disabled={!query.trim() || isStreaming}
         ><ArrowRightIcon /></button>
@@ -260,6 +260,8 @@ export function SynthesisView({
           flex: 1,
           minHeight: 0,
           width: '100%',
+          maxWidth: '800px',
+          margin: '0 auto',
         }}
       >
         {/* Chat Header Toolbar */}
@@ -278,65 +280,6 @@ export function SynthesisView({
                 EYES Neural Chat
               </span>
             )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {pendingActions.length > 0 && (
-              <button
-                onClick={() => {
-                  setActiveTab('actions');
-                  setRightPanelOpen(true);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'rgba(99, 102, 241, 0.12)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
-                  borderRadius: '20px',
-                  padding: '5px 12px',
-                  color: 'var(--accent-primary)',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 8px rgba(99, 102, 241, 0.12)'
-                }}
-                title="View and execute pending actions"
-              >
-                <span>Actions</span>
-                <span style={{
-                  background: 'var(--accent-primary)',
-                  color: '#fff',
-                  borderRadius: '10px',
-                  padding: '1px 6px',
-                  fontSize: '10px',
-                  fontWeight: 800
-                }}>
-                  {pendingActions.length}
-                </span>
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setRightPanelOpen(!rightPanelOpen);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: rightPanelOpen ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                color: rightPanelOpen ? '#fff' : 'var(--text-secondary)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '20px',
-                padding: '5px 12px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              <span>Intelligence</span>
-            </button>
           </div>
         </div>
 

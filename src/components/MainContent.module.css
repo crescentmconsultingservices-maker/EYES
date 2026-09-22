@@ -1,10 +1,11 @@
 .main {
   min-height: 100%;
-  padding: 28px 32px;
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  /* Parent handles overflow */
+  width: 100%;
+  max-width: 1200px;
 }
 
 /* Audit-only: tighter padding so header gap is removed */
@@ -165,7 +166,7 @@
   padding: 14px 18px;
   border-radius: var(--radius-lg);
   max-width: 88%;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
   transition: var(--transition-main);
   animation: fadeInUp 0.3s ease-out;
@@ -199,7 +200,7 @@
 .markdownContent {
   word-break: break-word;
   line-height: 1.7;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .markdownContent p {

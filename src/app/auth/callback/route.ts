@@ -45,7 +45,18 @@ export async function GET(request: NextRequest) {
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
         console.log('[Auth Callback] User requires MFA. Routing to /mfa');
-        return NextResponse.redirect(`${requestUrl.origin}/mfa`);
+        const mfaResponse = NextResponse.redirect(`${requestUrl.origin}/mfa`);
+        response.cookies.getAll().forEach(cookie => {
+          mfaResponse.cookies.set(cookie.name, cookie.value, {
+            domain: cookie.domain,
+            path: cookie.path,
+            maxAge: cookie.maxAge,
+            httpOnly: cookie.httpOnly,
+            secure: cookie.secure,
+            sameSite: cookie.sameSite,
+          });
+        });
+        return mfaResponse;
       }
       
       return response;

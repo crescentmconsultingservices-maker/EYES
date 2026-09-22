@@ -49,10 +49,8 @@ export const ALL_POSSIBLE_PLATFORMS = [
 
   // ─── Social ───────────────────────────────────────────────────────────────
   { id: 'facebook',        name: 'Facebook (Meta)', icon: <MetaIconOfficial />,     category: 'Social',       description: 'Official Meta integration. Sync Facebook Page DMs and posts.', color: '#0081FB' },
-  { id: 'whatsapp',        name: 'WhatsApp Business', icon: <WhatsAppIconOfficial />, category: 'Social',      description: 'Official Meta integration. Sync business customer conversations.', color: '#25D366' },
-  { id: 'instagram',       name: 'Instagram',       icon: <InstagramIconOfficial />, category: 'Social', description: 'Direct Instagram login. Sync your posts, media, and profile activity.', color: '#E4405F' },
   { id: 'discord',         name: 'Discord',         icon: <DiscordIconOfficial />,  category: 'Social',       description: 'Connect servers and private messaging history.',            color: '#5865f2' },
-  { id: 'twitter',         name: 'Twitter (X)',     icon: <XIconOfficial />,        category: 'Social',       description: 'Sync your tweets, mentions, and social footprint.',         color: 'var(--text-primary)', comingSoon: true },
+  { id: 'twitter',         name: 'Twitter (X)',     icon: <XIconOfficial />,        category: 'Social',       description: 'Sync your tweets, mentions, and social footprint.',         color: 'var(--text-primary)' },
   { id: 'linkedin',        name: 'LinkedIn',        icon: <LinkedInIconOfficial />, category: 'Social',       description: 'Index professional networking and careers communications.', color: '#0077b5', comingSoon: true },
   { id: 'google-maps',     name: 'Google Maps',     icon: <GoogleMapsIcon />,       category: 'Social',       description: 'Save travel memories, places, and location insights.',       color: '#4285F4', comingSoon: true },
 
