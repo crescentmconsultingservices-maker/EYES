@@ -626,55 +626,37 @@ export default function SettingsPage() {
 
           <div className={styles.contentLayout}>
             {/* Tabs Sidebar */}
-            <div className={styles.tabList}>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'profile' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('profile')}
-              >
-                Profile Details
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'tuning' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('tuning')}
-              >
-                Sensitivity
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'theme' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('theme')}
-              >
-                Interface Theme
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'privacy' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('privacy')}
-              >
-                Privacy Shields
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'security' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('security')}
-              >
-                Secure Access
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'notifications' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('notifications')}
-              >
-                Notifications
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('feedback')}
-              >
-                Feedback & Support
-              </button>
-              <button 
-                className={`${styles.tabBtn} ${activeTab === 'organization' ? styles.tabActive : ''}`}
-                onClick={() => setActiveTab('organization')}
-              >
-                Organization Space
-              </button>
+            <div className={styles.tabList} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Group 1: PERSONAL IDENTITY */}
+              <div>
+                <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 700, marginBottom: '8px', paddingLeft: '6px' }}>Personal Identity</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <button className={`${styles.tabBtn} ${activeTab === 'profile' ? styles.tabActive : ''}`} onClick={() => setActiveTab('profile')}>Profile Details</button>
+                  <button className={`${styles.tabBtn} ${activeTab === 'security' ? styles.tabActive : ''}`} onClick={() => setActiveTab('security')}>Secure Access</button>
+                  <button className={`${styles.tabBtn} ${activeTab === 'organization' ? styles.tabActive : ''}`} onClick={() => setActiveTab('organization')}>Organization Space</button>
+                </div>
+              </div>
+
+              {/* Group 2: AGENT BEHAVIOR */}
+              <div>
+                <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 700, marginBottom: '8px', paddingLeft: '6px' }}>Agent Behavior</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <button className={`${styles.tabBtn} ${activeTab === 'tuning' ? styles.tabActive : ''}`} onClick={() => setActiveTab('tuning')}>Sensitivity</button>
+                  <button className={`${styles.tabBtn} ${activeTab === 'privacy' ? styles.tabActive : ''}`} onClick={() => setActiveTab('privacy')}>Privacy Shields</button>
+                </div>
+              </div>
+
+              {/* Group 3: APP EXPERIENCE */}
+              <div>
+                <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 700, marginBottom: '8px', paddingLeft: '6px' }}>App Experience</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <button className={`${styles.tabBtn} ${activeTab === 'theme' ? styles.tabActive : ''}`} onClick={() => setActiveTab('theme')}>Interface Theme</button>
+                  <button className={`${styles.tabBtn} ${activeTab === 'notifications' ? styles.tabActive : ''}`} onClick={() => setActiveTab('notifications')}>Notifications</button>
+                  <button className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.tabActive : ''}`} onClick={() => setActiveTab('feedback')}>Feedback & Support</button>
+                </div>
+              </div>
+
             </div>
 
             {/* Tab Content */}
