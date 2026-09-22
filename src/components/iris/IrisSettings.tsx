@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function IrisSettings() {
   const { user, updateUser, theme, setGlobalTheme } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'theme' | 'privacy' | 'feedback' | 'duplex'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'tuning' | 'theme' | 'privacy' | 'feedback' | 'duplex' | 'security' | 'org' | 'notifications'>('profile');
   const [feedbackMessages, setFeedbackMessages] = useState<Array<{ sender: 'bot' | 'user'; text: string; time: string }>>([]);
   const [feedbackInput, setFeedbackInput] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -152,36 +152,119 @@ export default function IrisSettings() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '28px', alignItems: 'start' }}>
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--paper-2, #f2ede3)', padding: '6px', borderRadius: '8px' }}>
-          {[
-            { id: 'profile', label: 'Profile Details' },
-            { id: 'duplex', label: 'Founder Duplex' },
-            { id: 'tuning', label: 'Sensitivity Tuning' },
-            { id: 'theme', label: 'Visual Theme' },
-            { id: 'privacy', label: 'Privacy Shields' },
-            { id: 'feedback', label: 'Feedback Desk' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              style={{
-                textAlign: 'left',
-                padding: '10px 14px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontFamily: 'var(--font-inter, sans-serif)',
-                fontWeight: activeTab === tab.id ? 600 : 500,
-                cursor: 'pointer',
-                border: 'none',
-                transition: 'all 0.15s ease',
-                background: activeTab === tab.id ? 'var(--card, #fbfaf6)' : 'transparent',
-                color: activeTab === tab.id ? 'var(--accent, #bf3d11)' : 'var(--ink-soft, #3b372f)',
-                boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.06)' : 'none'
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Group 1: PERSONAL IDENTITY */}
+          <div>
+            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 700, marginBottom: '8px', paddingLeft: '6px' }}>
+              Personal Identity
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--paper-2, #f2ede3)', padding: '4px', borderRadius: '8px' }}>
+              {[
+                { id: 'profile', label: 'Profile Details' },
+                { id: 'security', label: 'Secure Access' },
+                { id: 'org', label: 'Organization Space' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font-inter, sans-serif)',
+                    fontWeight: activeTab === tab.id ? 600 : 500,
+                    cursor: 'pointer',
+                    border: 'none',
+                    transition: 'all 0.15s ease',
+                    background: activeTab === tab.id ? 'var(--card, #fbfaf6)' : 'transparent',
+                    color: activeTab === tab.id ? 'var(--accent, #bf3d11)' : 'var(--ink-soft, #3b372f)',
+                    boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Group 2: AGENT BEHAVIOR */}
+          <div>
+            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 700, marginBottom: '8px', paddingLeft: '6px' }}>
+              Agent Behavior
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--paper-2, #f2ede3)', padding: '4px', borderRadius: '8px' }}>
+              {[
+                { id: 'tuning', label: 'Sensitivity Tuning' },
+                { id: 'privacy', label: 'Privacy Shields' },
+                { id: 'duplex', label: 'Founder Duplex' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font-inter, sans-serif)',
+                    fontWeight: activeTab === tab.id ? 600 : 500,
+                    cursor: 'pointer',
+                    border: 'none',
+                    transition: 'all 0.15s ease',
+                    background: activeTab === tab.id ? 'var(--card, #fbfaf6)' : 'transparent',
+                    color: activeTab === tab.id ? 'var(--accent, #bf3d11)' : 'var(--ink-soft, #3b372f)',
+                    boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Group 3: APP EXPERIENCE */}
+          <div>
+            <div style={{ fontFamily: 'var(--font-jetbrains, monospace)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--ink-faint, #6b6557)', fontWeight: 700, marginBottom: '8px', paddingLeft: '6px' }}>
+              App Experience
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--paper-2, #f2ede3)', padding: '4px', borderRadius: '8px' }}>
+              {[
+                { id: 'theme', label: 'Visual Theme' },
+                { id: 'notifications', label: 'Notifications' },
+                { id: 'feedback', label: 'Feedback Desk' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  style={{
+                    textAlign: 'left',
+                    padding: '12px 14px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font-inter, sans-serif)',
+                    fontWeight: activeTab === tab.id ? 600 : 500,
+                    cursor: 'pointer',
+                    border: 'none',
+                    transition: 'all 0.15s ease',
+                    background: activeTab === tab.id ? 'var(--card, #fbfaf6)' : 'transparent',
+                    color: activeTab === tab.id ? 'var(--accent, #bf3d11)' : 'var(--ink-soft, #3b372f)',
+                    boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.06)' : 'none',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
         </div>
 
         {/* Content Card */}
@@ -572,6 +655,27 @@ export default function IrisSettings() {
                   {isSubmittingFeedback ? 'Sending...' : 'Send →'}
                 </button>
               </div>
+            </div>
+          )}
+          {/* Placeholders for new tabs */}
+          {activeTab === 'security' && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft, #3b372f)' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '20px', margin: '0 0 10px 0' }}>Secure Access</h3>
+              <p style={{ fontSize: '14px' }}>Authentication and security settings will live here.</p>
+            </div>
+          )}
+
+          {activeTab === 'org' && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft, #3b372f)' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '20px', margin: '0 0 10px 0' }}>Organization Space</h3>
+              <p style={{ fontSize: '14px' }}>Team management and billing settings will live here.</p>
+            </div>
+          )}
+
+          {activeTab === 'notifications' && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft, #3b372f)' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '20px', margin: '0 0 10px 0' }}>Notifications</h3>
+              <p style={{ fontSize: '14px' }}>Alert routing and push notification preferences will live here.</p>
             </div>
           )}
         </div>
