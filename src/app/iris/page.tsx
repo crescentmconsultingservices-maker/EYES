@@ -32,6 +32,7 @@ interface IrisResponse {
     intent?: string;
     intent_data?: any[];
     app_data?: any;
+    used_tools?: string[];
   }
 }
 
@@ -311,6 +312,11 @@ function IrisDashboardInner() {
                        <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '12px', borderRadius: '8px' }}>{m.content}</div>
                     ) : m.understanding ? (
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {m.understanding.used_tools && m.understanding.used_tools.length > 0 && (
+                          <div style={{ alignSelf: 'flex-start', marginBottom: '8px', background: 'rgba(191, 61, 17, 0.1)', color: 'var(--accent, #bf3d11)', border: '1px solid rgba(191, 61, 17, 0.2)', padding: '4px 12px', borderRadius: '16px', fontSize: '11px', fontFamily: 'var(--font-jetbrains, monospace)', fontWeight: 600 }}>
+                            🛠 Tools Executed: {m.understanding.used_tools.join(', ')}
+                          </div>
+                        )}
                         {m.understanding.intent && m.understanding.intent !== 'none' && m.understanding.intent_data && (
                           <IntentCards 
                             intent={m.understanding.intent} 

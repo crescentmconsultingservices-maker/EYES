@@ -246,8 +246,64 @@ export const staleCommitmentAlerts = inngest.createFunction(
   }
 );
 
+export const proactiveAgenticScan = inngest.createFunction(
+  {
+    id: "proactive-agentic-scan",
+    name: "Proactive Agentic Scan",
+    triggers: [{ cron: "0 */6 * * *" }] // Every 6 hours
+  },
+  async ({ event, step }) => {
+    // 1. Get recent users to scan (simplified: just grab users who have been active)
+    const users = await step.run("get-active-users", async () => {
+      const supabase = createAdminClient();
+      const { data } = await supabase.from('user_profiles').select('user_id').limit(10);
+      return data || [];
+    });
+
+    for (const u of users) {
+      await step.run(`scan-user-${u.user_id}`, async () => {
+        const supabase = createAdminClient();
+        
+        // Let the AI scan the last 6 hours of edges for anomalies
+        const { data: edges } = await supabase
+          .from('chronic_edges')
+          .select('relation_label, valid_from, weight')
+          .eq('user_id', u.user_id)
+          .order('valid_from', { ascending: false })
+          .limit(20);
+
+        if (!edges || edges.length === 0) return { alert: false };
+
+        const summary = edges.map(e => `${e.relation_label} (wt: ${e.weight})`).join(', ');
+
+        const { invokeModel } = await import('@/services/ai/ai');
+        const aiRes = await invokeModel({
+          capability: 'chat',
+          preference: 'system-2', // Use reasoning model
+          messages: [{ role: 'user', content: `Analyze this recent graph activity: ${summary}. Is there an anomaly or slippage? Reply with YES or NO.` }]
+        });
+
+        if (typeof aiRes === 'string' && aiRes.includes('YES')) {
+          await supabase.from('alerts').insert({
+            user_id: u.user_id,
+            alert_type: 'anomaly',
+            title: 'Agentic Scan: Anomaly Detected',
+            body: 'IRIS detected unusual patterns or slippage in your recent data activity.',
+            is_dismissed: false
+          });
+          return { alert: true };
+        }
+        return { alert: false };
+      });
+    }
+
+    return { status: "completed", scannedUsers: users.length };
+  }
+);
+
 export const functions = [
   investigateChurn,
   proactiveChurnInvestigation,
   staleCommitmentAlerts,
+  proactiveAgenticScan
 ];

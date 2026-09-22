@@ -92,7 +92,7 @@ const ALIAS_EMBED = 'auto-embed';
 const EMBED_DIMS = 1024; // Align with Voyage/Gemini 1024-dim database schema (Migration 032)
 
 // ── Types ────────────────────────────────────────────────────────────────────
-export type AIPreference = 'claude' | 'gemini' | 'auto';
+export type AIPreference = 'claude' | 'gemini' | 'auto' | 'system-1' | 'system-2';
 export type AICapability = 'chat' | 'embed' | 'classify' | 'extract';
 
 export interface AIHistoryMessage {
@@ -111,10 +111,13 @@ export interface AIInvokeOptions {
   temperature?: number;
   /** AbortSignal to cancel the in-flight request (e.g. when the chat timeout fires). */
   signal?: AbortSignal;
+  /** Optional array of OpenAI-compatible tool definitions */
+  tools?: any[];
 }
 
 export type EmbedResult = { embedding: number[] };
-export type InvokeResult = EmbedResult | string | null;
+export type ToolCallResult = { type: 'tool_calls', tool_calls: any[] };
+export type InvokeResult = EmbedResult | ToolCallResult | string | null;
 
 // ── Retry helper ─────────────────────────────────────────────────────────────
 const GATEWAY_MAX_RETRIES = 3;
@@ -132,7 +135,8 @@ async function gatewayChat(
   maxTokens = 1024,
   signal?: AbortSignal,
   temperature = 0.1,
-): Promise<string | null> {
+  tools?: any[]
+): Promise<string | ToolCallResult | null> {
   const base = getGatewayBase();
   const key = getGatewayKey();
   if (!base || !key) return null;
@@ -146,12 +150,16 @@ async function gatewayChat(
       const res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
         headers: getGatewayHeaders(key),
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature, ...(tools?.length ? { tools } : {}) }),
         signal,
       });
       if (res.ok) {
         const body = await res.json();
-        return body?.choices?.[0]?.message?.content ?? null;
+        const message = body?.choices?.[0]?.message;
+        if (message?.tool_calls?.length > 0) {
+          return { type: 'tool_calls', tool_calls: message.tool_calls };
+        }
+        return message?.content ?? null;
       }
       // Don't retry on 4xx client errors (except 429 rate-limit)
       if (res.status < 500 && res.status !== 429) {
@@ -389,7 +397,8 @@ async function handleChat(
   overrideMaxTokens?: number,
   signal?: AbortSignal,
   temperature = 0.1,
-): Promise<string | null> {
+  tools?: any[]
+): Promise<string | ToolCallResult | null> {
   const isClassify = capability === 'classify' ||
     /return.*json|json only|valid json/i.test(system);
   const maxTokens = overrideMaxTokens ?? (isClassify ? 500 : 1024);
@@ -408,7 +417,7 @@ async function handleChat(
   if (gpuResult) { console.log('[AI] Sovereign GPU Chat OK'); return gpuResult; }
 
   // 2. Gateway (K1)
-  const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens, signal, temperature);
+  const gatewayResult = await gatewayChat(alias, fullMessages, maxTokens, signal, temperature, tools);
   if (gatewayResult) { console.log(`[AI] Gateway (${alias}) OK`); return gatewayResult; }
 
   console.error('[AI] Gateway chat failed.');
@@ -418,16 +427,16 @@ async function handleChat(
 // ── Public interface ─────────────────────────────────────────────────────────
 export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResult> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal, temperature } = options;
+  const { capability, messages = [], system = '', preference: _pref = 'auto', capture = capability === 'chat', signal, temperature, tools } = options;
 
   if (capability === 'embed') {
     return handleEmbedding(messages[0]?.content || '', signal);
   }
 
   const startedAt = Date.now();
-  const result = await handleChat(messages, system, capability, options.maxTokens, signal, temperature);
+  const result = await handleChat(messages, system, capability, options.maxTokens, signal, temperature, tools);
 
-  if (capture && result) {
+  if (capture && result && typeof result === 'string') {
     setTimeout(() => {
       captureBehavioralData({
         queryText: messages[messages.length - 1]?.content || '',
