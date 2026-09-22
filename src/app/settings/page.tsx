@@ -21,6 +21,16 @@ export default function SettingsPage() {
   const [gdprConsent, setGdprConsent] = useState(true);
   const [newSender, setNewSender] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [pronouns, setPronouns] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      if (user.name && !displayName) setDisplayName(user.name);
+      if (user.fullName && !fullName) setFullName(user.fullName);
+      if (user.pronouns && !pronouns) setPronouns(user.pronouns);
+    }
+  }, [user]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [settingsSaved, setSettingsSaved] = useState<string | null>(null);
@@ -548,11 +558,11 @@ export default function SettingsPage() {
   };
 
   const handleUpdateProfile = async () => {
-    if (displayName === user?.name) return;
+    if (displayName === user?.name && fullName === (user?.fullName || '') && pronouns === (user?.pronouns || '')) return;
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      const result = await updateUser({ name: displayName });
+      const result = await updateUser({ name: displayName, fullName, pronouns });
       if (result.success) {
         setSaveStatus('Profile updated successfully!');
       } else {
@@ -672,6 +682,30 @@ export default function SettingsPage() {
                       autoComplete="name"
                       value={displayName} 
                       onChange={(e) => setDisplayName(e.target.value)}
+                      className={styles.input} 
+                    />
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <label>FULL LEGAL NAME</label>
+                    <input 
+                      id="full-name"
+                      name="fullName"
+                      type="text"
+                      placeholder="e.g. ChandraMohan"
+                      value={fullName} 
+                      onChange={(e) => setFullName(e.target.value)}
+                      className={styles.input} 
+                    />
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <label>PRONOUNS</label>
+                    <input 
+                      id="pronouns"
+                      name="pronouns"
+                      type="text"
+                      placeholder="e.g. He/Him, She/Her, They/Them"
+                      value={pronouns} 
+                      onChange={(e) => setPronouns(e.target.value)}
                       className={styles.input} 
                     />
                   </div>

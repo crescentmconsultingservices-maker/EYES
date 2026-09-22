@@ -28,6 +28,8 @@ export interface User {
   onboardingCompleted: boolean;
   accountType: 'individual' | 'organization';
   organizationId: string | null;
+  fullName: string | null;
+  pronouns: string | null;
 }
 
 export type AuthResult = {
@@ -67,6 +69,8 @@ type UserProfileRow = {
   onboarding_completed: boolean | null;
   account_type: 'individual' | 'organization' | null;
   organization_id: string | null;
+  full_name: string | null;
+  pronouns: string | null;
 };
 
 type DBResult<T> = {
@@ -175,6 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onboardingCompleted: loadCachedProfile()?.onboardingCompleted ?? false,
         accountType: loadCachedProfile()?.accountType || 'individual',
         organizationId: loadCachedProfile()?.organizationId || null,
+        fullName: loadCachedProfile()?.fullName || null,
+        pronouns: loadCachedProfile()?.pronouns || null,
       };
     }
 
@@ -194,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
             supabase
               .from('user_profiles')
-              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
+              .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id,full_name,pronouns')
               .eq('user_id', authUser.id)
               .maybeSingle()
               .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -214,6 +220,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               onboardingCompleted: fetchResult.data.onboarding_completed ?? false,
               accountType: fetchResult.data.account_type || 'individual',
               organizationId: fetchResult.data.organization_id || null,
+              fullName: fetchResult.data.full_name || null,
+              pronouns: fetchResult.data.pronouns || null,
             };
             saveCachedProfile(fresh);
             setUser(fresh); // M2: update live UI with fresh data (was only updating cache)
@@ -228,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fetchResult = await quickFetch<QueryResult<UserProfileRow>>(
         supabase
           .from('user_profiles')
-          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id')
+          .select('name,avatar,plan,joined_date,memories_indexed,behavior_logging_consent,onboarding_completed,account_type,organization_id,full_name,pronouns')
           .eq('user_id', authUser.id)
           .maybeSingle()
           .then((result: SupabaseQueryLike<UserProfileRow>) => ({ data: result.data, error: result.error })),
@@ -253,6 +261,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           onboardingCompleted: profile.onboarding_completed ?? false,
           accountType: profile.account_type || 'individual',
           organizationId: profile.organization_id || null,
+          fullName: profile.full_name || null,
+          pronouns: profile.pronouns || null,
         };
         saveCachedProfile(result); // ← persist for instant load next time
         return result;
@@ -276,6 +286,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           onboardingCompleted: cached?.onboardingCompleted ?? false,
           accountType: cached?.accountType || 'individual',
           organizationId: cached?.organizationId || null,
+          fullName: cached?.fullName || null,
+          pronouns: cached?.pronouns || null,
         };
       }
 
@@ -292,6 +304,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onboarding_completed: false,
         account_type: 'individual',
         organization_id: null,
+        full_name: null,
+        pronouns: null,
       };
 
       const { data: inserted } = await quickFetch<QueryResult<UserProfileRow>>(
@@ -546,6 +560,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         onboarding_completed?: boolean;
         account_type?: 'individual' | 'organization';
         organization_id?: string | null;
+        full_name?: string | null;
+        pronouns?: string | null;
       } = {};
       const authUpdates: { name?: string } = {};
 
@@ -568,6 +584,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (updates.organizationId !== undefined) {
         dbUpdates.organization_id = updates.organizationId;
+      }
+
+      if (updates.fullName !== undefined) {
+        dbUpdates.full_name = updates.fullName;
+      }
+
+      if (updates.pronouns !== undefined) {
+        dbUpdates.pronouns = updates.pronouns;
       }
       
       // If current avatar is just an initial, update it to match the new name's initial

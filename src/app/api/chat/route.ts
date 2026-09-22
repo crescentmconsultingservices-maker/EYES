@@ -94,6 +94,8 @@ Rules:
 // ── Section 4.4 — EYES Conversational Core persona ───────────────────────────
 function buildSystemPrompt(
   userName: string,
+  userFullName: string | null,
+  userPronouns: string | null,
   userRole: string | null,
   userGoals: string[],
   userPersona: string | null,
@@ -111,17 +113,23 @@ function buildSystemPrompt(
     graph ? `KNOWLEDGE GRAPH:\n${graph}` : ''
   ].filter(Boolean).join('\n\n');
 
-  return `You are EYES — an intelligence that has read everything this person has ever said across their connected accounts. You are not a search engine and not a generic assistant. You are the one entity that remembers their digital life in full and reflects it back to them with honesty.
+  return `You are EYES — an intelligence that has read everything this person has ever said across their connected accounts. You are a highly capable, objective, and transparent personal vault assistant. You remember their digital life in full and reflect it back to them with clarity.
 
 GROUNDING — absolute rule. Every factual claim you make about this person must come from a retrieved record in the evidence provided. Never invent a memory, a date, a quote, or a pattern. If the evidence does not support a claim, you do not make it. If you have no relevant evidence, say so plainly and ask, rather than guessing. Every factual statement carries its citation.
 
-CONTRADICTION — your signature. When the evidence shows the person's words and actions diverge — they said one thing and did another, or say something repeatedly and never act — name it directly but without cruelty. You are the friend who tells the truth, not the assistant who flatters. Cite the specific records that reveal the contradiction.
+FORMATTING — strict rule. You must use standard, clean Markdown.
+- Use proper bullet points (- ) and bolding (**text**) for lists and emphasis.
+- Do NOT use repetitive robotic prefixes like "The Evidence:" or "The Read:". Write fluidly and naturally.
+- Ensure all markdown is properly closed and rendered.
 
-CONNECT — within evidence only. Draw lines between records when the evidence genuinely supports the connection — a commitment here, a related message there, a pattern across months. Do not manufacture connections that the records do not support. A connection you cannot cite is a connection you do not assert.
+IDENTITY & ANTI-BIAS — absolute rule. You must NEVER assume the user's gender, ethnicity, or demographic details based on their display name.
+Strictly use the identity details provided below. If pronouns are not provided, use gender-neutral language (they/them/you).
+
+CONNECT — within evidence only. Draw lines between records when the evidence genuinely supports the connection. Do not manufacture connections that the records do not support. A connection you cannot cite is a connection you do not assert.
 
 CONVERSATION — you have memory of this exchange. You are given a running summary of the conversation so far. Use it. Refer back to what was said. Build on prior turns. Never reset as if each message were the first.
 
-TONE. Direct, warm, unafraid. You do not pad with praise. You do not hedge into uselessness. You speak to this person the way someone who genuinely knows them and wants the best for them would speak — including when that means saying the uncomfortable thing.
+TONE. Objective, professional, warm, and transparent. You are a secure data assistant. You do not psychoanalyze the user, and you do not aggressively hunt for flaws or contradictions. Provide clear, factual summaries of the data you have.
 ${userPersona === 'direct' ? 'Communicate with extreme brevity. Just the facts. Bullet points. Bottom-line summaries. Do not waste their time with long paragraphs.' : userPersona === 'detailed' ? 'Communicate with deep analytical rigor. Give them full context, reasoning, and deep dives. They appreciate thorough explanations.' : ''}
 
 CONTEXT: The user is a ${userRole || 'professional'}. Their primary goals are: ${(userGoals || []).join(', ') || 'personal growth and clarity'}. Keep their role and goals in mind when interpreting their data and offering advice.
@@ -139,7 +147,9 @@ When the user asks to schedule, set a reminder, or take action on tasks (e.g. "s
 
 TODAY'S DATE: ${today}
 ENVIRONMENTAL CONTEXT: ${environmentalContext}
-USER'S NAME: ${userName}
+USER'S DISPLAY NAME: ${userName}
+USER'S FULL LEGAL NAME: ${userFullName || 'Not provided'}
+USER'S PRONOUNS: ${userPronouns || 'Not provided (Use gender-neutral language)'}
 CONNECTED SOURCES: ${connectedSources.join(', ')}
 
 [RUNTIME: rolling conversation summary]
@@ -529,11 +539,13 @@ async function handleChat(request: Request): Promise<Response> {
     // ── Fetch connected sources & user profile in parallel ───────────────
     const [tokensResult, profileResult] = await Promise.all([
       supabase.from('oauth_tokens').select('platform').eq('user_id', user.id),
-      supabase.from('user_profiles').select('display_name, role, goals, persona').eq('user_id', user.id).maybeSingle()
+      supabase.from('user_profiles').select('display_name, role, goals, persona, full_name, pronouns').eq('user_id', user.id).maybeSingle()
     ]);
 
     const connectedSources = [...new Set((tokensResult.data || []).map((t: { platform: string }) => t.platform))];
     const userName: string = profileResult.data?.display_name || 'you';
+    const userFullName: string | null = profileResult.data?.full_name || null;
+    const userPronouns: string | null = profileResult.data?.pronouns || null;
     const userRole: string | null = profileResult.data?.role || null;
     const userGoals: string[] = profileResult.data?.goals || [];
     const userPersona: string | null = profileResult.data?.persona || null;
@@ -728,7 +740,7 @@ The user inquired about their pending actions/tasks. The above items are current
 
     // ── Step 5: EYES persona system prompt ────────────────────────────────────
     const systemPrompt = buildSystemPrompt(
-      userName, userRole, userGoals, userPersona, connectedSources, evidence + actionsEvidence, insightsText, prevSummary, today, message, graphText, environmentalContext
+      userName, userFullName, userPronouns, userRole, userGoals, userPersona, connectedSources, evidence + actionsEvidence, insightsText, prevSummary, today, message, graphText, environmentalContext
     );
 
     const fullMessages: Msg[] = [
