@@ -108,7 +108,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings' | 'communications' | 'tasks' | 'gmail' | 'slack' | 'linear' | 'gcal'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings' | 'communications' | 'tasks' | 'gmail' | 'slack' | 'linear' | 'gcal'>('priority');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedAction, setEditedAction] = useState<ActionItem | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);

@@ -6,6 +6,35 @@ import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
 import type { PlatformStatus } from '@/types/dashboard';
 import { AnimatedNumber } from '../common/AnimatedNumber';
 import { AIIntegrationView } from './AIIntegrationView';
+import { useConfirm } from '@/context/ConfirmContext';
+
+function getTimeAgo(dateString?: string | null) {
+  if (!dateString) return 'Never';
+  const diff = Date.now() - new Date(dateString).getTime();
+  if (diff < 0) return 'Just now';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} mins ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hours ago`;
+  return `${Math.floor(hours / 24)} days ago`;
+}
+
+function parseErrorMessage(raw?: string | null): string {
+  if (!raw) return 'Link Fractured';
+  let clean = raw;
+  const jsonMatch = raw.match(/(\{.*\})/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      if (parsed.message) return parsed.message;
+      if (parsed.error) return parsed.error;
+      if (parsed.type) return parsed.type.replace(/_/g, ' ');
+    } catch { /* not JSON */ }
+  }
+  clean = raw.replace(/[{}"]/g, '').trim();
+  return clean.length > 65 ? clean.slice(0, 65) + '…' : clean;
+}
 
 interface PlatformConfig {
   id: string;
@@ -29,6 +58,8 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
   const [metaInterstitial, setMetaInterstitial] = React.useState<{ platformName: string; startUrl: string } | null>(null);
   const [showAIUpload, setShowAIUpload] = React.useState<boolean>(false);
   const [readinessPlatforms, setReadinessPlatforms] = React.useState<PlatformStatus[]>(initialPlatforms || []);
+  const { openConfirm } = useConfirm();
+  const [syncError, setSyncError] = React.useState<string | null>(null);
 
   const loadReadiness = async () => {
     try {
@@ -57,9 +88,41 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
 
   const activePlatforms = readinessPlatforms.length > 0 ? readinessPlatforms : initialPlatforms;
   const liveStatus = syncStatus ?? null;
+  const connectedList = activePlatforms.filter(p => p.connected);
   
   const remainingPlatforms = ALL_POSSIBLE_PLATFORMS.filter(p => !activePlatforms.find(ap => ap.id === p.id)?.connected);
   const categories = ['All', 'Productivity', 'Development', 'Social', 'Creative', 'Health'];
+
+  const handleDisconnect = (platformId: string, platformName: string) => {
+    openConfirm({
+      title: `Disconnect ${platformName}?`,
+      description: `This removes the active OAuth tokens for ${platformName}. Your indexed memories will remain. You can reconnect anytime.`,
+      confirmLabel: 'Disconnect',
+      confirmVariant: 'danger',
+      onConfirm: async () => {
+        const response = await fetch(`/api/data/platform/${platformId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ disconnect: true }),
+        });
+        if (!response.ok) throw new Error(`Failed to disconnect (${response.status})`);
+        window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
+      },
+    });
+  };
+
+  const handleForceSync = async (id: string) => {
+    setSyncError(null);
+    const routePlatform = id === 'google-calendar' ? 'google-calendar' : id.replace(/_/g, '-');
+    try {
+      const response = await fetch(`/api/sync/${routePlatform}?depth=shallow`, { method: 'POST' });
+      if (response.status === 404) return setSyncError(`Manual sync for ${id} is not supported yet.`);
+      if (!response.ok) return setSyncError(`Sync failed (${response.status}). Please try again.`);
+      window.dispatchEvent(new CustomEvent('eyes-realtime-refresh'));
+    } catch (error) {
+      setSyncError(`Failed to manually sync ${id}.`);
+    }
+  };
 
   const filteredRemaining = activeCategory === 'All'
     ? remainingPlatforms
@@ -284,10 +347,97 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
         </div>
       </div>
 
+      {syncError && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+          borderRadius: '10px', padding: '10px 16px', marginBottom: '16px',
+          fontSize: '13px', color: '#ef4444',
+        }}>
+          <span>⚠ {syncError}</span>
+          <button onClick={() => setSyncError(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 4px' }}>×</button>
+        </div>
+      )}
 
+      {/* Active Sources Section */}
+      <div className={`${styles.readinessSection} stagger-2`} style={{ marginBottom: '48px' }}>
+        <h3 className={styles.subHeader}>Active Integrations ({connectedList.length})</h3>
+        
+        {connectedList.length === 0 ? (
+          <div className={styles.emptyState} style={{ padding: '32px', textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
+            No sources connected yet. Add a platform below to start indexing your digital memory.
+          </div>
+        ) : (
+          <div className={styles.readinessGrid}>
+            {connectedList.map(p => {
+               const isSyncing = p.status === 'syncing';
+               const isError = p.status === 'error';
+               const config = ALL_POSSIBLE_PLATFORMS.find(ap => ap.id === p.id);
+               
+               return (
+                <div key={p.id} className={`${styles.readinessCard} ${styles.connectedCard} ${isSyncing ? styles.cardSyncing : ''} ${isError ? styles.cardError : ''}`} style={{ cursor: 'default' }}>
+                  <div className={styles.cardHeader}>
+                    <div 
+                      className={styles.readinessIcon}
+                      style={{
+                        backgroundColor: config?.color?.startsWith('#') ? `${config.color}15` : 'var(--bg-secondary)',
+                        border: config?.color?.startsWith('#') ? `1px solid ${config.color}30` : '1px solid var(--border-subtle)',
+                      }}
+                    >
+                      {config?.icon ? React.cloneElement(config.icon, { size: 24 } as React.HTMLAttributes<SVGElement>) : null}
+                    </div>
+                    <div className={styles.readinessInfo}>
+                      <strong>{p.name}</strong>
+                      <span 
+                        className={isError ? styles.errorStatusText : (isSyncing ? styles.syncStatusText : styles.readyStatusText)}
+                        title={p.errorMessage || ''}
+                        style={{ 
+                          display: '-webkit-box', 
+                          WebkitLineClamp: 2, 
+                          WebkitBoxOrient: 'vertical', 
+                          overflow: 'hidden',
+                          wordBreak: 'break-word',
+                          lineHeight: '1.4'
+                        }}
+                      >
+                        {isError ? parseErrorMessage(p.errorMessage) : (isSyncing ? 'Syncing...' : 'Connected')}
+                      </span>
+                    </div>
+                    {isSyncing && <div className={styles.syncPulse} />}
+                  </div>
 
+                  <div style={{ margin: '12px 0', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '8px' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>LAST SYNC</span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{getTimeAgo(p.lastSyncAt)}</span>
+                     </div>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>RECORDS</span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{p.items || 0}</span>
+                     </div>
+                  </div>
 
-      {/* Discovery Hub Layout */}
+                  <div className={styles.cardActions} style={{ marginTop: 'auto' }}>
+                     <button 
+                       className={styles.miniSyncBtn}
+                       onClick={() => handleForceSync(p.id)}
+                       disabled={isSyncing}
+                     >
+                       Force Sync
+                     </button>
+                     <button 
+                       className={styles.inlineDisconnectBtn} 
+                       onClick={() => handleDisconnect(p.id, p.name)}
+                     >
+                       Disconnect
+                     </button>
+                  </div>
+                </div>
+               );
+            })}
+          </div>
+        )}
+      </div>      {/* Discovery Hub Layout */}
       <div className={`${styles.readinessSection} stagger-3`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', flexWrap: 'wrap', gap: '16px' }}>
           <h3 className={styles.subHeader} style={{ marginBottom: 0 }}>Connectors</h3>

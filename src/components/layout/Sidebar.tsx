@@ -358,7 +358,7 @@ export default function Sidebar() {
           >
             <div className={styles.itemIcon}><ConnectorsIcon /></div>
             <div className={styles.itemMain}>
-              <span className={styles.itemLabel}>Connectors</span>
+              <span className={styles.itemLabel}>Vault</span>
             </div>
           </div>
 
@@ -457,7 +457,7 @@ export default function Sidebar() {
       </div>
 
       <div className={styles.footer}>
-        <div className={styles.readinessCard} onClick={() => navigateToView('readiness')}>
+        <div className={styles.readinessCard} onClick={() => navigateToView('connectors')}>
           <div className={styles.readinessHeader}>
             <span className={styles.readinessTitle}>Status</span>
           </div>

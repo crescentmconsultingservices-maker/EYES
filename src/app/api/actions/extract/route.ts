@@ -96,6 +96,7 @@ Rules:
 - memoryId must be the exact id shown in [brackets] in the memory list
 - confidence: 90+ = very clear action, 70-89 = probable, below 70 = skip
 - Only include actions with confidence >= 70
+- EXPLICITLY IGNORE automated emails, delivery status notifications, undeliverable bounces, spam, and system alerts. Do not create actions for these.
 - Maximum 10 actions
 ${riskInstruction}
 - If no clear actions exist, return: {"actions": []}

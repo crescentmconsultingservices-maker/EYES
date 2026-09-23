@@ -16,12 +16,24 @@ function HomeInner() {
   const activeView = searchParams.get('view') || 'dashboard';
   const { user, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSystemBooting, setIsSystemBooting] = useState(true);
+  const [isSystemBooting, setIsSystemBooting] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !sessionStorage.getItem('eyes_booted');
+    }
+    return true;
+  });
 
   // Synchronize loading across components
   const handleBootComplete = useCallback(() => {
-    // Artificial delay for that premium 'handshake' feel
-    setTimeout(() => setIsSystemBooting(false), 200);
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('eyes_booted')) {
+      // Artificial delay for that premium 'handshake' feel on first load only
+      setTimeout(() => {
+        setIsSystemBooting(false);
+        sessionStorage.setItem('eyes_booted', '1');
+      }, 200);
+    } else {
+      setIsSystemBooting(false);
+    }
   }, []);
 
   // Show a premium black screen while loading auth session to prevent flashes
