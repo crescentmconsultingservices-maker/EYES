@@ -162,8 +162,7 @@ export default function IrisSettings() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: 'var(--paper-2, #f2ede3)', padding: '4px', borderRadius: '8px' }}>
               {[
                 { id: 'profile', label: 'Profile Details' },
-                { id: 'security', label: 'Secure Access' },
-                { id: 'org', label: 'Organization Space' }
+                { id: 'security', label: 'Secure Access' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -665,12 +664,7 @@ export default function IrisSettings() {
             </div>
           )}
 
-          {activeTab === 'org' && (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft, #3b372f)' }}>
-              <h3 style={{ fontFamily: 'var(--font-serif-display, serif)', fontSize: '20px', margin: '0 0 10px 0' }}>Organization Space</h3>
-              <p style={{ fontSize: '14px' }}>Team management and billing settings will live here.</p>
-            </div>
-          )}
+
 
           {activeTab === 'notifications' && (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--ink-soft, #3b372f)' }}>
