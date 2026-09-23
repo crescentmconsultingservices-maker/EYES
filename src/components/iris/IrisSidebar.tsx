@@ -10,7 +10,7 @@ export default function IrisSidebar() {
   const activeView = searchParams.get('view') || 'desk'; // Default to Desk (Surface 1)
 
   const navigateToView = (view: string) => {
-    router.push(`/iris?view=${view}`);
+    router.push(`/iris?view=${view}`, { scroll: false });
   };
 
   const navItems = [

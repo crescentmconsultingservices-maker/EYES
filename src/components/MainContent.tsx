@@ -401,12 +401,12 @@ function MainContentInner({ onLoaded }: { onLoaded?: () => void }) {
       )}
       {activeView === 'action-queue' && (
         <ActionQueueView 
-          onBack={() => router.push('/?view=dashboard')}
+          onBack={() => router.push('/?view=dashboard', { scroll: false })}
         />
       )}
       {activeView === 'integrations' && (
         <AIIntegrationView 
-          onBack={() => router.push('/?view=dashboard')}
+          onBack={() => router.push('/?view=dashboard', { scroll: false })}
         />
       )}
     </main>

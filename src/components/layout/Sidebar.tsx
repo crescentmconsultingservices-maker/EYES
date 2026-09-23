@@ -133,7 +133,7 @@ export default function Sidebar() {
           return next;
         });
         if (searchParams.get('threadId') === threadId) {
-          router.push('/?view=dashboard&new=' + Date.now());
+          router.push('/?view=dashboard', { scroll: false });
         }
         window.dispatchEvent(new CustomEvent('eyes-chat-saved'));
       }
@@ -257,16 +257,16 @@ export default function Sidebar() {
   const navigateToView = (view: string) => {
     if (view === 'chat') {
       if (pathname === '/chat') {
-        router.push(`/chat?new=${Date.now()}`);
+        router.push(`/chat`, { scroll: false });
       } else {
-        router.push(`/?view=dashboard&new=${Date.now()}`);
+        router.push(`/?view=dashboard`, { scroll: false });
       }
     } else if (view === 'dashboard') {
-      router.push('/');
+      router.push('/', { scroll: false });
     } else if (view === 'admin-funnel') {
       router.push('/admin/funnel');
     } else {
-      router.push(`/?view=${view}`);
+      router.push(`/?view=${view}`, { scroll: false });
     }
   };
 
@@ -284,7 +284,7 @@ export default function Sidebar() {
         className={`${styles.chatItem} ${isActive ? styles.chatItemActive : ''} ${isStarred ? styles.chatItemStarred : ''}`}
         onClick={() => {
           if (editingThreadId !== t.id) {
-            router.push(targetUrl);
+            router.push(targetUrl, { scroll: false });
           }
         }}
       >
