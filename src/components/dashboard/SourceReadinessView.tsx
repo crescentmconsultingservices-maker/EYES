@@ -80,7 +80,7 @@ export function SourceReadinessView({ platforms: initialPlatforms, totalMemories
   const connectedCount = activePlatforms.filter(p => p.connected).length;
   const connectedList = activePlatforms.filter(p => p.connected);
   const activeSourcesCount = connectedCount;
-  const availablePlatforms = new Set(ALL_POSSIBLE_PLATFORMS.filter(p => !p.comingSoon).map(p => p.id));
+  const availablePlatforms = new Set(ALL_POSSIBLE_PLATFORMS.map(p => p.id));
   const availablePlatformsCount = availablePlatforms.size;
   const connectedAvailableCount = activePlatforms.filter(p => p.connected && availablePlatforms.has(p.id)).length;
   const coveragePercent = Math.min(100, Math.round((connectedAvailableCount / availablePlatformsCount) * 100));
