@@ -513,8 +513,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: {
         redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
+        scopes: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.readonly',
         queryParams: {
-          prompt: 'select_account'
+          prompt: 'consent',
+          access_type: 'offline' // Needed to get a refresh token
         }
       }
     });

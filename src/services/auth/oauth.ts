@@ -490,6 +490,204 @@ export async function getValidVercelToken(
 }
 
 /**
+ * Retrieves a valid Asana token.
+ */
+export async function getValidAsanaToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'asana')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid ClickUp token.
+ */
+export async function getValidClickUpToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'clickup')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Netlify token.
+ */
+export async function getValidNetlifyToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'netlify')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Sentry token.
+ */
+export async function getValidSentryToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'sentry')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid GitLab token.
+ */
+export async function getValidGitlabToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'gitlab')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Google Chat token.
+ */
+export async function getValidGoogleChatToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'google-chat')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Cursor token.
+ */
+export async function getValidCursorToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'cursor')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid LinkedIn token.
+ */
+export async function getValidLinkedInToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'linkedin')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Zoom token.
+ */
+export async function getValidZoomToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'zoom')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Figma token.
+ */
+export async function getValidFigmaToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'figma')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
+ * Retrieves a valid Dropbox token.
+ */
+export async function getValidDropboxToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'dropbox')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+/**
  * Retrieves a valid Twitter token.
  * If expired, it uses the refresh_token to obtain a new one from Twitter.
  */
