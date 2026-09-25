@@ -738,8 +738,8 @@ CRITICAL INSTRUCTION FOR ASSISTANT:
    - Confidence: ${a.confidence || 90}%`
         ).join('\n') + `\n\nCRITICAL INSTRUCTION FOR ASSISTANT:
 The user inquired about their pending actions/tasks. The above items are currently waiting in their Action Queue for approval and execution.
-1. You MUST list and describe these pending items directly to the user (mention the platform, title, and suggested action for each).
-2. Inform the user that interactive Action Cards are displayed directly below your message in the chat where they can click "Execute", "Auto-Approve", "Refine", or adjust the date/time.
+1. DO NOT list all the items individually in your response. Instead, provide a very brief, 1-2 sentence summary of what kind of tasks are pending (e.g., "You have ${pendingActions.length} pending actions, mostly related to job applications and security checks.").
+2. Inform the user that interactive Action Cards are displayed directly below your message where they can quickly review and execute these tasks.
 3. NEVER say that there are no pending records or that you cannot see any items when the above list is provided.`;
       }
     }
