@@ -658,19 +658,29 @@ async function handleChat(request: Request): Promise<Response> {
 
     if (pendingActions.length > 0) {
       if (isCalendarOrReminderRequest) {
-        // Pre-fill tomorrow morning reminder slots
-        const now = new Date();
-        const t1 = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        t1.setHours(10, 0, 0, 0);
-        const t1End = new Date(t1.getTime() + 60 * 60 * 1000);
+        const nowStr = new Date().toISOString();
+        let baseTime: Date | null = null;
+        try {
+          const timeRes = await invokeModel({
+            capability: 'classify',
+            system: `Extract the requested date and time to set a reminder from the message. Today is ${nowStr}. Respond ONLY with a valid ISO-8601 string. If no time is found, output "NULL".`,
+            messages: [{ role: 'user', content: message }]
+          });
+          if (typeof timeRes === 'string' && timeRes.trim() !== 'NULL') {
+            const parsed = new Date(timeRes.trim());
+            if (!isNaN(parsed.getTime())) baseTime = parsed;
+          }
+        } catch (e) { console.warn('Time parse err:', e); }
 
-        const t2 = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        t2.setHours(11, 30, 0, 0);
-        const t2End = new Date(t2.getTime() + 30 * 60 * 1000);
+        if (!baseTime) {
+          baseTime = new Date();
+          baseTime.setDate(baseTime.getDate() + 1);
+          baseTime.setHours(10, 0, 0, 0);
+        }
 
         pendingActions.forEach((a, idx) => {
-          const s = idx === 0 ? t1 : t2;
-          const e = idx === 0 ? t1End : t2End;
+          const s = new Date(baseTime!.getTime() + idx * 30 * 60 * 1000);
+          const e = new Date(s.getTime() + 30 * 60 * 1000);
           a.startTime = s.toISOString().slice(0, 16);
           a.endTime = e.toISOString().slice(0, 16);
           a.action_type = 'REMINDER';
@@ -682,11 +692,8 @@ async function handleChat(request: Request): Promise<Response> {
           if (gcalToken) {
             for (let i = 0; i < pendingActions.length; i++) {
               const act = pendingActions[i];
-              const slotStart = new Date(Date.now() + 24 * 60 * 60 * 1000);
-              slotStart.setHours(10 + Math.floor(i * 0.5), (i % 2) * 30, 0, 0);
-              const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000);
-              const startIso = slotStart.toISOString();
-              const endIso = slotEnd.toISOString();
+              const startIso = new Date(act.startTime + ':00Z').toISOString();
+              const endIso = new Date(act.endTime + ':00Z').toISOString();
 
               const calRes = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
                 method: 'POST',
@@ -715,7 +722,7 @@ async function handleChat(request: Request): Promise<Response> {
         if (autoScheduledCount > 0) {
           actionsEvidence = `\n\n[GOOGLE CALENDAR REMINDERS CREATED DIRECTLY IN CALENDAR]:
 Successfully scheduled ${autoScheduledCount} reminder event(s) in the user's Google Calendar:
-${pendingActions.map((a, i) => `${i + 1}. "${a.title}" — Scheduled for tomorrow (${i === 0 ? '10:00 AM' : '11:30 AM'})`).join('\n')}
+${pendingActions.map((a, i) => `${i + 1}. "${a.title}" — Scheduled for ${new Date(a.startTime + ':00Z').toLocaleString()}`).join('\n')}
 
 CRITICAL INSTRUCTION FOR ASSISTANT:
 Inform the user that you have successfully scheduled the reminders directly in their Google Calendar.
