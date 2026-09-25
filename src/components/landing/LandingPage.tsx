@@ -227,8 +227,7 @@ export default function LandingPage() {
 
           {/* Main Cinematic Heading */}
           <motion.h1 className={styles.megaHeroTitle} variants={textReveal}>
-            Build your <br />
-            <motion.em variants={emReveal}>digital memory</motion.em>
+            EYES
           </motion.h1>
 
           <motion.p className={styles.heroSubText} variants={textReveal}>
