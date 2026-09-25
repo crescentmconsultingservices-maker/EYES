@@ -721,14 +721,15 @@ CRITICAL INSTRUCTION FOR ASSISTANT:
 Inform the user that you have successfully scheduled the reminders directly in their Google Calendar.
 Mention the specific times it was scheduled for. Do NOT mention any action cards or UI elements.`;
         } else {
-          actionsEvidence = `\n\n[CALENDAR REMINDER QUEUED FOR EXECUTION]:
+          actionsEvidence = `\n\n[CALENDAR REMINDER SYNC FAILED - REQUIRES AUTHENTICATION]:
 The user requested to set a reminder in their calendar for these pending actions:
 ${pendingActions.map((a, i) => `${i + 1}. "${a.title}"`).join('\n')}
 
 CRITICAL INSTRUCTION FOR ASSISTANT:
-1. Confirm to the user that you have acknowledged their request to set a reminder.
-2. State clearly that the reminder has been logged and will be synced to their calendar shortly.
-3. Do NOT mention or simulate any UI elements, Action Cards, or [EXECUTE] buttons in your response. Keep it completely conversational.`;
+1. Inform the user that you could not immediately create the event in their Google Calendar.
+2. Tell them this is likely because their Google Calendar is not connected or the connection has expired.
+3. Ask them to go to the "Connectors" tab in the sidebar and ensure their Google Calendar is fully connected and authenticated.
+4. Do NOT mention any UI elements, Action Cards, or [EXECUTE] buttons in your response. Keep it conversational.`;
         }
       } else {
         actionsEvidence = `\n\n[ACTIVE PENDING ACTIONS IN USER'S ACTION QUEUE (${pendingActions.length} item${pendingActions.length > 1 ? 's' : ''})]:\n` + pendingActions.map((a, idx) =>
