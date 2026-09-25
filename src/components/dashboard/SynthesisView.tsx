@@ -393,38 +393,7 @@ export function SynthesisView({
                   <CitationDock citations={m.citations.slice(0, 4)} setView={setView} />
                 )}
 
-                {/* Inline Action Queue cards */}
-                {m.role === 'assistant' && !m.pending && m.actionItems && m.actionItems.length > 0 && (
-                  <div style={{
-                    marginTop: '14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '10px',
-                    width: '100%',
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      color: 'var(--accent-primary)',
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                    }}>
-                      <span>⚡ Action Queue Suggestions ({m.actionItems.length})</span>
-                    </div>
-                    {m.actionItems.map(item => (
-                      <ActionItemCard
-                        key={item.id}
-                        action={item}
-                        compact={true}
-                        onExecuted={() => fetchActions()}
-                        onDismissed={() => fetchActions()}
-                      />
-                    ))}
-                  </div>
-                )}
+
               </div>
             ))}
             <div ref={messagesEndRef} />

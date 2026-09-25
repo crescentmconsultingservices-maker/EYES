@@ -738,8 +738,8 @@ CRITICAL INSTRUCTION FOR ASSISTANT:
    - Confidence: ${a.confidence || 90}%`
         ).join('\n') + `\n\nCRITICAL INSTRUCTION FOR ASSISTANT:
 The user inquired about their pending actions/tasks. The above items are currently waiting in their Action Queue for approval and execution.
-1. DO NOT list all the items individually in your response. Instead, provide a very brief, 1-2 sentence summary of what kind of tasks are pending (e.g., "You have ${pendingActions.length} pending actions, mostly related to job applications and security checks.").
-2. Inform the user that interactive Action Cards are displayed directly below your message where they can quickly review and execute these tasks.
+1. DO NOT list all the items individually in your response. Instead, provide a very brief, 1-2 sentence summary of what kind of tasks are pending.
+2. Ask the user if they would like to take action on any of them right now. (e.g., "You have ${pendingActions.length} pending actions, mostly related to job applications and security checks. Would you like me to execute or schedule any of these for you?")
 3. NEVER say that there are no pending records or that you cannot see any items when the above list is provided.`;
       }
     }
