@@ -718,17 +718,17 @@ Successfully scheduled ${autoScheduledCount} reminder event(s) in the user's Goo
 ${pendingActions.map((a, i) => `${i + 1}. "${a.title}" — Scheduled for tomorrow (${i === 0 ? '10:00 AM' : '11:30 AM'})`).join('\n')}
 
 CRITICAL INSTRUCTION FOR ASSISTANT:
-Inform the user that you have scheduled reminders for both actions directly in their Google Calendar for tomorrow.
-Mention the specific times (10:00 AM and 11:30 AM) and note that the Action Cards below reflect their updated status.`;
+Inform the user that you have successfully scheduled the reminders directly in their Google Calendar.
+Mention the specific times it was scheduled for. Do NOT mention any action cards or UI elements.`;
         } else {
-          actionsEvidence = `\n\n[CALENDAR REMINDER ACTION CARDS STAGED & READY]:
+          actionsEvidence = `\n\n[CALENDAR REMINDER QUEUED FOR EXECUTION]:
 The user requested to set a reminder in their calendar for these pending actions:
-${pendingActions.map((a, i) => `${i + 1}. "${a.title}" (Suggested time: tomorrow at ${i === 0 ? '10:00 AM' : '11:30 AM'})`).join('\n')}
+${pendingActions.map((a, i) => `${i + 1}. "${a.title}"`).join('\n')}
 
 CRITICAL INSTRUCTION FOR ASSISTANT:
-1. NEVER claim "I cannot modify your Google Calendar" or "I cannot set reminders". That is strictly prohibited because EYES has an active Action Execution engine.
-2. Confirm to the user that calendar reminders have been prepared for both actions with suggested times for tomorrow (10:00 AM and 11:30 AM).
-3. Direct the user to the interactive Action Cards displayed right below your message where START TIME and END TIME are already pre-filled. Tell them they can click "EXECUTE" on each card to immediately sync it to Google Calendar, or adjust the date/time as needed.`;
+1. Confirm to the user that you have acknowledged their request to set a reminder.
+2. State clearly that the reminder has been logged and will be synced to their calendar shortly.
+3. Do NOT mention or simulate any UI elements, Action Cards, or [EXECUTE] buttons in your response. Keep it completely conversational.`;
         }
       } else {
         actionsEvidence = `\n\n[ACTIVE PENDING ACTIONS IN USER'S ACTION QUEUE (${pendingActions.length} item${pendingActions.length > 1 ? 's' : ''})]:\n` + pendingActions.map((a, idx) =>
