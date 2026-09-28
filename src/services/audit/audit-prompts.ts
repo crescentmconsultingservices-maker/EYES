@@ -108,7 +108,7 @@ Generate exactly 3 opportunities. Each must:
   {
     "title": "[Short action-oriented title]",
     "description": "[2 sentences: what the data shows + what to do about it]",
-    "source": "[Specific platform name] connector (Record window: \\${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
@@ -124,7 +124,7 @@ Generate exactly 3 opportunities. Each must:
   {
     "title": "[Short credibility-building title]",
     "description": "[2 sentences: what the gap is + what to do]",
-    "source": "[Specific platform name] connector (Record window: ${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
@@ -140,7 +140,7 @@ Generate exactly 3 opportunities. Each must:
   {
     "title": "[Short professional development title]",
     "description": "[2 sentences: observed pattern + recommended action]",
-    "source": "[Specific platform name] connector (Record window: ${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
@@ -155,7 +155,7 @@ Tag each opportunity with its dimension:
   {
     "title": "[Short title prefixed with the dimension]",
     "description": "[Observed pattern + recommended action]",
-    "source": "[Specific platform name] connector (Record window: ${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
