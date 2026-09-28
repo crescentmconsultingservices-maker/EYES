@@ -20,9 +20,12 @@ CREATE INDEX IF NOT EXISTS idx_embedding_queue_status_user_id
 CREATE INDEX IF NOT EXISTS idx_embedding_queue_failed 
   ON embedding_queue(status, retry_count) WHERE status = 'failed';
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_embedding_queue_active_raw_event
-  ON embedding_queue(raw_event_id)
-  WHERE status IN ('pending', 'processing');
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'embedding_queue' AND column_name = 'raw_event_id') THEN
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS idx_embedding_queue_active_raw_event ON embedding_queue(raw_event_id) WHERE status IN (''pending'', ''processing'')';
+  END IF;
+END $$;
 
 -- Enable RLS
 ALTER TABLE embedding_queue ENABLE ROW LEVEL SECURITY;
