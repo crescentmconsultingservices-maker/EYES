@@ -1,8 +1,9 @@
 import { createAdminClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
 import { Commitment } from '@/types/dashboard';
-import { SECTION_TITLES, EXECUTIVE_SUMMARY_INSTRUCTIONS, OPPORTUNITIES_INSTRUCTIONS, CROSS_LENS_SECTION } from './audit-prompts';
+import { SECTION_TITLES, EXECUTIVE_SUMMARY_INSTRUCTIONS, OPPORTUNITIES_INSTRUCTIONS, CROSS_LENS_SECTION, commitmentKeywords, sensitiveKeywords, finalRiskInstruction } from './audit-prompts';
 import { resolveCommitmentStatuses, computeRecencyWeight } from './audit-scoring';
+import { fetchAuditData, updateAuditStage, markAuditFailed } from './audit-db';
 /**
  * Reputation Audit: Core Analysis Pipeline (REAL WORLD ONLY)
  */
@@ -14,75 +15,11 @@ export class AuditAnalysisService {
     const supabase = await createAdminClient();
     const startedAt = Date.now();
 
-    // Section 06: stage updater — drives the Thinking Veil status line in real-time
     const setStage = (stage: string, extra?: Record<string, unknown>) =>
-      supabase.from('reputation_audits').update({ stage, ...(extra ?? {}) }).eq('id', auditId).then(() => {});
+      updateAuditStage(auditId, stage, extra);
 
     try {
-      // Get the audit record metadata to see if a specialized lens type is requested
-      const { data: auditRecord } = await supabase
-        .from('reputation_audits')
-        .select('metadata')
-        .eq('id', auditId)
-        .single();
-      const auditType = ((auditRecord?.metadata as Record<string, unknown>)?.audit_type as string) || 'full';
-
-      // Get User Settings for Risk Sensitivity
-      const { data: settingsData } = await supabase
-        .from('connector_settings')
-        .select('data_types')
-        .eq('user_id', userId)
-        .eq('platform', 'user_global')
-        .maybeSingle();
-
-      let riskSensitivity = 'MEDIUM';
-      if (settingsData?.data_types?.[0]) {
-        try {
-          const parsedSettings = JSON.parse(settingsData.data_types[0]);
-          if (parsedSettings.riskSensitivity) riskSensitivity = parsedSettings.riskSensitivity;
-        } catch (parseErr) {
-          console.warn('[Audit] Failed to parse connector settings JSON:', parseErr);
-        }
-      }
-
-      // Unify keywords for a comprehensive extraction pass (identical across all lenses to ensure strict determinism)
-      const commitmentKeywords = /\b(will|i'll|we'll|i will|we will|i'll|going to|plan to|planning to|need to|have to|should|must|shall|promised|commit|deadline|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|eod|eow|next week|tomorrow)|follow.?up|send|review|check|handle|take care|responsible for|assigned|action item|todo|to.do)\b/i;
-      const sensitiveKeywords = /\b(salary|budget|invoice|payment|debt|legal|lawsuit|confidential|private|conflict|fired|quit|resign|burnout|stressed|anxiety|urgent|critical|emergency|overdue|missed|failed|broke|broken|issue|problem|complaint|dispute|disagree|delay|late|incomplete|pending|cancel|deadline|drift|dropped|slip|loops|angry|happy|sad|depressed|excited|furious|love|hate|dislike|upset|mad|frustrated|annoyed|disappoint|glad|awesome|terrible|bad|good|worst|best)\b/i;
-
-      // Unified extraction instruction (identical across all lenses to maintain strict data-layer consistency)
-      const finalRiskInstruction = `
-- Be precise and objective. Do not over-flag or hallucinate risks.
-- Flag standard reputational risks, unmet commitments, and moderate negative sentiment.
-- Treat automated notifications or emails from external parties as neutral and isCommitment=false.
-- CONTEXT-AWARE SENTIMENT: Conversations where the subject is actively debugging code, discussing technical bugs, compilation issues, or product errors (especially in developer platforms or Claude sessions) are standard software engineering activities. Classify them as neutral (sentiment: 0), NOT negative, unless there is a genuine interpersonal conflict, project failure, or professional misconduct.
-- FALSE POSITIVES FILTER: Internal development and debugging sessions where the subject is discussing product issues to improve/debug EYES (e.g., discussing "contradictory data in executive summary" or "fixing the PDF generator") are self-improvement/product feedback loops, NOT reputational risks. Do NOT flag them as sensitive or risks.
-- NORMAL TRANSACTION / RECEIVED EMAILS: Standard received transactions, service alerts, trial expirations, or social invites (e.g., birthday invitations) are neutral (sentiment: 0) and do NOT constitute PII exposures or security/reputation risks unless they expose raw secret credentials or financial account keys.
-- STRICTION: Commands, queries, prompts, search terms, or instructions sent to AI systems (e.g. Claude, ChatGPT), search engines, or code compilers (like "remove final page", "make perfect doc", "search receipts") are NOT personal commitments or promises made by the subject. Set isCommitment=false for them. A commitment is only when the subject explicitly promises they will do an action themselves in the future.
-`;
-
-      // Stage: aggregate — data retrieval begins
-      await setStage('aggregate');
-
-      // 1. Data Retrieval (Real data only)
-      const twoYearsAgo = new Date();
-      twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-
-      const { data: rawEvents, error: fetchError } = await supabase
-        .from('memories')
-        .select('id, platform, timestamp, title, content, author')
-        .eq('user_id', userId)
-        .gte('timestamp', twoYearsAgo.toISOString())
-        .limit(5000);
-
-      const events = rawEvents
-        ? rawEvents
-            .filter(e => e.content !== null)
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        : null;
-
-      if (fetchError || !events) {
-        throw new Error(`Data retrieval failed: ${fetchError?.message}`);
-      }
+      const { events, auditRecord, auditType, riskSensitivity } = await fetchAuditData(auditId, userId);   }
 
       if (events.length === 0) {
         // No data yet — complete the audit gracefully with a sync prompt
@@ -1117,11 +1054,7 @@ Return JSON ONLY (no markdown, no explanation):
 
       // Mark audit as failed in DB — error is already logged, do NOT re-throw
       // (caller is a background fire-and-forget task; re-throwing causes unhandledRejection crash)
-      const supabase = await createAdminClient();
-      await supabase.from('reputation_audits').update({
-        status: 'failed',
-        summary_narrative: `Analysis failed: ${errorMessage}. Please check AI quotas or retry.`
-      }).eq('id', auditId);
+      await markAuditFailed(auditId, errorMessage);
 
       return { success: false, auditId, error: errorMessage };
     }
