@@ -63,6 +63,45 @@ export {
   computeRetryDelayWithJitterMs,
   shouldDispatchEscalation,
   toEscalationCandidates,
+  shouldDispatchEscalation,
+  toEscalationKey,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ALERT_PENDING_RETRY_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ALERT_DEAD_LETTER_24H_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ALERT_MAX_RETRY_ATTEMPT_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ALERT_FAILURE_RATE_24H_THRESHOLD,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ESCALATION_DISPATCH_COOLDOWN_MINUTES,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ESCALATION_OWNER_WARNING,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ESCALATION_OWNER_CRITICAL,
+} from '@/lib/cron/escalation';
+
+import {
+  isMissingTable,
+  parseResponsePayload,
+  resolveBaseUrl,
+  isUuid,
+  getCronSecret,
+  isAuthorizedCron,
+  toLogStatus,
+  toIsoFromNowMinusDuration,
+  fetchWithTimeout,
+  runWithConcurrency
+} from '@/lib/cron/sync-utils';
+
+import { processEscalations } from '@/lib/cron/sync-escalation-handler';
+
+// Re-export public API so existing test imports continue to work
+export {
+  computeRetryDelayMs,
+  computeRetryDelayWithJitterMs,
+  shouldDispatchEscalation,
+  toEscalationCandidates,
 };
 
 // Vercel function timeout — must be <= plan limit (Pro = 800s max for background)
@@ -107,57 +146,7 @@ type SyncRunLogInsertRow = {
 // RetryQueueRow, RetryQueueUpsertRow, RetryDeadLetterInsertRow — imported from @/lib/cron/retry
 // EscalationSeverity, EscalationStatus, EscalationCandidate, UserEscalationMetrics — imported from @/lib/cron/escalation
 
-type EscalationEventRow = {
-  user_id: string;
-  code: string;
-  severity: EscalationSeverity;
-  status: EscalationStatus;
-  owner: string;
-  first_triggered_at: string;
-  last_triggered_at: string;
-  resolved_at: string | null;
-  trigger_count: number;
-  last_observed: number;
-  threshold: number;
-  message: string;
-  last_dispatched_at: string | null;
-  dispatch_count: number;
-  metadata: Record<string, unknown>;
-};
 
-type RetryQueueMetricRow = {
-  user_id: string;
-  retry_attempt: number;
-};
-
-type RetryDeadLetterMetricRow = {
-  user_id: string;
-};
-
-type RunLogMetricRow = {
-  user_id: string;
-  run_id: string;
-  status: 'success' | 'error' | 'skipped';
-};
-
-type DispatchCandidate = {
-  userId: string;
-  code: string;
-  severity: EscalationSeverity;
-  owner: string;
-  message: string;
-  observed: number;
-  threshold: number;
-  metrics: EscalationCandidate['metrics'];
-  nextDispatchCount: number;
-};
-
-type EscalationDispatchResult = {
-  attempted: boolean;
-  success: boolean;
-  status: number | null;
-  error?: string;
-};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function toFiniteNumber(raw: string | undefined, fallback: number) {
@@ -203,40 +192,7 @@ const ESCALATION_INCLUDE_WARNING = ['1', 'true', 'yes', 'on'].includes(
 );
 
 // ─── Route-local utility functions ───────────────────────────────────────────
-function isMissingTable(errorCode?: string) {
-  // Postgres error code 42P01 = undefined_table
-  return errorCode === '42P01';
-}
 
-
-function parseResponsePayload(rawBody: string) {
-  if (!rawBody) return null;
-
-  try {
-    return JSON.parse(rawBody);
-  } catch {
-    return { message: rawBody.slice(0, 300) };
-  }
-}
-
-function resolveBaseUrl(request: Request) {
-  // If we are on localhost, always use relative or local origin to avoid hitting production
-  const host = request.headers.get('host');
-  if (host) {
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    return `${protocol}://${host}`;
-  }
-
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
-  }
-
-  return new URL(request.url).origin;
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
 
 // ── NOTE: The following functions are imported from lib/cron/retry and lib/cron/escalation ──
 // computeRetryDelayMs, computeRetryDelayWithJitterMs, computeNextRetryAttemptAt,
@@ -294,84 +250,7 @@ async function dispatchEscalationWebhook(payload: Record<string, unknown>): Prom
   }
 }
 
-function getCronSecret(request: Request): string | null {
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice('Bearer '.length).trim();
-  }
 
-  const xSecret = request.headers.get('x-cron-secret');
-  if (xSecret) return xSecret.trim();
-
-  const url = new URL(request.url);
-  return url.searchParams.get('secret')?.trim() || null;
-}
-
-function isAuthorizedCron(request: Request): boolean {
-  const expectedSecret = process.env.CRON_SECRET;
-  if (!expectedSecret) {
-    return false;
-  }
-
-  const providedSecret = getCronSecret(request);
-  return !!providedSecret && providedSecret === expectedSecret;
-}
-
-function toLogStatus(success: boolean, attempted = true): 'success' | 'error' | 'skipped' {
-  if (!attempted) {
-    return 'skipped';
-  }
-
-  return success ? 'success' : 'error';
-}
-
-function toIsoFromNowMinusDuration(durationMs: number) {
-  return new Date(Date.now() - Math.max(0, durationMs)).toISOString();
-}
-
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-      cache: 'no-store',
-    });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function runWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<R>
-): Promise<R[]> {
-  if (items.length === 0) return [];
-
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-
-  async function runWorker() {
-    while (true) {
-      const index = nextIndex;
-      nextIndex += 1;
-
-      if (index >= items.length) {
-        return;
-      }
-
-      results[index] = await worker(items[index]);
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => runWorker());
-  await Promise.all(workers);
-
-  return results;
-}
 
 async function runPlatformSync(
   supabase: SupabaseClient,
@@ -872,315 +751,23 @@ async function runCronSync(request: Request) {
     }
   }
 
-  if (processedUserIds.length > 0) {
-    const since24hIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const metricWarnings: string[] = [];
-
-    const metricsByUser = new Map<string, UserEscalationMetrics>();
-    processedUserIds.forEach((userId) => {
-      metricsByUser.set(userId, {
-        pendingRetries: 0,
-        maxRetryAttempt: 0,
-        deadLetters24h: 0,
-        runs24h: 0,
-        failures24h: 0,
-        failureRate24h: 0,
-      });
-    });
-
-    const [retryMetricsResult, deadLetterMetricsResult, runLogMetricsResult] = await Promise.all([
-      supabase
-        .from('sync_retry_queue')
-        .select('user_id,retry_attempt')
-        .in('user_id', processedUserIds)
-        .limit(Math.max(200, processedUserIds.length * 50)),
-      supabase
-        .from('sync_retry_dead_letters')
-        .select('user_id')
-        .in('user_id', processedUserIds)
-        .gte('created_at', since24hIso)
-        .limit(Math.max(200, processedUserIds.length * 100)),
-      supabase
-        .from('sync_run_logs')
-        .select('user_id,run_id,status')
-        .in('user_id', processedUserIds)
-        .gte('created_at', since24hIso)
-        .limit(Math.max(500, processedUserIds.length * 250)),
-    ]);
-
-    if (retryMetricsResult.error) {
-      if (isMissingTable(retryMetricsResult.error.code)) {
-        metricWarnings.push('sync_retry_queue table is not available. Apply migration 006_sync_retry_queue.sql.');
-      } else {
-        metricWarnings.push(`Failed to evaluate retry queue metrics: ${retryMetricsResult.error.message}`);
-      }
-    } else {
-      ((retryMetricsResult.data ?? []) as RetryQueueMetricRow[]).forEach((row) => {
-        const metrics = metricsByUser.get(row.user_id);
-        if (!metrics) return;
-
-        metrics.pendingRetries += 1;
-        metrics.maxRetryAttempt = Math.max(metrics.maxRetryAttempt, row.retry_attempt || 0);
-      });
-    }
-
-    if (deadLetterMetricsResult.error) {
-      if (isMissingTable(deadLetterMetricsResult.error.code)) {
-        metricWarnings.push('sync_retry_dead_letters table is not available. Apply migration 007_sync_retry_dead_letters.sql.');
-      } else {
-        metricWarnings.push(`Failed to evaluate dead-letter metrics: ${deadLetterMetricsResult.error.message}`);
-      }
-    } else {
-      ((deadLetterMetricsResult.data ?? []) as RetryDeadLetterMetricRow[]).forEach((row) => {
-        const metrics = metricsByUser.get(row.user_id);
-        if (!metrics) return;
-        metrics.deadLetters24h += 1;
-      });
-    }
-
-    if (runLogMetricsResult.error) {
-      if (isMissingTable(runLogMetricsResult.error.code)) {
-        metricWarnings.push('sync_run_logs table is not available. Apply migration 005_sync_run_logs.sql.');
-      } else {
-        metricWarnings.push(`Failed to evaluate scheduler run metrics: ${runLogMetricsResult.error.message}`);
-      }
-    } else {
-      const runsByUser = new Map<string, Map<string, boolean>>();
-
-      ((runLogMetricsResult.data ?? []) as RunLogMetricRow[]).forEach((row) => {
-        if (!runsByUser.has(row.user_id)) {
-          runsByUser.set(row.user_id, new Map());
-        }
-
-        const userRunMap = runsByUser.get(row.user_id)!;
-        const hasFailure = userRunMap.get(row.run_id) ?? false;
-        userRunMap.set(row.run_id, hasFailure || row.status === 'error');
-      });
-
-      runsByUser.forEach((userRunMap, userId) => {
-        const metrics = metricsByUser.get(userId);
-        if (!metrics) return;
-
-        metrics.runs24h = userRunMap.size;
-        metrics.failures24h = Array.from(userRunMap.values()).filter(Boolean).length;
-        metrics.failureRate24h = metrics.runs24h > 0 ? metrics.failures24h / metrics.runs24h : 0;
-      });
-    }
-
-    const activeCandidatesByKey = new Map<string, { userId: string; candidate: EscalationCandidate }>();
-    metricsByUser.forEach((metrics, userId) => {
-      const candidates = toEscalationCandidates(metrics);
-      candidates.forEach((candidate) => {
-        activeCandidatesByKey.set(toEscalationKey(userId, candidate.code), { userId, candidate });
-      });
-    });
-
-    escalationActiveCount = activeCandidatesByKey.size;
-
-    const { data: escalationRowsData, error: escalationRowsError } = await supabase
-      .from('sync_escalation_events')
-      .select('user_id,code,severity,status,owner,first_triggered_at,last_triggered_at,resolved_at,trigger_count,last_observed,threshold,message,last_dispatched_at,dispatch_count,metadata')
-      .in('user_id', processedUserIds)
-      .limit(Math.max(200, processedUserIds.length * 20));
-
-    if (escalationRowsError) {
-      escalationPersisted = false;
-      if (isMissingTable(escalationRowsError.code)) {
-        escalationPersistenceError =
-          'sync_escalation_events table is not available. Apply migration 008_sync_escalation_events.sql.';
-      } else {
-        escalationPersistenceError = `Failed to read escalation events: ${escalationRowsError.message}`;
-      }
-      console.warn('[Cron Sync] Escalation persistence unavailable:', escalationPersistenceError);
-    } else {
-      const existingEscalationRows = (escalationRowsData ?? []) as EscalationEventRow[];
-      const existingByKey = new Map(
-        existingEscalationRows.map((row) => [toEscalationKey(row.user_id, row.code), row])
-      );
-
-      const nowIso = new Date().toISOString();
-      const activeUpserts: Array<{
-        user_id: string;
-        code: string;
-        severity: EscalationSeverity;
-        status: EscalationStatus;
-        owner: string;
-        first_triggered_at: string;
-        last_triggered_at: string;
-        resolved_at: string | null;
-        trigger_count: number;
-        last_observed: number;
-        threshold: number;
-        message: string;
-        last_dispatched_at: string | null;
-        dispatch_count: number;
-        metadata: Record<string, unknown>;
-        updated_at: string;
-      }> = [];
-
-      const dispatchCandidates: DispatchCandidate[] = [];
-      const activeKeys = new Set<string>();
-
-      activeCandidatesByKey.forEach(({ userId, candidate }, key) => {
-        activeKeys.add(key);
-        const existing = existingByKey.get(key);
-        const existingMetadata = existing?.metadata && typeof existing.metadata === 'object' ? existing.metadata : {};
-
-        if (!existing || existing.status !== 'open') {
-          escalationOpenedCount += 1;
-        }
-
-        activeUpserts.push({
-          user_id: userId,
-          code: candidate.code,
-          severity: candidate.severity,
-          status: 'open',
-          owner: candidate.owner,
-          first_triggered_at: !existing || existing.status !== 'open' ? nowIso : existing.first_triggered_at,
-          last_triggered_at: nowIso,
-          resolved_at: null,
-          trigger_count: (existing?.trigger_count ?? 0) + 1,
-          last_observed: candidate.observed,
-          threshold: candidate.threshold,
-          message: candidate.message,
-          last_dispatched_at: existing?.last_dispatched_at ?? null,
-          dispatch_count: existing?.dispatch_count ?? 0,
-          metadata: {
-            ...existingMetadata,
-            lastEvaluatedAt: nowIso,
-            lastRunId: runId,
-            metrics: candidate.metrics,
-          },
-          updated_at: nowIso,
-        });
-
-        const shouldAttemptDispatch =
-          !!ESCALATION_WEBHOOK_URL &&
-          (candidate.severity === 'critical' || ESCALATION_INCLUDE_WARNING) &&
-          shouldDispatchEscalation({
-            lastDispatchedAt: existing?.last_dispatched_at ?? null,
-          });
-
-        if (shouldAttemptDispatch) {
-          dispatchCandidates.push({
-            userId,
-            code: candidate.code,
-            severity: candidate.severity,
-            owner: candidate.owner,
-            message: candidate.message,
-            observed: candidate.observed,
-            threshold: candidate.threshold,
-            metrics: candidate.metrics,
-            nextDispatchCount: (existing?.dispatch_count ?? 0) + 1,
-          });
-        }
-      });
-
-      const rowsToResolve = existingEscalationRows.filter((row) => {
-        if (row.status !== 'open') {
-          return false;
-        }
-
-        return !activeKeys.has(toEscalationKey(row.user_id, row.code));
-      });
-
-      escalationResolvedCount = rowsToResolve.length;
-
-      if (activeUpserts.length > 0) {
-        const { error: escalationUpsertError } = await supabase
-          .from('sync_escalation_events')
-          .upsert(activeUpserts, { onConflict: 'user_id,code' });
-
-        if (escalationUpsertError) {
-          escalationPersisted = false;
-          escalationPersistenceError = `Failed to upsert escalation events: ${escalationUpsertError.message}`;
-          console.warn('[Cron Sync] Failed to upsert escalation events:', escalationUpsertError.message);
-        }
-      }
-
-      if (rowsToResolve.length > 0) {
-        const resolveResults = await Promise.all(
-          rowsToResolve.map((row) =>
-            supabase
-              .from('sync_escalation_events')
-              .update({
-                status: 'resolved',
-                resolved_at: nowIso,
-                updated_at: nowIso,
-              })
-              .eq('user_id', row.user_id)
-              .eq('code', row.code)
-          )
-        );
-
-        const firstResolveError = resolveResults.find((result) => result.error)?.error;
-        if (firstResolveError) {
-          escalationPersisted = false;
-          escalationPersistenceError = `Failed to resolve escalation events: ${firstResolveError.message}`;
-          console.warn('[Cron Sync] Failed to resolve escalation events:', firstResolveError.message);
-        }
-      }
-
-      if (!ESCALATION_WEBHOOK_URL && escalationActiveCount > 0) {
-        escalationDispatchWarning =
-          'SYNC_ESCALATION_WEBHOOK_URL is not configured. Escalations were persisted without outbound dispatch.';
-      }
-
-      if (dispatchCandidates.length > 0 && ESCALATION_WEBHOOK_URL) {
-        for (const candidate of dispatchCandidates) {
-          const dispatchPayload = {
-            service: 'the-eyes',
-            event: 'sync-escalation',
-            emittedAt: new Date().toISOString(),
-            runId,
-            userId: candidate.userId,
-            code: candidate.code,
-            severity: candidate.severity,
-            owner: candidate.owner,
-            message: candidate.message,
-            observed: candidate.observed,
-            threshold: candidate.threshold,
-            metrics: candidate.metrics,
-          };
-
-          const dispatchResult = await dispatchEscalationWebhook(dispatchPayload);
-          if (!dispatchResult.success) {
-            escalationDispatchFailureCount += dispatchResult.attempted ? 1 : 0;
-            const message = dispatchResult.error || 'Unknown webhook dispatch error.';
-            console.warn('[Cron Sync] Escalation webhook dispatch failed:', message);
-            escalationDispatchWarning = escalationDispatchWarning
-              ? `${escalationDispatchWarning} | ${candidate.code}:${message}`
-              : `${candidate.code}:${message}`;
-            continue;
-          }
-
-          const dispatchedAtIso = new Date().toISOString();
-          const { error: dispatchUpdateError } = await supabase
-            .from('sync_escalation_events')
-            .update({
-              last_dispatched_at: dispatchedAtIso,
-              dispatch_count: candidate.nextDispatchCount,
-              updated_at: dispatchedAtIso,
-            })
-            .eq('user_id', candidate.userId)
-            .eq('code', candidate.code);
-
-          if (dispatchUpdateError) {
-            escalationPersisted = false;
-            escalationPersistenceError = `Failed to update escalation dispatch metadata: ${dispatchUpdateError.message}`;
-            console.warn('[Cron Sync] Failed to persist escalation dispatch metadata:', dispatchUpdateError.message);
-            continue;
-          }
-
-          escalationDispatchedCount += 1;
-        }
-      }
-    }
-
-    if (metricWarnings.length > 0) {
-      escalationEvaluationWarning = metricWarnings.join(' | ');
-    }
-  }
+  const {
+    escalationEvaluationWarning,
+    escalationPersistenceError,
+    escalationDispatchWarning,
+    escalationPersisted,
+    escalationActiveCount,
+    escalationOpenedCount,
+    escalationResolvedCount,
+    escalationDispatchedCount,
+    escalationDispatchFailureCount,
+  } = await processEscalations(
+    supabase,
+    processedUserIds,
+    runId,
+    ESCALATION_WEBHOOK_URL,
+    ESCALATION_INCLUDE_WARNING
+  );
 
   let observabilityWarning = [
     logPersistenceError,
