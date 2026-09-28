@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "rm -rf .next",
     "dev": "next dev",
     "dev:all": "concurrently \"npm run dev\" \"cd src/engine && uvicorn main:app --reload --port 8000\"",
     "build": "next build",
