@@ -4,13 +4,6 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendOrganizationInviteEmail } from '@/services/email/resend';
 
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -32,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid role specified' }, { status: 400 });
     }
 
-    const adminSupabase = getAdminClient();
+    const adminSupabase = supabase;
 
     // Find the current user's organization context
     const { data: profile, error: profileErr } = await adminSupabase
@@ -132,7 +125,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Invitation ID is required' }, { status: 400 });
     }
 
-    const adminSupabase = getAdminClient();
+    const adminSupabase = supabase;
 
     // Find the invitation
     const { data: invitation, error: inviteErr } = await adminSupabase

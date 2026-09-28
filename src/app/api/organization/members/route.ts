@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 
-function getAdminClient() {
-  return createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
 
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
@@ -38,7 +31,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'memberId or userId is required' }, { status: 400 });
     }
 
-    const adminSupabase = getAdminClient();
+    const adminSupabase = supabase;
 
     // 1. Fetch current requester's profile and organization context
     const { data: requesterProfile } = await adminSupabase
