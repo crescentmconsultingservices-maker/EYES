@@ -14,3 +14,4 @@ model_list:
   - model_name: auto-embed
     litellm_params:
       model: text-embedding-3-small
+      dimensions: 1024

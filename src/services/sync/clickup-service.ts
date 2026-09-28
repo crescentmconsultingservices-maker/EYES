@@ -44,7 +44,7 @@ export async function executeClickUpSync(actor: SyncActor, mode: string = 'delta
   }
 
   const isBackfill = mode === 'backfill';
-  let page = isBackfill ? parseInt(currentStatus?.cursor || '0') : 0;
+  const page = isBackfill ? parseInt(currentStatus?.cursor || '0') : 0;
 
   await upsertSyncStatusSafely(supabase, {
     user_id: userId,

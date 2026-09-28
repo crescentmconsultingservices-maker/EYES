@@ -13,7 +13,7 @@ interface AuditViewProps {
   summary?: AuditSummary;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 export function AuditView({ onBack, summary }: AuditViewProps) {
   const [activeAudit, setActiveAudit] = useState<ReputationAudit | null>(null);
   const [isInitiating, setIsInitiating] = useState(false);

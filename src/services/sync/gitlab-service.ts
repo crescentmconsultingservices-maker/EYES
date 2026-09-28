@@ -45,7 +45,7 @@ export async function executeGitlabSync(actor: SyncActor, mode: string = 'delta'
 
   const isBackfill = mode === 'backfill';
   const perPage = 100;
-  let page = isBackfill ? parseInt(currentStatus?.cursor || '1') : 1;
+  const page = isBackfill ? parseInt(currentStatus?.cursor || '1') : 1;
 
   await upsertSyncStatusSafely(supabase, {
     user_id: userId,

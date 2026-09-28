@@ -184,7 +184,7 @@ export default function SandboxOnboarding() {
     );
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   const router = useRouter();
 
   const handleNext = async () => {

@@ -132,8 +132,8 @@ EVIDENCE:
 ${evidenceText || 'No records found.'}`;
 
     let rawResponse: string | ToolCallResult | null = null;
-    let messages: AIHistoryMessage[] = [{ role: 'user', content: query }];
-    let usedTools: string[] = [];
+    const messages: AIHistoryMessage[] = [{ role: 'user', content: query }];
+    const usedTools: string[] = [];
     
     // Agentic Loop (Max 3 iterations to prevent infinite loops)
     for (let i = 0; i < 3; i++) {

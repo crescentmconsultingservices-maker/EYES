@@ -45,7 +45,7 @@ export async function executeNetlifySync(actor: SyncActor, mode: string = 'delta
 
   const isBackfill = mode === 'backfill';
   const perPage = 50;
-  let page = isBackfill ? parseInt(currentStatus?.cursor || '1') : 1;
+  const page = isBackfill ? parseInt(currentStatus?.cursor || '1') : 1;
 
   await upsertSyncStatusSafely(supabase, {
     user_id: userId,
