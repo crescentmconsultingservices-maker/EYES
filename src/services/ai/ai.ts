@@ -442,7 +442,7 @@ export async function invokeModel(options: AIInvokeOptions): Promise<InvokeResul
       captureBehavioralData({
         queryText: messages[messages.length - 1]?.content || '',
         queryType: capability,
-        modelUsed: getGatewayBase() ? `gateway/${capability === 'classify' ? ALIAS_CLASSIFY : ALIAS_CHAT}` : 'fallback',
+        modelUsed: getGatewayBase(getGatewayKey()) ? `gateway/${capability === 'classify' ? ALIAS_CLASSIFY : ALIAS_CHAT}` : 'fallback',
         latencyMs: Date.now() - startedAt,
         resultCount: messages.length,
         responseLength: result.length,
@@ -467,8 +467,8 @@ export async function invokeModelStream(options: AIInvokeOptions): Promise<Reada
   ];
 
   // 1. Gateway stream
-  const base = getGatewayBase();
   const key = getGatewayKey();
+  const base = getGatewayBase(key);
   if (base && key) {
     const models = getModelsForRequest(key, ALIAS_CHAT);
     for (const model of models) {
