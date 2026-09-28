@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/utils/supabase/admin';
+import { createClient } from '@/utils/supabase/server';
 
 // ── Fallback prompts (used if DB read fails or table not yet migrated) ────────
 const FALLBACK_PROMPTS: Record<string, string> = {
@@ -52,9 +52,7 @@ export async function getPrompt(name: string): Promise<string> {
   }
 
   try {
-    // Use createAdminClient() (consistent with rest of codebase) instead of
-    // raw createClient() with service role key (H-NEW-2 fix: removed overprivileged inline client).
-    const supabase = createAdminClient();
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('prompt_versions')

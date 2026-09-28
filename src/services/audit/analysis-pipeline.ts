@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
 import { Commitment } from '@/types/dashboard';
 import { SECTION_TITLES, EXECUTIVE_SUMMARY_INSTRUCTIONS, OPPORTUNITIES_INSTRUCTIONS, CROSS_LENS_SECTION, commitmentKeywords, sensitiveKeywords, finalRiskInstruction } from './audit-prompts';
@@ -12,7 +12,7 @@ import { fetchAuditData, updateAuditStage, markAuditFailed } from './audit-db';
 
 export class AuditAnalysisService {
   static async runAnalysis(auditId: string, userId: string) {
-    const supabase = await createAdminClient();
+    const supabase = await createClient();
     const startedAt = Date.now();
 
     const setStage = (stage: string, extra?: Record<string, unknown>) =>

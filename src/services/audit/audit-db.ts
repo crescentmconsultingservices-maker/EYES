@@ -1,7 +1,7 @@
-import { createAdminClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function updateAuditStage(auditId: string, stage: string, extra?: Record<string, unknown>) {
-  const supabase = await createAdminClient();
+  const supabase = await createClient();
   await supabase
     .from('reputation_audits')
     .update({ stage, ...(extra ?? {}) })
@@ -9,7 +9,7 @@ export async function updateAuditStage(auditId: string, stage: string, extra?: R
 }
 
 export async function fetchAuditData(auditId: string, userId: string) {
-  const supabase = await createAdminClient();
+  const supabase = await createClient();
   
   // Get the audit record metadata
   const { data: auditRecord } = await supabase
@@ -63,7 +63,7 @@ export async function fetchAuditData(auditId: string, userId: string) {
 }
 
 export async function markAuditFailed(auditId: string, errorMessage: string) {
-  const supabase = await createAdminClient();
+  const supabase = await createClient();
   await supabase.from('reputation_audits').update({
     status: 'failed',
     summary_narrative: \`Analysis failed: \${errorMessage}. Please check AI quotas or retry.\`

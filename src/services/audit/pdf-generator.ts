@@ -2,7 +2,7 @@ import PDFDocument from 'pdfkit';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { createAdminClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { ReputationAudit } from '@/types/dashboard';
 
 interface Opportunity {
@@ -661,7 +661,7 @@ export class PDFGenerationService {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
-          const supabase = await createAdminClient();
+          const supabase = await createClient();
 
           // Resolve real user display name
           let subjectName = 'Authorized Account Holder';
@@ -873,7 +873,7 @@ export class PDFGenerationService {
         }
       }
 
-      const supabase = await createAdminClient();
+      const supabase = await createClient();
 
       try {
         await supabase.storage.createBucket('audits', { public: false });
