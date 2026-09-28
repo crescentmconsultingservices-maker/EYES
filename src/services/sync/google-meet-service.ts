@@ -53,10 +53,14 @@ export async function executeGoogleMeetSync(actor: SyncActor, mode: string = 'de
     last_sync_at: new Date().toISOString(),
   });
 
+  const now = new Date();
+  const timeMin = isBackfill ? '' : new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7).toISOString();
+  const timeMinParam = timeMin ? `&timeMin=${encodeURIComponent(timeMin)}` : '';
+
   // Consumer Google Meet Sync via Google Calendar API
   // We extract Google Meet sessions by identifying calendar events with conference data.
   // We filter out declined meetings and extract participant metadata to enrich the backend graph.
-  const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?q=meet.google.com${pageToken ? `&pageToken=${pageToken}` : ''}`, {
+  const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?q=meet.google.com&singleEvents=true&orderBy=startTime${timeMinParam}${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: 'application/json',
@@ -90,7 +94,7 @@ export async function executeGoogleMeetSync(actor: SyncActor, mode: string = 'de
       platform_id: String(event.id),
       event_type: 'scheduled_meeting',
       title: `[Scheduled] ${event.summary || 'Untitled Meeting'}`,
-      content: `Google Meet link: ${event.hangoutLink}\nScheduled Participants: ${coParticipants || 'None'}\nNote: This is a calendar schedule, actual attendance is not confirmed.`,
+      content: `Google Meet link: ${event.hangoutLink || 'No link provided'}\nScheduled Participants: ${coParticipants || 'None'}\nNote: This is a calendar schedule, actual attendance is not confirmed.`,
       author: event.creator?.email || userEmail || userName || 'Google User',
       timestamp: new Date(event.start?.dateTime || event.start?.date || event.updated).toISOString(),
       scope: isOrg ? 'organizational' : 'personal',
@@ -119,7 +123,7 @@ export async function executeGoogleMeetSync(actor: SyncActor, mode: string = 'de
       platform: 'google-meet',
       status: hasMore ? 'syncing' : 'connected',
       sync_progress: hasMore ? 60 : 100,
-      total_items: (currentStatus?.total_items || 0) + rawEvents.length,
+      total_items: (currentStatus?.total_items || 0), // Avoid double counting on upserts
       last_sync_at: now,
       next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
       cursor: hasMore ? String(nextPageToken) : null,
