@@ -53,8 +53,9 @@ export async function executeGoogleMeetSync(actor: SyncActor, mode: string = 'de
     last_sync_at: new Date().toISOString(),
   });
 
-  // Mocking Google Meet via Google Calendar API since Meet itself doesn't have a direct "list meetings" API
-  // We filter calendar events that have conference data (Meet links)
+  // Consumer Google Meet Sync via Google Calendar API
+  // We extract Google Meet sessions by identifying calendar events with conference data.
+  // We filter out declined meetings and extract participant metadata to enrich the backend graph.
   const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?q=meet.google.com${pageToken ? `&pageToken=${pageToken}` : ''}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -71,26 +72,41 @@ export async function executeGoogleMeetSync(actor: SyncActor, mode: string = 'de
   const nextPageToken = payload.nextPageToken || null;
   const hasMore = !!nextPageToken;
 
-  const rawEvents = events.map((event: any) => ({
-    user_id: userId,
-    platform: 'google-meet',
-    platform_id: String(event.id),
-    event_type: 'meeting',
-    title: event.summary || 'Untitled Meeting',
-    content: `Google Meet link: ${event.hangoutLink}`,
-    author: userEmail || userName || 'Google User',
-    timestamp: new Date(event.start?.dateTime || event.updated).toISOString(),
-    scope: isOrg ? 'organizational' : 'personal',
-    organization_id: orgId,
-    metadata: {
-      id: event.id,
-      hangoutLink: event.hangoutLink,
-      attendees: event.attendees?.length || 0,
-    },
-    is_flagged: false,
-    flag_severity: 'none',
-    flag_reason: null,
-  }));
+  const validEvents = events.filter((event: any) => {
+    if (!event.attendees) return true; // If no attendees listed, assume user is owner/going
+    const me = event.attendees.find((a: any) => a.self || a.email === userEmail);
+    // If explicitly declined, skip it.
+    if (me && me.responseStatus === 'declined') return false;
+    return true;
+  });
+
+  const rawEvents = validEvents.map((event: any) => {
+    const attendees = (event.attendees || []).map((a: any) => a.email || a.displayName).filter(Boolean);
+    const coParticipants = attendees.filter((a: string) => a !== userEmail).join(', ');
+    
+    return {
+      user_id: userId,
+      platform: 'google-meet',
+      platform_id: String(event.id),
+      event_type: 'scheduled_meeting',
+      title: `[Scheduled] ${event.summary || 'Untitled Meeting'}`,
+      content: `Google Meet link: ${event.hangoutLink}\nScheduled Participants: ${coParticipants || 'None'}\nNote: This is a calendar schedule, actual attendance is not confirmed.`,
+      author: event.creator?.email || userEmail || userName || 'Google User',
+      timestamp: new Date(event.start?.dateTime || event.start?.date || event.updated).toISOString(),
+      scope: isOrg ? 'organizational' : 'personal',
+      organization_id: orgId,
+      metadata: {
+        id: event.id,
+        hangoutLink: event.hangoutLink,
+        attendee_count: attendees.length,
+        attendees: attendees,
+        status: event.status,
+      },
+      is_flagged: false,
+      flag_severity: 'none',
+      flag_reason: null,
+    };
+  });
 
   if (rawEvents.length > 0) {
     await upsertRawEventsSafely(supabase, rawEvents);

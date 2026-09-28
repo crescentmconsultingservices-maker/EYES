@@ -244,16 +244,26 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
                             if isinstance(rel, dict):
                                 rel["head"] = "User"
                     
-                    # Inject a placeholder entity for the User to satisfy downstream graph mapping
+                    # Fetch actual User entity ID and metadata instead of a placeholder
                     has_user_entity = any(e.get("text") == "User" for e in entities)
-                    if not has_user_entity and relations:
+                    if not has_user_entity and relations and request.user_id and supabase:
+                        try:
+                            user_res = supabase.table("users").select("full_name").eq("id", request.user_id).execute()
+                            user_name = user_res.data[0].get("full_name", "User") if user_res.data else "User"
+                        except Exception:
+                            user_name = "User"
+                        
                         entities.append({
                             "label": "person",
-                            "text": "User",
+                            "text": user_name,
+                            "id": request.user_id,
                             "score": 1.0,
                             "start": 0,
                             "end": 0
                         })
+                        for rel in relations:
+                            if isinstance(rel, dict) and rel.get("head") == "User":
+                                rel["head"] = user_name
 
                 except Exception as llm_err:
                     print(f"[Relationship Engine] LiteLLM Error: {llm_err}. Skipping relation extraction.")

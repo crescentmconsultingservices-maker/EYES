@@ -651,10 +651,7 @@ export async function getValidZoomToken(
   return decryptToken(tokenRow.access_token);
 }
 
-/**
- * Retrieves a valid Figma token.
- */
-export async function getValidFigmaToken(
+export async function getValidCanvaToken(
   supabase: SupabaseClient,
   userId: string
 ): Promise<string | null> {
@@ -662,12 +659,44 @@ export async function getValidFigmaToken(
     .from('oauth_tokens')
     .select('access_token')
     .eq('user_id', userId)
-    .eq('platform', 'figma')
+    .eq('platform', 'canva')
     .maybeSingle();
 
   if (!tokenRow) return null;
   return decryptToken(tokenRow.access_token);
 }
+
+export async function getValidSpotifyToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'spotify')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+export async function getValidStripeToken(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const { data: tokenRow } = await supabase
+    .from('oauth_tokens')
+    .select('access_token')
+    .eq('user_id', userId)
+    .eq('platform', 'stripe')
+    .maybeSingle();
+
+  if (!tokenRow) return null;
+  return decryptToken(tokenRow.access_token);
+}
+
+
 
 /**
  * Retrieves a valid Dropbox token.

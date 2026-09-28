@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 
 // In a real implementation, this would fetch from a custom Next.js API route
 // that queries the Inngest REST API for running tasks for the current user.
-// For Step E demonstration, we provide a manual trigger and mock list.
-
+// that queries the Inngest REST API for running tasks for the current user.
 export default function ActiveTasksDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [tasks, setTasks] = useState<any[]>([]);
 
@@ -95,15 +94,6 @@ export default function ActiveTasksDrawer({ isOpen, onClose }: { isOpen: boolean
         )}
       </div>
 
-      <div style={{ marginTop: '24px' }}>
-        <button 
-          onClick={async () => {
-            await fetch('/api/inngest/trigger', { method: 'POST' });
-          }}
-          style={{ width: '100%', background: 'rgba(255,255,255,0.1)', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}
-        >
-          Test: Dispatch Churn Investigation Task
-        </button>
       </div>
     </div>
   );

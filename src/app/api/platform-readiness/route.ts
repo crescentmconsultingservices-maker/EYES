@@ -12,7 +12,7 @@ type PlatformId =
   | 'canva'
   | 'strava' | 'fitbit' | 'withings'
   | 'google-docs' | 'google-sheets' | 'google-slides' | 'google-meet' | 'google-chat' | 'google-maps' | 'youtube'
-  | 'sonos' | 'philips-hue' | 'zoom' | 'hubspot' | 'salesforce' | 'jira' | 'confluence' | 'aws' | 'gcp' | 'azure' | 'quickbooks' | 'xero' | 'sap' | 'excel' | 'stripe' | 'tableau' | 'monday' | 'mailchimp' | 'google-analytics' | 'meta-ads' | 'linkedin-ads' | 'productboard' | 'figma' | 'mixpanel' | 'datadog' | 'linkedin-sales-navigator' | 'ms-project' | 'azure-devops' | 'miro' | 'gitlab' | 'vscode' | 'postman' | 'docker' | 'stack-overflow';
+  | 'sonos' | 'philips-hue' | 'zoom' | 'hubspot' | 'salesforce' | 'jira' | 'confluence' | 'aws' | 'gcp' | 'azure' | 'quickbooks' | 'xero' | 'sap' | 'excel' | 'stripe' | 'tableau' | 'monday' | 'mailchimp' | 'google-analytics' | 'meta-ads' | 'linkedin-ads' | 'productboard' | 'mixpanel' | 'datadog' | 'linkedin-sales-navigator' | 'ms-project' | 'azure-devops' | 'miro' | 'gitlab' | 'vscode' | 'postman' | 'docker' | 'stack-overflow' | 'spotify';
 
 type PlatformReadiness = {
   id: PlatformId;
@@ -243,12 +243,6 @@ const platformConfigs: Array<{
     scopes: ['accounting.transactions', 'accounting.reports.read'],
   },
   {
-    id: 'figma',
-    name: 'Figma',
-    env: ['FIGMA_API_TOKEN'],
-    scopes: ['file_read'],
-  },
-  {
     id: 'jira',
     name: 'Jira',
     env: ['JIRA_CLIENT_ID', 'JIRA_CLIENT_SECRET'],
@@ -271,6 +265,18 @@ const platformConfigs: Array<{
     name: 'Mixpanel',
     env: ['MIXPANEL_CLIENT_ID', 'MIXPANEL_CLIENT_SECRET'],
     scopes: ['data:read'],
+  },
+  {
+    id: 'spotify',
+    name: 'Spotify',
+    env: ['SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET'],
+    scopes: ['user-read-recently-played'],
+  },
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    env: ['STRIPE_CLIENT_ID', 'STRIPE_CLIENT_SECRET'],
+    scopes: ['read_only'],
   },
 ];
 

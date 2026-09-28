@@ -110,10 +110,12 @@ export default function RevenueScanPage() {
                 onChange={(e) => setUserIdInput(e.target.value)}
                 style={{ width: '100%', padding: '12px', marginBottom: '12px', border: '1px solid #E2D8C8', background: '#FDFAF4', fontFamily: 'monospace' }}
               />
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', fontFamily: 'monospace', fontSize: '12px', color: '#5C554B', cursor: 'pointer' }}>
-                <input type="checkbox" checked={useMock} onChange={(e) => setUseMock(e.target.checked)} />
-                USE MOCK DATA (Bypass Gmail API to test AI pipeline)
-              </label>
+              {process.env.NODE_ENV !== 'production' && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', fontFamily: 'monospace', fontSize: '12px', color: '#5C554B', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={useMock} onChange={(e) => setUseMock(e.target.checked)} />
+                  USE MOCK DATA (Bypass Gmail API to test AI pipeline)
+                </label>
+              )}
             <button className={styles.btn} onClick={startScan}>Scan My Inbox Now</button>
           </div>
 

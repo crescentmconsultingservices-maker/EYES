@@ -40,7 +40,6 @@ export const ALL_POSSIBLE_PLATFORMS = [
   { id: 'google-meet',     name: 'Google Meet',     icon: <GoogleMeetIcon />,       category: 'Productivity', description: 'Sync meeting data and AI-generated meeting summaries.',      color: '#00832d' },
   { id: 'google-chat',     name: 'Google Chat',     icon: <GoogleChatIcon />,       category: 'Productivity', description: 'Index team communication and perform message analysis.',     color: '#00ac47' },
   { id: 'zoom',            name: 'Zoom',            icon: <div className="w-5 h-5 rounded bg-blue-500 text-white flex items-center justify-center text-xs">Z</div>, category: 'Productivity', description: 'Sync meetings, transcripts, and recordings.', color: '#2D8CFF' },
-  { id: 'figma',           name: 'Figma',           icon: <div className="w-5 h-5 rounded bg-pink-500 text-white flex items-center justify-center text-xs">F</div>, category: 'Productivity', description: 'Index design files, comments, and assets.', color: '#F24E1E' },
   { id: 'dropbox',         name: 'Dropbox',         icon: <div className="w-5 h-5 rounded bg-blue-700 text-white flex items-center justify-center text-xs">D</div>, category: 'Productivity', description: 'Sync cloud files and storage.', color: '#0061FE' },
 
   // ─── Development ──────────────────────────────────────────────────────────
@@ -59,4 +58,7 @@ export const ALL_POSSIBLE_PLATFORMS = [
 
   // ─── Creative ─────────────────────────────────────────────────────────────
   { id: 'youtube',         name: 'YouTube',         icon: <YouTubeIconOfficial />,  category: 'Creative',     description: 'Index saved videos, watch history, and learning.',           color: '#FF0000' },
+  { id: 'canva',           name: 'Canva',           icon: <div className="w-5 h-5 rounded bg-blue-500 text-white flex items-center justify-center text-xs">C</div>, category: 'Creative',     description: 'Sync your graphic designs and visual assets.', color: '#00C4CC' },
+  { id: 'spotify',         name: 'Spotify',         icon: <div className="w-5 h-5 rounded bg-green-500 text-white flex items-center justify-center text-xs">S</div>, category: 'Creative',     description: 'Index listening history and favorite tracks.', color: '#1DB954' },
+  { id: 'stripe',          name: 'Stripe',          icon: <div className="w-5 h-5 rounded bg-indigo-500 text-white flex items-center justify-center text-xs">S</div>, category: 'Productivity', description: 'Index payments, invoices, and subscriptions.', color: '#635BFF' },
 ];

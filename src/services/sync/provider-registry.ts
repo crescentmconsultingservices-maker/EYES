@@ -35,8 +35,10 @@ import { executeLinkedInSync } from './linkedin-service';
 import { executeGoogleMapsSync } from './google-maps-service';
 import { executeYouTubeSync } from './youtube-service';
 import { executeZoomSync } from './zoom-service';
-import { executeFigmaSync } from './figma-service';
 import { executeDropboxSync } from './dropbox-service';
+import { executeSpotifySync } from './spotify-service';
+import { executeStripeSync } from './stripe-service';
+import { executeCanvaSync } from './canva-service';
 
 export const syncProviders: Record<string, SyncProvider> = {
   'github': { executeSync: executeGithubSync },
@@ -64,6 +66,8 @@ export const syncProviders: Record<string, SyncProvider> = {
   'google-maps': { executeSync: executeGoogleMapsSync },
   'youtube': { executeSync: executeYouTubeSync },
   'zoom': { executeSync: executeZoomSync },
-  'figma': { executeSync: executeFigmaSync },
   'dropbox': { executeSync: executeDropboxSync },
+  'spotify': { executeSync: executeSpotifySync },
+  'stripe': { executeSync: executeStripeSync },
+  'canva': { executeSync: executeCanvaSync },
 };

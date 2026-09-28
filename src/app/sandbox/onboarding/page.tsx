@@ -112,8 +112,16 @@ export default function SandboxOnboarding() {
   const handleNext = () => {
     if (step < 5) setStep(step + 1);
     else {
-      // Final submission (mocked for now)
-      alert(`Onboarding Complete!\n\nAccount Type: ${accountType}\nOrganization Name: ${orgName || 'N/A'}\nRole: ${selectedRole}\nGoals: ${selectedGoals.join(', ')}\nPersona: ${selectedPersona}`);
+      fetch('/api/user/onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountType, orgName, selectedRole, selectedGoals, selectedPersona })
+      }).then(() => {
+        alert('Onboarding Complete!');
+        window.location.href = '/dashboard';
+      }).catch(err => {
+        alert('Failed to save onboarding data.');
+      });
     }
   };
 

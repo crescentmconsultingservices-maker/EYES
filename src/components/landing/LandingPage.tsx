@@ -46,7 +46,7 @@ const sandboxCards = [
   { id: '2', type: 'CODE', title: 'Auth Logic', desc: 'Snippet from last Tuesday matches your current problem.', time: '1 day ago', relevance: 94 },
   { id: '3', type: 'IDEA', title: 'Marketing Campaign', desc: 'You jotted this down at 2 AM last week. Ready to expand?', time: '3 days ago', relevance: 88 },
   { id: '4', type: 'DOCUMENT', title: 'Q3 Product Brief', desc: 'Detailed specifications for the memory extraction service API.', time: '4 days ago', relevance: 85 },
-  { id: '5', type: 'CHAT', title: 'Design Handoff', desc: 'Sarah shared the Figma links for the new landing page styles.', time: '5 days ago', relevance: 82 },
+  { id: '5', type: 'CHAT', title: 'Design Handoff', desc: 'Sarah shared the Notion links for the new landing page styles.', time: '5 days ago', relevance: 82 },
   { id: '6', type: 'NOTE', title: 'Waitlist Launch Plan', desc: 'Checklist for the beta campaign. Limit spots to 100 on day one.', time: '6 days ago', relevance: 78 }
 ];
 

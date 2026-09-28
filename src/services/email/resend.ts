@@ -78,9 +78,8 @@ async function sendEmailMessage(params: {
     }
   }
 
-  // 3. Fallback: Local dev mock log
-  console.log(`[Email Mock/Dev] To: ${toList.join(', ')} | Subject: "${params.subject}"`);
-  return { success: false, provider: 'mock' };
+  // 3. Fail loudly if no email provider succeeds
+  throw new Error('No email provider configured or all providers failed to send.');
 }
 
 // ── Email templates ──────────────────────────────────────────────────────────
