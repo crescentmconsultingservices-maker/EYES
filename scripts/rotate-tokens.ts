@@ -68,12 +68,15 @@ async function main() {
     for (const row of rows) {
       try {
         const plainAccess = decryptToken(row.access_token);
+        if (!plainAccess) throw new Error('Failed to decrypt access_token');
         const newAccess = encryptToken(plainAccess);
         
         let newRefresh = row.refresh_token;
         if (row.refresh_token && row.refresh_token.startsWith('enc:v1:')) {
           const plainRefresh = decryptToken(row.refresh_token);
-          newRefresh = encryptToken(plainRefresh);
+          if (plainRefresh) {
+            newRefresh = encryptToken(plainRefresh);
+          }
         }
 
         if (!DRY_RUN) {
