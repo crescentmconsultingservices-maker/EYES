@@ -46,12 +46,13 @@ export async function POST(request: Request) {
     const emailAddress = String(notification?.emailAddress ?? '').toLowerCase();
     if (!historyId || !emailAddress) return NextResponse.json({ received: true });
 
-    const { data: profile } = await supabase
-      .from('user_profiles')
+    const { data: tokenRecord } = await supabase
+      .from('oauth_tokens')
       .select('user_id')
-      .ilike('email', emailAddress)
+      .eq('platform', 'gmail')
+      .eq('metadata->>email', emailAddress)
       .maybeSingle();
-    userId = profile?.user_id ?? null;
+    userId = tokenRecord?.user_id ?? null;
     if (!userId) return NextResponse.json({ received: true });
 
     // Fetch recent unprocessed memories for this user from Gmail

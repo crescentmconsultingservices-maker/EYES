@@ -24,7 +24,7 @@ export default function KnowledgeGraph({ userId, width, height }: { userId?: str
   useEffect(() => {
     async function fetchGraph() {
       try {
-        const res = await fetch(`/api/graph${userId ? `?userId=${userId}` : ''}`);
+        const res = await fetch(`/api/graph`);
         const data = await res.json();
         if (data.nodes && data.edges) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

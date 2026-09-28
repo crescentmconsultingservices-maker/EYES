@@ -191,9 +191,21 @@ export async function GET(request: Request) {
         if (watchRes.ok) {
           const watchData = await watchRes.json();
           console.log('[Gmail Watch] Activated. historyId:', watchData.historyId, 'expiry:', watchData.expiration);
+          
+          let emailAddress = null;
+          try {
+            const profileRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+              headers: { 'Authorization': `Bearer ${tokenBody.access_token}` }
+            });
+            if (profileRes.ok) {
+              const pData = await profileRes.json();
+              emailAddress = pData.emailAddress;
+            }
+          } catch (e) { console.warn('[Gmail Profile] Failed', e); }
+
           // Store historyId so the webhook knows where to start fetching from
           await supabase.from('oauth_tokens')
-            .update({ metadata: { gmail_history_id: watchData.historyId, gmail_watch_expiry: watchData.expiration } })
+            .update({ metadata: { gmail_history_id: watchData.historyId, gmail_watch_expiry: watchData.expiration, email: emailAddress } })
             .eq('user_id', userId)
             .eq('platform', 'gmail');
         } else {

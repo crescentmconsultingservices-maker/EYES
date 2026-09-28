@@ -78,3 +78,6 @@ push-env.ps1
 
 # Python virtualenv
 .venv/
+
+# ESLint
+eslint-report.json

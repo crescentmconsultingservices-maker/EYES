@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = await createAdminClient();
+    const userId = user.id;
 
     // Phase 4.A Temporal Aggregation: Count mentions of specific entities over time
     // For this example, we will find the most mentioned tail_node_id and compare its frequency

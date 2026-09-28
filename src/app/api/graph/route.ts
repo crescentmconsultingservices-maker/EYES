@@ -1,25 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const { searchParams } = new URL(request.url);
-    const targetUserId = searchParams.get('userId') || user?.id;
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const userIds = targetUserId ? [targetUserId] : (user ? [user.id] : []);
-
-    const adminUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    const adminClient = adminUrl && adminKey ? createAdminClient(adminUrl, adminKey) : supabase;
+    const userIds = [user.id];
 
     const [edgesRes, corrRes, clustersRes] = await Promise.all([
-      adminClient
+      supabase
         .from('chronic_edges')
         .select(`
           id, 
@@ -31,11 +27,11 @@ export async function GET(request: Request) {
         .in('user_id', userIds)
         .is('valid_to', null)
         .limit(150),
-      adminClient
+      supabase
         .from('entity_correlations')
         .select('entity_id, entity_name')
         .in('user_id', userIds),
-      adminClient
+      supabase
         .from('cognitive_clusters')
         .select('id, cluster_label, cluster_description, characteristics, occurrence_count')
         .in('user_id', userIds)
