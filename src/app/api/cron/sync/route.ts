@@ -95,6 +95,7 @@ import {
 } from '@/lib/cron/sync-utils';
 
 import { processEscalations } from '@/lib/cron/sync-escalation-handler';
+import { persistSyncResults, persistCronMetrics } from '@/lib/cron/sync-persistence';
 
 // Re-export public API so existing test imports continue to work
 export {
@@ -685,71 +686,21 @@ async function runCronSync(request: Request) {
     .filter((key) => !retryUpsertKeySet.has(key))
     .map(fromRetryQueueKey);
 
-  let logPersistenceError: string | null = null;
-  if (syncRunLogs.length > 0) {
-    const { error: runLogError } = await supabase.from('sync_run_logs').insert(syncRunLogs);
-    if (runLogError) {
-      // Keep scheduler execution successful even if observability persistence fails.
-      logPersistenceError = runLogError.message;
-      console.warn('[Cron Sync] Failed to persist sync run logs:', runLogError.message);
-    }
-  }
-
-  let retryQueuePersistenceError: string | null = retryQueueWarning;
-  let retryQueuePersisted = retryQueueReady;
-  let deadLetterPersistenceError: string | null = null;
-  let deadLetterPersisted = true;
-  let escalationEvaluationWarning: string | null = null;
-  let escalationPersistenceError: string | null = null;
-  let escalationDispatchWarning: string | null = null;
-  let escalationPersisted = true;
-  let escalationActiveCount = 0;
-  let escalationOpenedCount = 0;
-  let escalationResolvedCount = 0;
-  let escalationDispatchedCount = 0;
-  let escalationDispatchFailureCount = 0;
-
-  if (retryQueueReady) {
-    if (dedupedRetryQueueUpserts.length > 0) {
-      const { error: retryUpsertError } = await supabase
-        .from('sync_retry_queue')
-        .upsert(dedupedRetryQueueUpserts, { onConflict: 'user_id,platform' });
-
-      if (retryUpsertError) {
-        retryQueuePersisted = false;
-        retryQueuePersistenceError = `Failed to upsert retry queue: ${retryUpsertError.message}`;
-        console.warn('[Cron Sync] Failed to upsert retry queue:', retryUpsertError.message);
-      }
-    }
-
-    if (retryQueueDeleteRows.length > 0) {
-      const deleteResults = await Promise.all(
-        retryQueueDeleteRows.map((row) =>
-          supabase.from('sync_retry_queue').delete().eq('user_id', row.userId).eq('platform', row.platform)
-        )
-      );
-
-      const firstDeleteError = deleteResults.find((result) => result.error)?.error;
-      if (firstDeleteError) {
-        retryQueuePersisted = false;
-        retryQueuePersistenceError = `Failed to clear retry queue rows: ${firstDeleteError.message}`;
-        console.warn('[Cron Sync] Failed to clear retry queue rows:', firstDeleteError.message);
-      }
-    }
-  }
-
-  if (retryDeadLetters.length > 0) {
-    const { error: deadLetterInsertError } = await supabase.from('sync_retry_dead_letters').insert(retryDeadLetters);
-    if (deadLetterInsertError) {
-      deadLetterPersisted = false;
-      if (isMissingTable(deadLetterInsertError.code)) {
-        deadLetterPersistenceError = 'sync_retry_dead_letters table is not available. Apply migration 007_sync_retry_dead_letters.sql.';
-      } else {
-        deadLetterPersistenceError = `Failed to persist retry dead letters: ${deadLetterInsertError.message}`;
-      }
-      console.warn('[Cron Sync] Failed to persist retry dead letters:', deadLetterPersistenceError);
-    }
-  }
+  const {
+    logPersistenceError,
+    retryQueuePersisted,
+    retryQueuePersistenceError,
+    deadLetterPersisted,
+    deadLetterPersistenceError,
+  } = await persistSyncResults(
+    supabase,
+    syncRunLogs,
+    retryQueueReady,
+    dedupedRetryQueueUpserts,
+    retryQueueDeleteRows,
+    retryDeadLetters,
+    retryQueueWarning
+  );
 
   const {
     escalationEvaluationWarning,
@@ -781,7 +732,7 @@ async function runCronSync(request: Request) {
     .join(' | ') || null;
 
   // Log cron execution metrics for monitoring (Work Item #7)
-  const cronMetricsResult = await logCronMetrics(supabase, {
+  const cronMetricsResult = await persistCronMetrics(supabase, {
     runId,
     durationMs: Date.now() - startedAt,
     processedUsers: outcomes.length,
@@ -798,12 +749,10 @@ async function runCronSync(request: Request) {
     timestamp: new Date().toISOString(),
   });
 
-  if (!cronMetricsResult.success) {
-    const monitoringWarning = `Cron metrics logging failed: ${cronMetricsResult.error}`;
-    console.warn('[Cron Sync] Monitoring:', monitoringWarning);
+  if (cronMetricsResult.warning) {
     observabilityWarning = observabilityWarning
-      ? `${observabilityWarning} | ${monitoringWarning}`
-      : monitoringWarning;
+      ? `${observabilityWarning} | ${cronMetricsResult.warning}`
+      : cronMetricsResult.warning;
   }
 
   return NextResponse.json({
