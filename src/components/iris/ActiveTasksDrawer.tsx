@@ -93,8 +93,6 @@ export default function ActiveTasksDrawer({ isOpen, onClose }: { isOpen: boolean
           ))
         )}
       </div>
-
-      </div>
     </div>
   );
 }
