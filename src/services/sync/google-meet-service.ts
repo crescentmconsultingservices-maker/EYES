@@ -53,8 +53,8 @@ export async function executeGoogleMeetSync(actor: SyncActor, mode: string = 'de
     last_sync_at: new Date().toISOString(),
   });
 
-  const now = new Date();
-  const timeMin = isBackfill ? '' : new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7).toISOString();
+  const currentTime = new Date();
+  const timeMin = isBackfill ? '' : new Date(currentTime.getTime() - 1000 * 60 * 60 * 24 * 7).toISOString();
   const timeMinParam = timeMin ? `&timeMin=${encodeURIComponent(timeMin)}` : '';
 
   // Consumer Google Meet Sync via Google Calendar API
