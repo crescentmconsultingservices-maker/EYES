@@ -1,69 +1,57 @@
-# The EYES
+# EYES (Everything You Ever Said)
 
-The EYES is a Next.js dashboard for exploring personal digital memory data across connected platforms. (Everything You Ever Said)
+EYES is an advanced, AI-powered digital memory and cognitive assistant. It securely ingests and indexes your personal data from 14+ connected platforms, extracts actionable insights (commitments, tasks, and requests), and provides a unified interface to investigate and act on your digital life.
+
+## Core Features
+
+- **Omnichannel Sync:** Continuous, background synchronization across 14+ platforms (Gmail, Slack, Meta, Google Meet, Notion, GitHub, Linear, Canva, Stripe, Spotify, Discord, Reddit, Twitter, etc.).
+- **Real-Time Webhooks:** Secure, authenticated webhook receivers (OIDC JWTs, HMAC-SHA256 signatures) for instant processing of incoming messages from Slack, Gmail, and Meta.
+- **Cognitive Engine:** Powered by an OpenAI-compatible LiteLLM gateway (Anthropic Claude 3.5 Sonnet) and Python FastAPI microservices to extract entities, summarize long contexts, and generate temporal drift analytics.
+- **Action Queue & Inngest:** Background task processing for asynchronous AI extraction, remediation, and alerting.
+- **Universal Investigate UI:** A rich Next.js dashboard featuring timeline stats, memory feeds, topic clusters, and a chat interface to converse directly with your personal memory graph.
 
 ## Tech Stack
 
-- Next.js 16 (App Router)
-- React 19
-- TypeScript 5
-- ESLint 9 with `eslint-config-next`
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, TailwindCSS
+- **Database & Auth:** Supabase (PostgreSQL, pgvector for embeddings, Row-Level Security)
+- **Task Orchestration:** QStash (Crons), Inngest (Background Actions)
+- **AI/ML:** LiteLLM Gateway, text-embedding-3-small
 
-## Run Locally
+## Environment Setup
+
+Ensure the following critical environment variables are set in your `.env.local` or Vercel dashboard:
+
+### Database & Auth
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (Used for background syncs)
+
+### Security & Webhooks
+- `TOKEN_ENCRYPTION_KEY` (Used to encrypt OAuth tokens at rest)
+- `GMAIL_PUSH_AUDIENCE` & `GMAIL_PUSH_SERVICE_ACCOUNT` (Pub/Sub auth)
+- `SLACK_SIGNING_SECRET`
+- `META_APP_SECRET`
+
+### Platform Integrations
+- Set standard `CLIENT_ID` and `CLIENT_SECRET` pairs for each supported platform (e.g., `LINEAR_CLIENT_ID`, `GOOGLE_CLIENT_ID`, etc.).
+
+### AI Gateway
+- `LITELLM_BASE_URL` (e.g., `https://eyes-llm-gateway.fly.dev/v1`)
+- `LITELLM_KEY`
+
+## Architecture & Background Jobs
+
+- **Cron Jobs (QStash):** The 30-minute sync loop (`/api/cron/sync`) runs via Upstash QStash, not standard Vercel Crons. Vercel Crons are limited to daily maintenance tasks (`chronic` and `purge-leak-scans`).
+- **Data Pipeline:** The AI pipeline (`analysis-pipeline.ts`) continuously monitors the `raw_events` table for new entries, embeds them into the `vector(1536)` space, and pushes them to the cognitive clusters.
+
+## Running Locally
 
 ```bash
+# Install dependencies
 npm install
-npm run dev
+
+# Start both Next.js and the local Python FastAPI engine concurrently
+npm run dev:all
 ```
-
-Open <http://localhost:3000>.
-
-## Scripts
-
-- `npm run dev`: Start local development server
-- `npm run build`: Build production bundle
-- `npm run start`: Start production server
-- `npm run lint`: Run lint checks
-
-## Project Layout
-
-- `src/app/page.tsx`: Main shell composition
-- `src/components/*`: Dashboard UI components
-- `src/app/api/audit-summary/route.ts`: Audit summary API
-- `src/app/api/memory-chat/route.ts`: Chat API endpoint
-- `src/types/dashboard.ts`: Shared dashboard API and UI types
-
-## Notes
-
-- Dashboard content is API-backed through local route handlers.
-- The UI supports desktop and mobile layouts with responsive CSS modules.
-
-## Unattended Sync
-
-- Cron route: `/api/cron/sync`
-- Schedule: configured in `vercel.json` (every 30 minutes)
-- Required server env vars: `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`
-- Optional escalation env vars: `SYNC_ESCALATION_WEBHOOK_URL`, `SYNC_ESCALATION_COOLDOWN_MINUTES`, `SYNC_ESCALATION_OWNER_WARNING`, `SYNC_ESCALATION_OWNER_CRITICAL`, `SYNC_ESCALATION_INCLUDE_WARNING`
-
-## Linear Setup
-
-Linear actions now execute directly from the Action Queue and Linear sync is available in the platform stack.
-
-Required env vars:
-
-- `LINEAR_CLIENT_ID`
-- `LINEAR_CLIENT_SECRET`
-- `LINEAR_DEFAULT_TEAM_ID` (used when creating tickets from the Action Queue)
-- `TOKEN_ENCRYPTION_KEY`
-
-If you want the platform readiness screen to show Linear as configured, all of the above must be present.
-
-## EYES Gateway Setup
-
-Core LLM operations are routed through a single OpenAI-compatible AI gateway.
-
-Required env vars:
-
-- `LITELLM_BASE_URL` (usually set to `https://eyes-llm-gateway.fly.dev/v1`)
-- `LITELLM_KEY` (the master key or project virtual key)
+Open <http://localhost:3003> to view the app.
 
