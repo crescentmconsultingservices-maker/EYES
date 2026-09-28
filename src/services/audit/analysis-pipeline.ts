@@ -2,64 +2,12 @@ import { createAdminClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
 import { Commitment } from '@/types/dashboard';
 import { SECTION_TITLES, EXECUTIVE_SUMMARY_INSTRUCTIONS, OPPORTUNITIES_INSTRUCTIONS, CROSS_LENS_SECTION } from './audit-prompts';
+import { resolveCommitmentStatuses, computeRecencyWeight } from './audit-scoring';
 /**
  * Reputation Audit: Core Analysis Pipeline (REAL WORLD ONLY)
  */
 
-/**
- * Cross-references extracted commitments against Google Calendar events
- * to determine if a commitment was actually fulfilled.
- * A commitment is considered 'completed' if a calendar event was created
- * within 7 days of the commitment date with overlapping keywords.
- */
-async function resolveCommitmentStatuses(
-  commitments: Commitment[],
-  calendarEvents: Array<{ title: string | null; timestamp: string | null }>
-): Promise<Commitment[]> {
-  if (calendarEvents.length === 0) return commitments;
 
-  return commitments.map(commitment => {
-    const commitmentDate = new Date(commitment.date).getTime();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-
-    // Extract key words from the commitment text (3+ char words)
-    const commitmentWords = commitment.text
-      .toLowerCase()
-      .split(/\W+/)
-      .filter(w => w.length >= 3);
-
-    // Look for a calendar event created within 7 days of the commitment
-    // that shares at least 2 keywords with the commitment text (raised from 1
-    // to reduce false positives where unrelated events share common short words)
-    const hasFulfillingEvent = calendarEvents.some(evt => {
-      if (!evt.timestamp || !evt.title) return false;
-      const evtDate = new Date(evt.timestamp).getTime();
-      const withinWindow = Math.abs(evtDate - commitmentDate) <= sevenDaysMs;
-      if (!withinWindow) return false;
-
-      const evtWords = evt.title.toLowerCase().split(/\W+/).filter(w => w.length >= 3);
-      const matchingWords = commitmentWords.filter(w => evtWords.includes(w));
-      return matchingWords.length >= 2; // L4 fix: require 2+ shared keywords to reduce false positives
-    });
-
-    return {
-      ...commitment,
-      status: hasFulfillingEvent ? 'completed' : 'pending',
-    };
-  });
-}
-
-/**
- * Computes a time-decay weight for a memory record.
- * Recent (< 30 days): 1.0 | Semi-recent (< 6 months): 0.5 | Older: 0.2
- * Extracted from the three inline copies that previously existed in runAnalysis.
- */
-function computeRecencyWeight(timestampIso: string, nowTs: number): number {
-  const ageMs = nowTs - new Date(timestampIso).getTime();
-  const THIRTY_DAYS_MS  = 30  * 24 * 60 * 60 * 1000;
-  const SIX_MONTHS_MS   = 180 * 24 * 60 * 60 * 1000;
-  return ageMs < THIRTY_DAYS_MS ? 1.0 : ageMs < SIX_MONTHS_MS ? 0.5 : 0.2;
-}
 
 export class AuditAnalysisService {
   static async runAnalysis(auditId: string, userId: string) {
