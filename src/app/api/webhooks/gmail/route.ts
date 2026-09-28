@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       .select('user_id')
       .eq('platform', 'gmail')
       .eq('metadata->>email', emailAddress)
+      .limit(1)
       .maybeSingle();
     userId = tokenRecord?.user_id ?? null;
     if (!userId) return NextResponse.json({ received: true });

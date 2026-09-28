@@ -37,6 +37,11 @@ async function main() {
     console.error('❌  Missing Supabase environment variables.');
     process.exit(1);
   }
+  
+  if (!process.env.TOKEN_ENCRYPTION_KEY_V2) {
+    console.error('❌  Missing TOKEN_ENCRYPTION_KEY_V2 environment variable. Cannot rotate to v2.');
+    process.exit(1);
+  }
 
   // tokens.ts automatically checks for TOKEN_ENCRYPTION_KEY and TOKEN_ENCRYPTION_KEY_V2
 
@@ -52,7 +57,8 @@ async function main() {
     const { data: rows, error } = await supabase
       .from('oauth_tokens')
       .select('id, access_token, refresh_token')
-      .like('access_token', 'enc:v1:%') // Only fetch v1 tokens
+      // Fetch anything that is not fully v2 encrypted
+      .or('access_token.not.like.enc:v2:%,refresh_token.not.like.enc:v2:%')
       .gt('id', lastId)
       .order('id', { ascending: true })
       .limit(BATCH_SIZE);
