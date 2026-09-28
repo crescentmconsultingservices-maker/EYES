@@ -29,9 +29,8 @@ async def get_expert_ground_truth(text: str, platform: str, sem: asyncio.Semapho
     async with sem:
         try:
             response = await acompletion(
-                model="openai/gemini-flash-lite", 
-                api_base=os.environ.get("LITELLM_BASE_URL"),
-                api_key=os.environ.get("LITELLM_KEY"),
+                model="groq/llama-3.3-70b-versatile", 
+                api_key=os.environ.get("GROQ_API_KEY") or os.environ.get("EYES_GATEWAY_KEY"),
                 messages=[
                     {"role": "system", "content": EXPERT_SYSTEM_PROMPT},
                     {"role": "user", "content": f"Platform: {platform}\nText:\n{text}"}

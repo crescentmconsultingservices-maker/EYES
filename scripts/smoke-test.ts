@@ -15,8 +15,8 @@ import * as fs from 'fs';
 if (fs.existsSync('.env.local')) dotenv.config({ path: '.env.local' });
 else dotenv.config();
 
-const GATEWAY_BASE = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
-const GATEWAY_KEY  = process.env.LITELLM_KEY || '';
+const GATEWAY_BASE = (process.env.GROQ_BASE_URL || '').replace(/\/$/, '');
+const GATEWAY_KEY  = process.env.GROQ_API_KEY || '';
 const SITE_URL     = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 interface TestResult { id: string; pass: boolean; note?: string; }
@@ -56,7 +56,7 @@ async function testAlias(alias: string) {
 
 async function testEmbed() {
   try {
-    if (!GATEWAY_BASE || !GATEWAY_KEY) { log('auto-embed', false, 'LITELLM_BASE_URL or LITELLM_KEY not set'); return; }
+    if (!GATEWAY_BASE || !GATEWAY_KEY) { log('auto-embed', false, 'GROQ_BASE_URL or GROQ_API_KEY not set'); return; }
     const res = await fetch(`${GATEWAY_BASE}/embeddings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GATEWAY_KEY}` },

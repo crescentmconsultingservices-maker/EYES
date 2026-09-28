@@ -218,9 +218,8 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
 
                     # Route through the EYES LLM Gateway to the upgraded Haiku model
                     response = await acompletion(
-                        model="openai/claude-haiku", # Upgraded for better reasoning, prefixed for proxy routing
-                        api_base=os.environ.get("LITELLM_BASE_URL"),
-                        api_key=os.environ.get("LITELLM_KEY"),
+                        model="groq/llama-3.3-70b-versatile",
+                        api_key=os.environ.get("GROQ_API_KEY") or os.environ.get("EYES_GATEWAY_KEY"),
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}

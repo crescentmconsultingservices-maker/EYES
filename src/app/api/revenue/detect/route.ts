@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { classifyThread } from '@/core/engine/classifier';
 
 const CONFIDENCE_GATE = 0.80;
-const LITELLM_URL = process.env.LITELLM_BASE_URL || 'https://eyes-llm-gateway.fly.dev/v1';
-const LITELLM_KEY = process.env.LITELLM_KEY || process.env.EYES_GATEWAY_KEY || '';
+const GROQ_URL = process.env.GROQ_BASE_URL || 'https://eyes-llm-gateway.fly.dev/v1';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.EYES_GATEWAY_KEY || '';
 
 export async function POST(req: Request) {
   try {
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       }
 
       // 3. Call Core Classifier Engine
-      const parsed = await classifyThread(rawTranscript, LITELLM_URL, LITELLM_KEY);
+      const parsed = await classifyThread(rawTranscript, GROQ_URL, GROQ_API_KEY);
 
       if (parsed.error) {
         console.error(`Error processing thread ${thread.id}:`, parsed.error);

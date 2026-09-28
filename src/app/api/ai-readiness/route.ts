@@ -46,7 +46,7 @@ async function runGatewayProbe(): Promise<ReadinessCheck> {
   const key = findGatewayKey();
   const isGroq = key.startsWith('gsk_');
   const isOpenRouter = key.startsWith('sk-or-v1-');
-  let base = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+  let base = (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
   let model = 'auto-chat';
   if (isGroq) {
     base = (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
@@ -55,7 +55,7 @@ async function runGatewayProbe(): Promise<ReadinessCheck> {
     base = (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
     model = process.env.OPENROUTER_MODEL || 'liquid/lfm-2.5-2.6b:free';
   }
-  if (!base || !key) return { status: 'skip', latencyMs: 0, error: 'LITELLM_BASE_URL or LITELLM_KEY not set.' };
+  if (!base || !key) return { status: 'skip', latencyMs: 0, error: 'GROQ_API_KEY not set.' };
   const started = Date.now();
   try {
     const headers: Record<string, string> = {

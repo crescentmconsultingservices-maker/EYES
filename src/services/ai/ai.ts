@@ -4,7 +4,7 @@ import crypto from 'crypto';
 /**
  * AI Gateway — Unified Production Interface (K1 + K2)
  *
- * K1: Zero provider SDKs. Every call goes through LITELLM_BASE_URL via one
+ * K1: Zero provider SDKs. Every call goes through GROQ_BASE_URL via one
  *     OpenAI-compatible fetch client.
  * K2: Only the four gateway aliases appear in code — never literal model strings.
  * K3: MOCK_MODE=true returns realistic fixtures so the product runs without keys.
@@ -14,7 +14,6 @@ import crypto from 'crypto';
 export function findGatewayKey(): string {
   const candidates = [
     process.env.GROQ_API_KEY,
-    process.env.LITELLM_KEY,
     process.env.EYES_GATEWAY_KEY,
     process.env.OPENROUTER_API_KEY,
   ].filter(Boolean) as string[];
@@ -41,7 +40,7 @@ const getGatewayBase = () => {
   if (key.startsWith('sk-or-v1-')) {
     return (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
   }
-  return (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
+  return '';
 };
 
 const GROQ_MODELS = [

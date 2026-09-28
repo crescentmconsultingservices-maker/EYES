@@ -6,15 +6,15 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
 
-const LITELLM_URL = process.env.LITELLM_BASE_URL || 'https://eyes-llm-gateway.fly.dev/v1';
-const LITELLM_KEY = process.env.LITELLM_KEY || process.env.EYES_GATEWAY_KEY;
+const GROQ_URL = process.env.GROQ_BASE_URL || 'https://eyes-llm-gateway.fly.dev/v1';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.EYES_GATEWAY_KEY;
 
 async function testLLM() {
-  const response = await fetch(`${LITELLM_URL}/chat/completions`, {
+  const response = await fetch(`${GROQ_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${LITELLM_KEY}`
+      'Authorization': `Bearer ${GROQ_API_KEY}`
     },
     body: JSON.stringify({
       model: "auto-extract",

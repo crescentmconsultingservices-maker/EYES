@@ -36,8 +36,8 @@ Ensure the following critical environment variables are set in your `.env.local`
 - Set standard `CLIENT_ID` and `CLIENT_SECRET` pairs for each supported platform (e.g., `LINEAR_CLIENT_ID`, `GOOGLE_CLIENT_ID`, etc.).
 
 ### AI Gateway
-- `LITELLM_BASE_URL` (e.g., `https://eyes-llm-gateway.fly.dev/v1`)
-- `LITELLM_KEY`
+- `GROQ_BASE_URL` (e.g., `https://eyes-llm-gateway.fly.dev/v1`)
+- `GROQ_API_KEY`
 
 ## Architecture & Background Jobs
 

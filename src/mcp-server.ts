@@ -24,8 +24,7 @@ if (fs.existsSync(".env.local")) {
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const LITELLM_BASE_URL = (process.env.LITELLM_BASE_URL || '').replace(/\/$/, '');
-const LITELLM_KEY = process.env.EYES_GATEWAY_KEY || process.env.LITELLM_KEY || '';
+
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Missing Supabase credentials in .env file.");
@@ -37,28 +36,29 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const EMBED_DIMS = 1024; // Voyage/Gemini 1024-dim — aligned with migration 032 & ai.ts
 
 async function generateGatewayEmbedding(text: string): Promise<number[] | null> {
-  if (!LITELLM_BASE_URL || !LITELLM_KEY) {
-    console.error('[MCP] LITELLM_BASE_URL or LITELLM_KEY not set — cannot generate embeddings.');
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    console.error('[MCP] GEMINI_API_KEY not set — cannot generate embeddings.');
     return null;
   }
   try {
-    const res = await fetch(`${LITELLM_BASE_URL}/embeddings`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${geminiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LITELLM_KEY}`,
       },
       body: JSON.stringify({
-        model: 'auto-embed',
-        input: text.slice(0, 8000),
+        model: 'models/gemini-embedding-001',
+        content: { parts: [{ text: text.slice(0, 8000) }] },
+        outputDimensionality: 1024,
       }),
     });
     if (!res.ok) {
-      console.error('[MCP] LiteLLM Gateway embed REST error:', res.status);
+      console.error('[MCP] Gemini embed REST error:', res.status);
       return null;
     }
     const data = await res.json();
-    const values: number[] = data?.data?.[0]?.embedding;
+    const values: number[] = data?.embedding?.values;
     if (values?.length !== EMBED_DIMS) return null;
     return values;
   } catch (err) {
@@ -281,7 +281,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // 1. Generate embedding using LiteLLM Gateway (1024d) — matches the main app's vector store.
       const embedding = await generateGatewayEmbedding(query);
-      if (!embedding) throw new Error('Gateway embedding failed. Check LITELLM_BASE_URL and LITELLM_KEY in .env.');
+      if (!embedding) throw new Error('Embedding failed. Check GEMINI_API_KEY in .env.');
 
       // 2. Search Supabase via match_memories RPC (match_embeddings was dropped in migration 030)
       // match_memories: vector(1024), threshold, count, user_id_arg
