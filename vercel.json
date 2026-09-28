@@ -4,10 +4,6 @@
     {
       "path": "/api/cron/chronic",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/purge-leak-scans",
-      "schedule": "0 3 * * *"
     }
   ]
 }

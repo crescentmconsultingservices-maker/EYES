@@ -138,15 +138,27 @@ async function gatewayChat(
   temperature = 0.1,
   tools?: any[]
 ): Promise<string | ToolCallResult | null> {
-  const key = getGatewayKey();
-  const base = getGatewayBase(key);
-  if (!base || !key) return null;
+  const keys = [
+    process.env.GROQ_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.OPENROUTER_API_KEY,
+    process.env.EYES_GATEWAY_KEY
+  ].filter(Boolean) as string[];
 
-  const models = getModelsForRequest(key, alias);
-  const totalAttempts = Math.max(models.length, GATEWAY_MAX_RETRIES);
+  const combos: {key: string, base: string, model: string}[] = [];
+  for (const k of keys) {
+    const b = getGatewayBase(k);
+    if (!b) continue;
+    const m = getModelsForRequest(k, alias);
+    for (const model of m) combos.push({ key: k, base: b, model });
+  }
+
+  if (combos.length === 0) return null;
+
+  const totalAttempts = Math.max(combos.length, GATEWAY_MAX_RETRIES);
 
   for (let attempt = 0; attempt < totalAttempts; attempt++) {
-    const model = models[attempt % models.length];
+    const { key, base, model } = combos[attempt % combos.length];
     try {
       const res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
@@ -192,7 +204,7 @@ async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[
           'Authorization': `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: ALIAS_EMBED,
+          model: getModelsForRequest(key, ALIAS_EMBED)[0] || 'text-embedding-004',
           input: text.slice(0, 8000),
           dimensions: 1024,
         }),
@@ -229,7 +241,7 @@ async function gatewayEmbedBatch(texts: string[], signal?: AbortSignal): Promise
           'Authorization': `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: ALIAS_EMBED,
+          model: getModelsForRequest(key, ALIAS_EMBED)[0] || 'text-embedding-004',
           input: texts.map((t) => t.slice(0, 8000)),
           dimensions: 1024,
         }),
