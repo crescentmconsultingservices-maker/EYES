@@ -1,15 +1,15 @@
 model_list:
   - model_name: auto-chat
     litellm_params:
-      model: anthropic/claude-3-5-sonnet-20240620
+      model: anthropic/claude-3-5-sonnet-20241022
 
   - model_name: auto-extract
     litellm_params:
-      model: anthropic/claude-3-5-sonnet-20240620
+      model: anthropic/claude-3-5-sonnet-20241022
 
   - model_name: auto-classify
     litellm_params:
-      model: anthropic/claude-3-5-sonnet-20240620
+      model: anthropic/claude-3-5-sonnet-20241022
 
   - model_name: auto-embed
     litellm_params:

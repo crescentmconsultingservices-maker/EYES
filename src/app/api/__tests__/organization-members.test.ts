@@ -7,17 +7,6 @@ let mockCurrentUser: { id: string; email: string } | null = {
   email: 'owner@acme.com',
 };
 
-vi.mock('@/utils/supabase/server', () => ({
-  createClient: vi.fn(() => Promise.resolve({
-    auth: {
-      getUser: vi.fn(() => Promise.resolve({
-        data: { user: mockCurrentUser },
-        error: mockCurrentUser ? null : new Error('Not authenticated'),
-      })),
-    },
-  })),
-}));
-
 const mockDbData = {
   user_profiles: [
     { user_id: 'owner-1', organization_id: 'org-1' },
@@ -31,8 +20,15 @@ const mockDbData = {
   ],
 };
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
+// Route uses @/utils/supabase/server only — mock that exclusively.
+vi.mock('@/utils/supabase/server', () => ({
+  createClient: vi.fn(() => Promise.resolve({
+    auth: {
+      getUser: vi.fn(() => Promise.resolve({
+        data: { user: mockCurrentUser },
+        error: mockCurrentUser ? null : new Error('Not authenticated'),
+      })),
+    },
     from: vi.fn((table: string) => {
       if (table === 'user_profiles') {
         return {

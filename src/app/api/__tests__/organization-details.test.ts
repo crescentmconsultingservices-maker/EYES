@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET, POST } from '../organization/details/route';
 
+// The route exclusively uses @/utils/supabase/server — mock that fully.
 vi.mock('@/utils/supabase/server', () => ({
   createClient: vi.fn(() => Promise.resolve({
     auth: {
@@ -9,57 +10,53 @@ vi.mock('@/utils/supabase/server', () => ({
         error: null,
       })),
     },
-  })),
-}));
-
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
       if (table === 'user_profiles') {
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              maybeSingle: vi.fn(() => Promise.resolve({ data: { organization_id: 'org-999' } }))
+              maybeSingle: vi.fn(() => Promise.resolve({ data: { organization_id: 'org-999' } })),
             })),
-            in: vi.fn(() => Promise.resolve({ data: [{ user_id: 'test-user-123', name: 'Test Owner', avatar: 'T' }] }))
+            in: vi.fn(() => Promise.resolve({ data: [{ user_id: 'test-user-123', name: 'Test Owner', avatar: 'T' }] })),
           })),
-          upsert: vi.fn(() => Promise.resolve({ error: null }))
+          update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
+          upsert: vi.fn(() => Promise.resolve({ error: null })),
         };
       }
       if (table === 'organizations') {
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              single: vi.fn(() => Promise.resolve({ data: { id: 'org-999', name: 'Acme Robotics', corporate_domain: 'acme.com', privacy_shield_enabled: true } }))
-            }))
+              single: vi.fn(() => Promise.resolve({ data: { id: 'org-999', name: 'Acme Robotics', corporate_domain: 'acme.com', privacy_shield_enabled: true } })),
+            })),
           })),
           insert: vi.fn(() => ({
             select: vi.fn(() => ({
-              single: vi.fn(() => Promise.resolve({ data: { id: 'org-999', name: 'Acme Robotics' } }))
-            }))
-          }))
+              single: vi.fn(() => Promise.resolve({ data: { id: 'org-999', name: 'Acme Robotics' } })),
+            })),
+          })),
         };
       }
       if (table === 'organization_members') {
         return {
           select: vi.fn(() => ({
-            eq: vi.fn(() => Promise.resolve({ data: [{ id: 'm-1', user_id: 'test-user-123', role: 'owner', joined_at: new Date().toISOString() }] }))
+            eq: vi.fn(() => Promise.resolve({ data: [{ id: 'm-1', user_id: 'test-user-123', role: 'owner', joined_at: new Date().toISOString() }] })),
           })),
-          upsert: vi.fn(() => Promise.resolve({ error: null }))
+          upsert: vi.fn(() => Promise.resolve({ error: null })),
         };
       }
       if (table === 'organization_invitations') {
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [] }))
-            }))
-          }))
+              order: vi.fn(() => Promise.resolve({ data: [] })),
+            })),
+          })),
         };
       }
       return {};
-    })
-  }))
+    }),
+  })),
 }));
 
 describe('/api/organization/details', () => {

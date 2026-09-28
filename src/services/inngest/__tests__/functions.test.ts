@@ -4,14 +4,16 @@ import {
   investigateChurn,
   proactiveChurnInvestigation,
   staleCommitmentAlerts,
+  proactiveAgenticScan,
 } from '@/services/inngest/functions';
 
 describe('Inngest Automated Workflows', () => {
-  it('exports all 3 functions in the functions array', () => {
-    expect(functions).toHaveLength(3);
+  it('exports all 4 functions in the functions array', () => {
+    expect(functions).toHaveLength(4);
     expect(functions).toContain(investigateChurn);
     expect(functions).toContain(proactiveChurnInvestigation);
     expect(functions).toContain(staleCommitmentAlerts);
+    expect(functions).toContain(proactiveAgenticScan);
   });
 
   it('configures investigateChurn with correct ID and trigger', () => {
@@ -33,5 +35,11 @@ describe('Inngest Automated Workflows', () => {
     const fn = staleCommitmentAlerts as any;
     expect(fn.id()).toBe('stale-commitment-alerts');
     expect(fn.name).toBe('Stale Commitment & Slippage Monitor');
+  });
+
+  it('configures proactiveAgenticScan with correct ID', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fn = proactiveAgenticScan as any;
+    expect(fn.id()).toBe('proactive-agentic-scan');
   });
 });
