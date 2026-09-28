@@ -28,10 +28,10 @@ export default function ActiveTasksDrawer({ isOpen, onClose }: { isOpen: boolean
   const handleApprove = async (taskId: string) => {
     try {
       // Send the approval event back to Inngest
-      const res = await fetch('/api/inngest/approve', {
-        method: 'POST',
+      const res = await fetch('/api/actions/queue', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, approved: true })
+        body: JSON.stringify({ id: taskId, status: 'approved' })
       });
       if (res.ok) {
         setTasks(tasks.filter(t => t.id !== taskId));
@@ -43,10 +43,10 @@ export default function ActiveTasksDrawer({ isOpen, onClose }: { isOpen: boolean
 
   const handleReject = async (taskId: string) => {
     try {
-      const res = await fetch('/api/inngest/approve', {
-        method: 'POST',
+      const res = await fetch('/api/actions/queue', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, approved: false })
+        body: JSON.stringify({ id: taskId, status: 'dismissed' })
       });
       if (res.ok) {
         setTasks(tasks.filter(t => t.id !== taskId));

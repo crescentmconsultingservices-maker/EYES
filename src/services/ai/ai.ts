@@ -46,15 +46,15 @@ const getGatewayBase = (key: string) => {
 
 const GROQ_MODELS = [
   process.env.GROQ_MODEL,
-  'llama-3.3-70b-versatile',
-  'mixtral-8x7b-32768',
-  'llama-3.1-8b-instant',
+  'qwen/qwen3.8-27b',
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-120b',
 ].filter(Boolean) as string[];
 
 const GEMINI_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-3.5-flash',
   'gemini-2.5-flash',
-  'gemini-1.5-pro',
-  'gemini-1.5-flash',
 ].filter(Boolean) as string[];
 
 const OPENROUTER_MODELS = [
@@ -65,7 +65,7 @@ const OPENROUTER_MODELS = [
 
 function getModelsForRequest(key: string, alias: string): string[] {
   if (key.startsWith('gsk_')) return GROQ_MODELS;
-  if (key.startsWith('AIza')) return alias === ALIAS_EMBED ? ['text-embedding-004'] : GEMINI_MODELS;
+  if (key.startsWith('AIza')) return alias === ALIAS_EMBED ? ['gemini-embedding-2'] : GEMINI_MODELS;
   if (key.startsWith('sk-or-v1-')) return OPENROUTER_MODELS;
   return [alias];
 }
@@ -204,7 +204,7 @@ async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[
           'Authorization': `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: getModelsForRequest(key, ALIAS_EMBED)[0] || 'text-embedding-004',
+          model: getModelsForRequest(key, ALIAS_EMBED)[0] || 'gemini-embedding-2',
           input: text.slice(0, 8000),
           dimensions: 1024,
         }),
@@ -241,7 +241,7 @@ async function gatewayEmbedBatch(texts: string[], signal?: AbortSignal): Promise
           'Authorization': `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: getModelsForRequest(key, ALIAS_EMBED)[0] || 'text-embedding-004',
+          model: getModelsForRequest(key, ALIAS_EMBED)[0] || 'gemini-embedding-2',
           input: texts.map((t) => t.slice(0, 8000)),
           dimensions: 1024,
         }),

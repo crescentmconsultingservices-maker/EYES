@@ -165,7 +165,7 @@ def run_phase5_organs(user_id: str) -> None:
             "Return JSON only: {\"narrative\": \"string\", \"identity\": \"string\"}"
         )
         response = completion(
-            model="gemini/gemini-1.5-flash",
+            model="gemini/gemini-3.5-flash",
             api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("EYES_GATEWAY_KEY"),
             messages=[{"role": "user", "content": prompt}]
         )
