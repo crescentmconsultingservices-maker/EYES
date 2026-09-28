@@ -8,10 +8,5 @@
     {
       "path": "/api/cron/purge-leak-scans",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/sync",
-      "schedule": "*/30 * * * *"
-    }
   ]
 }
