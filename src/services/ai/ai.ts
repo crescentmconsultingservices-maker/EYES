@@ -12,30 +12,31 @@ import crypto from 'crypto';
 
 // ── Gateway config (K1) ─────────────────────────────────────────────────────
 export function findGatewayKey(): string {
-  const candidates = [
-    process.env.GROQ_API_KEY,
-    process.env.EYES_GATEWAY_KEY,
-    process.env.OPENROUTER_API_KEY,
-  ].filter(Boolean) as string[];
-
-  // Priority 1: Groq key (working high-throughput free tier)
-  const groqKey = candidates.find(k => k.startsWith('gsk_'));
+  // We prefer Groq first, Gemini second, OpenRouter third.
+  const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) return groqKey;
-
-  // Priority 2: OpenRouter key
-  const openRouterKey = candidates.find(k => k.startsWith('sk-or-v1-'));
+  
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) return geminiKey;
+  
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (openRouterKey) return openRouterKey;
 
-  // Priority 3: Any other gateway key (e.g. LiteLLM proxy)
-  return candidates[0] || '';
+  const eyesKey = process.env.EYES_GATEWAY_KEY;
+  if (eyesKey) return eyesKey;
+
+  return '';
 }
 
 const getGatewayKey = () => findGatewayKey();
 
-const getGatewayBase = () => {
-  const key = getGatewayKey();
+const getGatewayBase = (key: string) => {
+  if (!key) return '';
   if (key.startsWith('gsk_')) {
     return (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+  }
+  if (key.startsWith('AIza')) { // Gemini key format
+    return 'https://generativelanguage.googleapis.com/v1beta/openai';
   }
   if (key.startsWith('sk-or-v1-')) {
     return (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
@@ -45,26 +46,27 @@ const getGatewayBase = () => {
 
 const GROQ_MODELS = [
   process.env.GROQ_MODEL,
-  'qwen/qwen3.8-27b',
-  'openai/gpt-oss-20b',
-  'groq/compound-mini',
-  'openai/gpt-oss-120b',
+  'llama-3.3-70b-versatile',
+  'mixtral-8x7b-32768',
+  'llama-3.1-8b-instant',
+].filter(Boolean) as string[];
+
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-1.5-pro',
+  'gemini-1.5-flash',
 ].filter(Boolean) as string[];
 
 const OPENROUTER_MODELS = [
   process.env.OPENROUTER_MODEL,
   'liquid/lfm-2.5-2.6b:free',
-  'nvidia/nemotron-3.5-lightning:free',
-  'google/gemma-4-26b-a4b-it:free',
+  'google/gemma-2-27b-it:free',
 ].filter(Boolean) as string[];
 
 function getModelsForRequest(key: string, alias: string): string[] {
-  if (key.startsWith('gsk_')) {
-    return GROQ_MODELS;
-  }
-  if (key.startsWith('sk-or-v1-')) {
-    return OPENROUTER_MODELS;
-  }
+  if (key.startsWith('gsk_')) return GROQ_MODELS;
+  if (key.startsWith('AIza')) return alias === ALIAS_EMBED ? ['text-embedding-004'] : GEMINI_MODELS;
+  if (key.startsWith('sk-or-v1-')) return OPENROUTER_MODELS;
   return [alias];
 }
 
@@ -136,8 +138,8 @@ async function gatewayChat(
   temperature = 0.1,
   tools?: any[]
 ): Promise<string | ToolCallResult | null> {
-  const base = getGatewayBase();
   const key = getGatewayKey();
+  const base = getGatewayBase(key);
   if (!base || !key) return null;
 
   const models = getModelsForRequest(key, alias);
@@ -177,8 +179,8 @@ async function gatewayChat(
 }
 
 async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[] | null> {
-  const base = getGatewayBase();
-  const key = getGatewayKey();
+  const key = process.env.GEMINI_API_KEY; // Always force Gemini for embeddings if possible
+  const base = getGatewayBase(key || '');
   if (!base || !key) return null;
 
   for (let attempt = 0; attempt < GATEWAY_MAX_RETRIES; attempt++) {
@@ -214,8 +216,8 @@ async function gatewayEmbed(text: string, signal?: AbortSignal): Promise<number[
 
 async function gatewayEmbedBatch(texts: string[], signal?: AbortSignal): Promise<number[][] | null> {
   if (!texts.length) return [];
-  const base = getGatewayBase();
-  const key = getGatewayKey();
+  const key = process.env.GEMINI_API_KEY; // Always force Gemini for embeddings
+  const base = getGatewayBase(key || '');
   if (!base || !key) return null;
 
   for (let attempt = 0; attempt < GATEWAY_MAX_RETRIES; attempt++) {

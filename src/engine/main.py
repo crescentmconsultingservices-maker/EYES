@@ -218,8 +218,8 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
 
                     # Route through the EYES LLM Gateway to the upgraded Haiku model
                     response = await acompletion(
-                        model="groq/llama-3.3-70b-versatile",
-                        api_key=os.environ.get("GROQ_API_KEY") or os.environ.get("EYES_GATEWAY_KEY"),
+                        model="gemini/gemini-1.5-flash",
+                        api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("EYES_GATEWAY_KEY"),
                         messages=[
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
