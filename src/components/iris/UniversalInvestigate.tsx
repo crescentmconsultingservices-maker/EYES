@@ -22,13 +22,12 @@ export interface AuditFindingItem {
 
 export default function UniversalInvestigate() {
   const [query, setQuery] = useState<string>('');
-  const [selectedLens, setSelectedLens] = useState<string>('revenue');
+  const [selectedLens, setSelectedLens] = useState<string>('credentials');
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [hasCompleted, setHasCompleted] = useState<boolean>(false);
   const [findings, setFindings] = useState<AuditFindingItem[]>([]);
 
   const lenses = [
-    { id: 'revenue', label: 'Revenue Leaks', active: true },
     { id: 'credentials', label: 'Leaked Credentials', active: true },
     { id: 'soc2', label: 'SOC2 Readiness', active: false },
     { id: 'reputation', label: 'Reputation Audit', active: false },
@@ -213,7 +212,7 @@ export default function UniversalInvestigate() {
                   headline={`No evidence found for ${selectedLens} audit.`}
                   subtext="Deterministic sweep completed across your memory graph. No contradictory, leaked, or unbilled edges surfaced."
                   suggestionText="Run Another Lens"
-                  onSuggestionClick={() => setSelectedLens(selectedLens === 'revenue' ? 'credentials' : 'revenue')}
+                  onSuggestionClick={() => setSelectedLens('credentials')}
                 />
               ) : (
                 findings.map((finding) => (
