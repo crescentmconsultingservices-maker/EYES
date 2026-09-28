@@ -59,7 +59,7 @@ export default function FeedbackTab() {
     const diagnostics = includeDiagnostics ? {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
       theme,
-      windowSize: typeof window !== 'undefined' ? \`\${window.innerWidth}x\${window.innerHeight}\` : 'unknown',
+      windowSize: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'unknown',
       timestamp: new Date().toISOString(),
     } : undefined;
 
@@ -78,7 +78,7 @@ export default function FeedbackTab() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setTicketSuccess(\`Ticket #\${data.ticket?.id ? data.ticket.id.slice(0, 8) : 'Created'} dispatched! Notification sent to our engineering team.\`);
+        setTicketSuccess(`Ticket #${data.ticket?.id ? data.ticket.id.slice(0, 8) : 'Created'} dispatched! Notification sent to our engineering team.`);
         setFeedbackSubject('');
         setFeedbackMessage('');
         if (data.ticket) {
@@ -142,7 +142,7 @@ export default function FeedbackTab() {
               transition: 'all 0.15s ease',
             }}
           >
-            My Submissions {userTickets.length > 0 ? \`(\${userTickets.length})\` : ''}
+            My Submissions {userTickets.length > 0 ? `(${userTickets.length})` : ''}
           </button>
         </div>
       </div>
@@ -431,7 +431,7 @@ export default function FeedbackTab() {
                     borderLeft: '3px solid var(--text-primary)',
                   }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-                      Developer Response {ticket.responded_at ? \`(\${new Date(ticket.responded_at).toLocaleDateString()})\` : ''}:
+                      Developer Response {ticket.responded_at ? `(${new Date(ticket.responded_at).toLocaleDateString()})` : ''}:
                     </div>
                     <div style={{ fontSize: '12.5px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
                       {ticket.admin_response}

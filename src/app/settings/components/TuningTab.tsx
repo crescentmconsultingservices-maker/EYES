@@ -57,7 +57,7 @@ export default function TuningTab() {
             <button
               key={level}
               onClick={() => setRiskSensitivity(level)}
-              className={\`\${styles.levelBtn} \${riskSensitivity === level ? styles.levelBtnActive : ''}\`}
+              className={`${styles.levelBtn} ${riskSensitivity === level ? styles.levelBtnActive : ''}`}
             >
               {level}
             </button>

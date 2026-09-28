@@ -163,7 +163,7 @@ export default function OrganizationTab() {
       });
       const data = await safeParseJson(res);
       if (res.ok && data.success) {
-        setInviteStatus(\`Invitation generated: \${data.inviteUrl}\`);
+        setInviteStatus(`Invitation generated: ${data.inviteUrl}`);
         setInviteEmail('');
         fetchOrgDetails();
       } else {
@@ -183,7 +183,7 @@ export default function OrganizationTab() {
     } : null);
 
     try {
-      const res = await fetch(\`/api/organization/invite?id=\${id}\`, {
+      const res = await fetch(`/api/organization/invite?id=${id}`, {
         method: 'DELETE'
       });
       const data = await safeParseJson(res);
@@ -202,10 +202,10 @@ export default function OrganizationTab() {
   const handleRemoveMember = (member: OrgMember) => {
     const isSelf = member.user_id === user?.id;
     openConfirm({
-      title: isSelf ? 'Leave Workspace?' : \`Remove \${member.profile.name}?\`,
+      title: isSelf ? 'Leave Workspace?' : `Remove ${member.profile.name}?`,
       description: isSelf
         ? 'You will lose access to this organization workspace and its shared memories. Your account will revert to an individual account.'
-        : \`This will remove \${member.profile.name} from the organization workspace. They will lose access to the shared memory pool immediately.\`,
+        : `This will remove ${member.profile.name} from the organization workspace. They will lose access to the shared memory pool immediately.`,
       confirmLabel: isSelf ? 'Leave Workspace' : 'Remove Member',
       confirmVariant: 'danger',
       onConfirm: async () => {
@@ -216,7 +216,7 @@ export default function OrganizationTab() {
         } : null);
 
         try {
-          const res = await fetch(\`/api/organization/members?memberId=\${member.id}\`, {
+          const res = await fetch(`/api/organization/members?memberId=${member.id}`, {
             method: 'DELETE'
           });
           const data = await safeParseJson(res);

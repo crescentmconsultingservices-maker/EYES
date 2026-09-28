@@ -94,7 +94,7 @@ export async function dispatchEscalationWebhook(
         attempted: true,
         success: false,
         status: response.status,
-        error: body.slice(0, 300) || \`Webhook dispatch failed (\${response.status}).\`,
+        error: body.slice(0, 300) || `Webhook dispatch failed (${response.status}).`,
       };
     }
 
@@ -184,7 +184,7 @@ export async function processEscalations(
     if (isMissingTable(retryMetricsResult.error.code)) {
       metricWarnings.push('sync_retry_queue table is not available. Apply migration 006_sync_retry_queue.sql.');
     } else {
-      metricWarnings.push(\`Failed to evaluate retry queue metrics: \${retryMetricsResult.error.message}\`);
+      metricWarnings.push(`Failed to evaluate retry queue metrics: ${retryMetricsResult.error.message}`);
     }
   } else {
     ((retryMetricsResult.data ?? []) as RetryQueueMetricRow[]).forEach((row) => {
@@ -200,7 +200,7 @@ export async function processEscalations(
     if (isMissingTable(deadLetterMetricsResult.error.code)) {
       metricWarnings.push('sync_retry_dead_letters table is not available. Apply migration 007_sync_retry_dead_letters.sql.');
     } else {
-      metricWarnings.push(\`Failed to evaluate dead-letter metrics: \${deadLetterMetricsResult.error.message}\`);
+      metricWarnings.push(`Failed to evaluate dead-letter metrics: ${deadLetterMetricsResult.error.message}`);
     }
   } else {
     ((deadLetterMetricsResult.data ?? []) as RetryDeadLetterMetricRow[]).forEach((row) => {
@@ -214,7 +214,7 @@ export async function processEscalations(
     if (isMissingTable(runLogMetricsResult.error.code)) {
       metricWarnings.push('sync_run_logs table is not available. Apply migration 005_sync_run_logs.sql.');
     } else {
-      metricWarnings.push(\`Failed to evaluate scheduler run metrics: \${runLogMetricsResult.error.message}\`);
+      metricWarnings.push(`Failed to evaluate scheduler run metrics: ${runLogMetricsResult.error.message}`);
     }
   } else {
     const runsByUser = new Map<string, Map<string, boolean>>();
@@ -261,7 +261,7 @@ export async function processEscalations(
       escalationPersistenceError =
         'sync_escalation_events table is not available. Apply migration 008_sync_escalation_events.sql.';
     } else {
-      escalationPersistenceError = \`Failed to read escalation events: \${escalationRowsError.message}\`;
+      escalationPersistenceError = `Failed to read escalation events: ${escalationRowsError.message}`;
     }
     console.warn('[Cron Sync] Escalation persistence unavailable:', escalationPersistenceError);
   } else {
@@ -365,7 +365,7 @@ export async function processEscalations(
 
       if (escalationUpsertError) {
         escalationPersisted = false;
-        escalationPersistenceError = \`Failed to upsert escalation events: \${escalationUpsertError.message}\`;
+        escalationPersistenceError = `Failed to upsert escalation events: ${escalationUpsertError.message}`;
         console.warn('[Cron Sync] Failed to upsert escalation events:', escalationUpsertError.message);
       }
     }
@@ -388,7 +388,7 @@ export async function processEscalations(
       const firstResolveError = resolveResults.find((result) => result.error)?.error;
       if (firstResolveError) {
         escalationPersisted = false;
-        escalationPersistenceError = \`Failed to resolve escalation events: \${firstResolveError.message}\`;
+        escalationPersistenceError = `Failed to resolve escalation events: ${firstResolveError.message}`;
         console.warn('[Cron Sync] Failed to resolve escalation events:', firstResolveError.message);
       }
     }
@@ -421,8 +421,8 @@ export async function processEscalations(
           const message = dispatchResult.error || 'Unknown webhook dispatch error.';
           console.warn('[Cron Sync] Escalation webhook dispatch failed:', message);
           escalationDispatchWarning = escalationDispatchWarning
-            ? \`\${escalationDispatchWarning} | \${candidate.code}:\${message}\`
-            : \`\${candidate.code}:\${message}\`;
+            ? `${escalationDispatchWarning} | ${candidate.code}:${message}`
+            : `${candidate.code}:${message}`;
           continue;
         }
 
@@ -439,7 +439,7 @@ export async function processEscalations(
 
         if (dispatchUpdateError) {
           escalationPersisted = false;
-          escalationPersistenceError = \`Failed to update escalation dispatch metadata: \${dispatchUpdateError.message}\`;
+          escalationPersistenceError = `Failed to update escalation dispatch metadata: ${dispatchUpdateError.message}`;
           console.warn('[Cron Sync] Failed to persist escalation dispatch metadata:', dispatchUpdateError.message);
           continue;
         }

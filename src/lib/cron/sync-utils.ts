@@ -18,11 +18,11 @@ export function resolveBaseUrl(request: Request) {
   const host = request.headers.get('host');
   if (host) {
     const protocol = host.includes('localhost') ? 'http' : 'https';
-    return \`\${protocol}://\${host}\`;
+    return `${protocol}://${host}`;
   }
 
   if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\\/$/, '');
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
   }
 
   return new URL(request.url).origin;

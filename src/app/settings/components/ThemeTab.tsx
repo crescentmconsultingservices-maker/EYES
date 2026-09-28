@@ -13,7 +13,7 @@ export default function ThemeTab() {
 
       <div className={styles.themeGrid}>
         <div 
-          className={\`\${styles.themeCard} \${theme === 'dark' ? styles.themeActive : ''}\`}
+          className={`${styles.themeCard} ${theme === 'dark' ? styles.themeActive : ''}`}
           onClick={() => setGlobalTheme('dark')}
         >
           <div className={styles.themePreviewDark} />
@@ -21,7 +21,7 @@ export default function ThemeTab() {
         </div>
 
         <div 
-          className={\`\${styles.themeCard} \${theme === 'light' ? styles.themeActive : ''}\`}
+          className={`${styles.themeCard} ${theme === 'light' ? styles.themeActive : ''}`}
           onClick={() => setGlobalTheme('light')}
         >
           <div className={styles.themePreviewLight} />
@@ -29,7 +29,7 @@ export default function ThemeTab() {
         </div>
 
         <div 
-          className={\`\${styles.themeCard} \${theme === 'ember' ? styles.themeActive : ''}\`}
+          className={`${styles.themeCard} ${theme === 'ember' ? styles.themeActive : ''}`}
           onClick={() => setGlobalTheme('ember')}
         >
           <div className={styles.themePreviewEmber} />

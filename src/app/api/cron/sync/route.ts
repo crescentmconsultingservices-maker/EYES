@@ -57,29 +57,7 @@ import type {
   EscalationStatus,
 } from '@/lib/cron/escalation';
 
-// Re-export public API so existing test imports continue to work
-export {
-  computeRetryDelayMs,
-  computeRetryDelayWithJitterMs,
-  shouldDispatchEscalation,
-  toEscalationCandidates,
-  shouldDispatchEscalation,
-  toEscalationKey,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ALERT_PENDING_RETRY_THRESHOLD,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ALERT_DEAD_LETTER_24H_THRESHOLD,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ALERT_MAX_RETRY_ATTEMPT_THRESHOLD,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ALERT_FAILURE_RATE_24H_THRESHOLD,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ESCALATION_DISPATCH_COOLDOWN_MINUTES,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ESCALATION_OWNER_WARNING,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  ESCALATION_OWNER_CRITICAL,
-} from '@/lib/cron/escalation';
+// Re-exports removed to avoid duplicates and incorrect module imports. They are exported correctly below.
 
 import {
   isMissingTable,
@@ -97,13 +75,24 @@ import {
 import { processEscalations } from '@/lib/cron/sync-escalation-handler';
 import { persistSyncResults, persistCronMetrics } from '@/lib/cron/sync-persistence';
 
-// Re-export public API so existing test imports continue to work
+// Correct re-exports for tests
 export {
   computeRetryDelayMs,
   computeRetryDelayWithJitterMs,
+} from '@/lib/cron/retry';
+
+export {
   shouldDispatchEscalation,
   toEscalationCandidates,
-};
+  toEscalationKey,
+  ALERT_PENDING_RETRY_THRESHOLD,
+  ALERT_DEAD_LETTER_24H_THRESHOLD,
+  ALERT_MAX_RETRY_ATTEMPT_THRESHOLD,
+  ALERT_FAILURE_RATE_24H_THRESHOLD,
+  ESCALATION_DISPATCH_COOLDOWN_MINUTES,
+  ESCALATION_OWNER_WARNING,
+  ESCALATION_OWNER_CRITICAL,
+} from '@/lib/cron/escalation';
 
 // Vercel function timeout — must be <= plan limit (Pro = 800s max for background)
 
@@ -201,6 +190,13 @@ const ESCALATION_INCLUDE_WARNING = ['1', 'true', 'yes', 'on'].includes(
 // shouldDispatchEscalation, toEscalationCandidates, toEscalationKey
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 
+
+type EscalationDispatchResult = {
+  attempted: boolean;
+  success: boolean;
+  status: number | null;
+  error?: string;
+};
 
 async function dispatchEscalationWebhook(payload: Record<string, unknown>): Promise<EscalationDispatchResult> {
   if (!ESCALATION_WEBHOOK_URL) {

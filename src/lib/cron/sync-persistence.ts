@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { isMissingTable } from './sync-utils';
-import { logCronMetrics } from './monitoring';
+import { logCronMetrics } from '@/utils/monitoring';
 
 export async function persistSyncResults(
   supabase: SupabaseClient,
@@ -34,7 +34,7 @@ export async function persistSyncResults(
 
       if (retryUpsertError) {
         retryQueuePersisted = false;
-        retryQueuePersistenceError = \`Failed to upsert retry queue: \${retryUpsertError.message}\`;
+        retryQueuePersistenceError = `Failed to upsert retry queue: ${retryUpsertError.message}`;
         console.warn('[Cron Sync] Failed to upsert retry queue:', retryUpsertError.message);
       }
     }
@@ -49,7 +49,7 @@ export async function persistSyncResults(
       const firstDeleteError = deleteResults.find((result) => result.error)?.error;
       if (firstDeleteError) {
         retryQueuePersisted = false;
-        retryQueuePersistenceError = \`Failed to clear retry queue rows: \${firstDeleteError.message}\`;
+        retryQueuePersistenceError = `Failed to clear retry queue rows: ${firstDeleteError.message}`;
         console.warn('[Cron Sync] Failed to clear retry queue rows:', firstDeleteError.message);
       }
     }
@@ -62,7 +62,7 @@ export async function persistSyncResults(
       if (isMissingTable(deadLetterInsertError.code)) {
         deadLetterPersistenceError = 'sync_retry_dead_letters table is not available. Apply migration 007_sync_retry_dead_letters.sql.';
       } else {
-        deadLetterPersistenceError = \`Failed to persist retry dead letters: \${deadLetterInsertError.message}\`;
+        deadLetterPersistenceError = `Failed to persist retry dead letters: ${deadLetterInsertError.message}`;
       }
       console.warn('[Cron Sync] Failed to persist retry dead letters:', deadLetterPersistenceError);
     }
@@ -85,7 +85,7 @@ export async function persistCronMetrics(
   let monitoringWarning: string | null = null;
 
   if (!cronMetricsResult.success) {
-    monitoringWarning = \`Cron metrics logging failed: \${cronMetricsResult.error}\`;
+    monitoringWarning = `Cron metrics logging failed: ${cronMetricsResult.error}`;
     console.warn('[Cron Sync] Monitoring:', monitoringWarning);
   }
 

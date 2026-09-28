@@ -56,7 +56,7 @@ export async function fetchAuditData(auditId: string, userId: string) {
     : null;
 
   if (fetchError || !events) {
-    throw new Error(\`Data retrieval failed: \${fetchError?.message}\`);
+    throw new Error(`Data retrieval failed: ${fetchError?.message}`);
   }
 
   return { events, auditRecord, auditType, riskSensitivity };
@@ -66,6 +66,6 @@ export async function markAuditFailed(auditId: string, errorMessage: string) {
   const supabase = await createClient();
   await supabase.from('reputation_audits').update({
     status: 'failed',
-    summary_narrative: \`Analysis failed: \${errorMessage}. Please check AI quotas or retry.\`
+    summary_narrative: `Analysis failed: ${errorMessage}. Please check AI quotas or retry.`
   }).eq('id', auditId);
 }

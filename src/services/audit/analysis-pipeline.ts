@@ -19,7 +19,7 @@ export class AuditAnalysisService {
       updateAuditStage(auditId, stage, extra);
 
     try {
-      const { events, auditRecord, auditType, riskSensitivity } = await fetchAuditData(auditId, userId);   }
+      const { events, auditRecord, auditType, riskSensitivity } = await fetchAuditData(auditId, userId);
 
       if (events.length === 0) {
         // No data yet — complete the audit gracefully with a sync prompt

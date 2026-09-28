@@ -108,7 +108,7 @@ Generate exactly 3 opportunities. Each must:
   {
     "title": "[Short action-oriented title]",
     "description": "[2 sentences: what the data shows + what to do about it]",
-    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: \\${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
@@ -124,7 +124,7 @@ Generate exactly 3 opportunities. Each must:
   {
     "title": "[Short credibility-building title]",
     "description": "[2 sentences: what the gap is + what to do]",
-    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: ${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
@@ -140,7 +140,7 @@ Generate exactly 3 opportunities. Each must:
   {
     "title": "[Short professional development title]",
     "description": "[2 sentences: observed pattern + recommended action]",
-    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: ${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
@@ -155,14 +155,14 @@ Tag each opportunity with its dimension:
   {
     "title": "[Short title prefixed with the dimension]",
     "description": "[Observed pattern + recommended action]",
-    "source": "[Specific platform name] connector (Record window: \${actualScanWindow})",
+    "source": "[Specific platform name] connector (Record window: ${actualScanWindow})",
     "priority": "[High/Medium/Low]",
     "scoreReduction": "[Estimated risk score reduction points, e.g., -0.8 or -0.4]"
   }
 `,
 };
 
-export const CROSS_LENS_SECTION = \`
+export const CROSS_LENS_SECTION = `
 MANDATORY SECTION FOR FULL AUDIT ONLY — § 8 CROSS-LENS CONSISTENCY:
 You MUST generate a Cross-Lens Consistency Report as § 8 of the Full Reputation Audit. This section does NOT appear in any other lens. It must contain:
 
@@ -190,14 +190,14 @@ You MUST generate a Cross-Lens Consistency Report as § 8 of the Full Reputation
 
 If no contradictions are found, state:
 "No significant cross-platform contradictions detected. The subject's digital behavior presents a consistent profile across all analyzed connectors and contexts."
-\`;
+`;
 
 // Unify keywords for a comprehensive extraction pass (identical across all lenses to ensure strict determinism)
 export const commitmentKeywords = /\b(will|i'll|we'll|i will|we will|i'll|going to|plan to|planning to|need to|have to|should|must|shall|promised|commit|deadline|by (monday|tuesday|wednesday|thursday|friday|saturday|sunday|eod|eow|next week|tomorrow)|follow.?up|send|review|check|handle|take care|responsible for|assigned|action item|todo|to.do)\b/i;
 export const sensitiveKeywords = /\b(salary|budget|invoice|payment|debt|legal|lawsuit|confidential|private|conflict|fired|quit|resign|burnout|stressed|anxiety|urgent|critical|emergency|overdue|missed|failed|broke|broken|issue|problem|complaint|dispute|disagree|delay|late|incomplete|pending|cancel|deadline|drift|dropped|slip|loops|angry|happy|sad|depressed|excited|furious|love|hate|dislike|upset|mad|frustrated|annoyed|disappoint|glad|awesome|terrible|bad|good|worst|best)\b/i;
 
 // Unified extraction instruction (identical across all lenses to maintain strict data-layer consistency)
-export const finalRiskInstruction = \`
+export const finalRiskInstruction = `
 - Be precise and objective. Do not over-flag or hallucinate risks.
 - Flag standard reputational risks, unmet commitments, and moderate negative sentiment.
 - Treat automated notifications or emails from external parties as neutral and isCommitment=false.
@@ -205,4 +205,4 @@ export const finalRiskInstruction = \`
 - FALSE POSITIVES FILTER: Internal development and debugging sessions where the subject is discussing product issues to improve/debug EYES (e.g., discussing "contradictory data in executive summary" or "fixing the PDF generator") are self-improvement/product feedback loops, NOT reputational risks. Do NOT flag them as sensitive or risks.
 - NORMAL TRANSACTION / RECEIVED EMAILS: Standard received transactions, service alerts, trial expirations, or social invites (e.g., birthday invitations) are neutral (sentiment: 0) and do NOT constitute PII exposures or security/reputation risks unless they expose raw secret credentials or financial account keys.
 - STRICTION: Commands, queries, prompts, search terms, or instructions sent to AI systems (e.g. Claude, ChatGPT), search engines, or code compilers (like "remove final page", "make perfect doc", "search receipts") are NOT personal commitments or promises made by the subject. Set isCommitment=false for them. A commitment is only when the subject explicitly promises they will do an action themselves in the future.
-\`;
+`;
