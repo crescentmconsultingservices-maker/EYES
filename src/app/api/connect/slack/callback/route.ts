@@ -80,6 +80,7 @@ export async function GET(request: Request) {
         refresh_token: refreshToken,
         expires_at: expiresAt,
         scope: data.authed_user.scope,
+        metadata: { team_id: data.team?.id ?? null },
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,platform' });
 

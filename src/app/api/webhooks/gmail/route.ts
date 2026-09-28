@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { invokeModel } from '@/services/ai/ai';
 import { waitUntil } from '@vercel/functions';
 import { extractForUser } from '../../actions/extract/route';
+import { verifyPubSubPush } from '@/lib/webhooks/verify';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -22,26 +23,36 @@ type CommitmentCheck = {
  * Parses incoming email for asks/commitments, cross-references memory, fires alert.
  */
 export async function POST(request: Request) {
+  // 1. Authenticate: only Google Pub/Sub (our push subscription) may call this.
+  if (!(await verifyPubSubPush(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
-  // Gmail Pub/Sub wraps the message in a base64-encoded data field
   const messageData = body?.message?.data;
-  const userId      = body?.message?.attributes?.userId ?? null;
-
-  if (!messageData || !userId) {
-    // Direct call format (for testing) or missing user
-    return NextResponse.json({ received: true });
-  }
+  if (!messageData) return NextResponse.json({ received: true });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createClient(SERVICE_URL, SERVICE_KEY, { auth: { persistSession: false } }) as any;
 
+  // 2. Derive the user from the notification itself (Gmail sends
+  //    {emailAddress, historyId}), never from a caller-supplied attribute.
+  let userId: string | null = null;
   try {
-    const decoded = Buffer.from(messageData, 'base64').toString('utf-8');
-    const notification = JSON.parse(decoded);
+    const notification = JSON.parse(Buffer.from(messageData, 'base64').toString('utf-8'));
     const historyId = notification?.historyId;
-    if (!historyId) return NextResponse.json({ received: true });
+    const emailAddress = String(notification?.emailAddress ?? '').toLowerCase();
+    if (!historyId || !emailAddress) return NextResponse.json({ received: true });
+
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('user_id')
+      .ilike('email', emailAddress)
+      .maybeSingle();
+    userId = profile?.user_id ?? null;
+    if (!userId) return NextResponse.json({ received: true });
 
     // Fetch recent unprocessed memories for this user from Gmail
     const since = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // last 5 min
@@ -63,7 +74,8 @@ export async function POST(request: Request) {
 
   // Trigger Action Queue extraction immediately in the background
   if (userId) {
-    waitUntil(extractForUser(userId, supabase).catch(err => 
+    const uid = userId;
+    waitUntil(extractForUser(uid, supabase).catch(err =>
       console.error('[Gmail Webhook] Background extraction failed:', err)
     ));
   }

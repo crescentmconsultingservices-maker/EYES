@@ -3,11 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 import { processMessageForAcuteAlert } from '../gmail/route';
 import { waitUntil } from '@vercel/functions';
 import { extractForUser } from '../../actions/extract/route';
+import { verifySlackSignature } from '@/lib/webhooks/verify';
 
 const SERVICE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const SLACK_SIGNING_SECRET = process.env.SLACK_CLIENT_SECRET ?? '';
+// NOTE: this is the app's *Signing Secret* (Slack app > Basic Information), NOT the client secret.
+const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
 
 /**
  * POST /api/webhooks/slack
@@ -15,7 +16,18 @@ const SLACK_SIGNING_SECRET = process.env.SLACK_CLIENT_SECRET ?? '';
  * Handles: url_verification challenge + message.channels events.
  */
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
+  // Verify the signature against the RAW body before touching the payload.
+  const rawBody = await request.text();
+  const validSignature = verifySlackSignature(
+    rawBody,
+    request.headers.get('x-slack-request-timestamp'),
+    request.headers.get('x-slack-signature'),
+    SLACK_SIGNING_SECRET,
+  );
+  if (!validSignature) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+
+  let body: any = null;
+  try { body = JSON.parse(rawBody); } catch { /* handled below */ }
   if (!body) return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
 
   // Slack URL verification handshake
@@ -41,6 +53,7 @@ export async function POST(request: Request) {
     .from('oauth_tokens')
     .select('user_id')
     .eq('platform', 'slack')
+    .eq('metadata->>team_id', String(body.team_id ?? ''))
     .limit(1);
 
   const tokenRow = data?.[0];
