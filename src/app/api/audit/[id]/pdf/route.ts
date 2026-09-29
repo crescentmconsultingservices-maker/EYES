@@ -24,18 +24,24 @@ export async function GET(
     let user, authError;
 
     const authHeader = request.headers.get('Authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1]?.trim();
-      const res = await authClient.auth.getUser(token);
-      user = res.data.user;
-      authError = res.error;
-    } else {
+    const bearerToken = (authHeader && authHeader.startsWith('Bearer '))
+      ? authHeader.split(' ')[1]?.trim()
+      : null;
+
+    if (bearerToken) {
+      const res = await authClient.auth.getUser(bearerToken);
+      if (res.data?.user) {
+        user = res.data.user;
+      }
+    }
+
+    if (!user) {
       const res = await authClient.auth.getUser();
-      user = res.data.user;
+      user = res.data?.user;
       authError = res.error;
     }
 
-    if (authError || !user) {
+    if (!user) {
       console.error('[PDF GET] Unauthorized. Error:', authError, 'User:', user ? 'exists' : 'missing');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

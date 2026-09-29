@@ -27,7 +27,7 @@ export class AuditLensService {
     // 1. Check if audit exists and belongs to user
     const { data: audit, error: auditError } = await supabase
       .from('reputation_audits')
-      .select('id, user_id, status, risk_score, summary_narrative, metadata, extracted_findings')
+      .select('id, user_id, status, risk_score, summary_narrative, metadata, extracted_findings, created_at')
       .eq('id', auditId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -64,31 +64,45 @@ export class AuditLensService {
     const findings = (audit.extracted_findings || {}) as Record<string, any>;
     const baseRiskScore = Number(audit.risk_score || 0);
 
-    // If lensType is 'full' and audit has a summary narrative, we can use it as base
+    // If lensType is 'full' and audit has a summary narrative, we can use it as base directly
     if (lensType === 'full' && audit.summary_narrative) {
-      const { data: inserted, error: insertError } = await supabase
-        .from('audit_lenses')
-        .insert({
-          audit_id: auditId,
-          lens_type: 'full',
-          risk_score: baseRiskScore,
-          narrative: audit.summary_narrative,
-          metadata: { generatedReason: 'base_full' },
-        })
-        .select()
-        .single();
+      try {
+        const { data: upserted } = await supabase
+          .from('audit_lenses')
+          .upsert({
+            audit_id: auditId,
+            lens_type: 'full',
+            risk_score: baseRiskScore,
+            narrative: audit.summary_narrative,
+            metadata: { generatedReason: 'base_full' },
+          }, { onConflict: 'audit_id, lens_type' })
+          .select()
+          .maybeSingle();
 
-      if (!insertError && inserted) {
-        return {
-          id: inserted.id,
-          auditId: inserted.audit_id,
-          lensType: 'full',
-          riskScore: Number(inserted.risk_score || 0),
-          narrative: inserted.narrative || '',
-          metadata: inserted.metadata || {},
-          generatedAt: inserted.generated_at,
-        };
+        if (upserted) {
+          return {
+            id: upserted.id,
+            auditId: upserted.audit_id,
+            lensType: 'full',
+            riskScore: Number(upserted.risk_score || 0),
+            narrative: upserted.narrative || '',
+            metadata: upserted.metadata || {},
+            generatedAt: upserted.generated_at,
+          };
+        }
+      } catch (upsertErr) {
+        console.warn('[AuditLensService] Error upserting full lens:', upsertErr);
       }
+
+      return {
+        id: existingLens?.id || `lens-full-${auditId}`,
+        auditId,
+        lensType: 'full',
+        riskScore: baseRiskScore,
+        narrative: audit.summary_narrative,
+        metadata: (audit.metadata as Record<string, any>) || {},
+        generatedAt: audit.created_at || new Date().toISOString(),
+      };
     }
 
     // 4. Generate lens on demand using cheap AI call with extracted_findings

@@ -423,23 +423,41 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
         auditId={activeAudit.id}
         onComplete={async () => {
           try {
-            const res = await fetch(`/api/audit/${activeAudit.id}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data) {
-                const refreshedAudit: ReputationAudit = {
-                  ...data,
-                  riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore) ? data.riskScore : 0,
-                  mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? 0),
-                  commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? 0),
-                  metadata: data.metadata || {},
-                  extractedFindings: data.extractedFindings || data.extracted_findings || {},
-                  lenses: data.lenses || {},
-                };
-                setActiveAudit(refreshedAudit);
-                if (refreshedAudit.lenses) setCachedLenses(refreshedAudit.lenses);
-                loadHistory();
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            const headers: Record<string, string> = {};
+            if (session?.access_token) {
+              headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
+
+            let data: any = null;
+            // Retry up to 3 times to ensure DB write is settled before transitioning
+            for (let attempt = 0; attempt < 3; attempt++) {
+              const res = await fetch(`/api/audit/${activeAudit.id}`, { headers });
+              if (res.ok) {
+                const json = await res.json();
+                if (json && (json.status === 'completed' || json.summaryNarrative)) {
+                  data = json;
+                  break;
+                }
+                data = json;
               }
+              await new Promise(r => setTimeout(r, 500));
+            }
+
+            if (data) {
+              const refreshedAudit: ReputationAudit = {
+                ...data,
+                riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore) ? data.riskScore : 0,
+                mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? 0),
+                commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? 0),
+                metadata: data.metadata || {},
+                extractedFindings: data.extractedFindings || data.extracted_findings || {},
+                lenses: data.lenses || {},
+              };
+              setActiveAudit(refreshedAudit);
+              if (refreshedAudit.lenses) setCachedLenses(refreshedAudit.lenses);
+              loadHistory();
             }
           } catch (e) {
             console.warn('[AuditView] Could not refresh audit on complete:', e);
@@ -592,19 +610,30 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                 try {
                   const supabase = createClient();
                   const { data: { session } } = await supabase.auth.getSession();
+                  const headers: Record<string, string> = {};
+                  if (session?.access_token) {
+                    headers['Authorization'] = `Bearer ${session.access_token}`;
+                  }
+
                   const res = await fetch(`/api/audit/${activeAudit.id}/pdf?lens=${activeLensType}`, {
-                    headers: {
-                      'Authorization': `Bearer ${session?.access_token || ''}`
-                    }
+                    headers
                   });
-                  if (!res.ok) throw new Error('PDF generation failed. Please try again.');
+                  if (!res.ok) {
+                    const errJson = await res.json().catch(() => ({}));
+                    throw new Error(errJson.error || `PDF generation failed (${res.status}). Please try again.`);
+                  }
                   const blob = await res.blob();
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
+                  a.style.display = 'none';
                   a.href = url;
                   a.download = `eyes-audit-${activeLensType}-${activeAudit.id.slice(0, 8)}.pdf`;
+                  document.body.appendChild(a);
                   a.click();
-                  setTimeout(() => URL.revokeObjectURL(url), 2000);
+                  setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }, 1000);
                 } catch (err) {
                   console.error('[PDF Download] failed:', err);
                   setPdfError(err instanceof Error ? err.message : 'PDF generation failed.');
