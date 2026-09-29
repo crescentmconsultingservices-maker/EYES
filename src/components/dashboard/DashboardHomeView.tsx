@@ -98,7 +98,7 @@ export function DashboardHomeView({ platforms: initialPlatforms, syncStatus }: D
         setMetaInterstitial({ platformName: 'Instagram', startUrl });
         return;
       }
-      const isMeta = p.id === 'facebook' || p.id === 'whatsapp' || p.id === 'meta-ads';
+      const isMeta = p.id === 'facebook' || p.id === 'meta-ads';
       if (isMeta) {
         startUrl = `/api/connect/facebook/start?platform=${p.id}`;
         setMetaInterstitial({ platformName: p.name, startUrl });

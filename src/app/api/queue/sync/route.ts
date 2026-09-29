@@ -79,11 +79,27 @@ export async function handler(request: Request) {
   }
 }
 
-// In test or local dev without signing keys, bypass verification
+// Only bypass QStash signature verification in explicit local development.
+// In production, missing signing keys are a misconfiguration — return 500.
 export async function POST(req: Request) {
-  if (!process.env.QSTASH_CURRENT_SIGNING_KEY || !process.env.QSTASH_NEXT_SIGNING_KEY) {
+  const isDev = process.env.NODE_ENV === 'development';
+  const hasKeys =
+    Boolean(process.env.QSTASH_CURRENT_SIGNING_KEY) &&
+    Boolean(process.env.QSTASH_NEXT_SIGNING_KEY);
+
+  if (isDev && !hasKeys) {
+    // Local dev without QStash keys — bypass signature check
     return handler(req);
   }
+
+  if (!hasKeys) {
+    console.error('[Queue: Sync] QStash signing keys are not configured in production.');
+    return new Response(
+      JSON.stringify({ error: 'QStash signing keys not configured.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const verifiedHandler = verifySignatureAppRouter(handler);
   return verifiedHandler(req);
 }

@@ -5,9 +5,6 @@ import { createClient } from '@/utils/supabase/server';
 import { getBaseUrl } from '@/utils/url';
 
 function getMetaRedirectUri(baseUrl: string, platform: string) {
-  if (platform === 'whatsapp') {
-    return process.env.WHATSAPP_REDIRECT_URI?.trim() || new URL('/api/connect/whatsapp/callback', baseUrl).toString();
-  }
   const explicit = process.env.FACEBOOK_REDIRECT_URI?.trim();
   if (explicit) return explicit;
   return new URL('/api/connect/facebook/callback', baseUrl).toString();
@@ -58,9 +55,6 @@ export async function GET(request: Request) {
   let scopes = process.env.FACEBOOK_SCOPES?.trim() || 'public_profile';
   if (platform === 'instagram') {
     scopes = process.env.INSTAGRAM_SCOPES?.trim() || 'public_profile';
-  } else if (platform === 'whatsapp') {
-    // Only use custom scopes if explicitly provided in environment, otherwise standard public_profile
-    scopes = process.env.WHATSAPP_SCOPES?.trim() || 'public_profile';
   }
   
   authUrl.searchParams.set('scope', scopes);

@@ -10,9 +10,6 @@ function getRequestBaseUrl(request: Request) {
 }
 
 function getMetaRedirectUri(baseUrl: string, platform: string) {
-  if (platform === 'whatsapp') {
-    return process.env.WHATSAPP_REDIRECT_URI?.trim() || new URL('/api/connect/whatsapp/callback', baseUrl).toString();
-  }
   const explicit = process.env.FACEBOOK_REDIRECT_URI?.trim();
   if (explicit) return explicit;
   return new URL('/api/connect/facebook/callback', baseUrl).toString();

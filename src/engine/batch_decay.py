@@ -1,5 +1,6 @@
 import os
 import datetime
+from datetime import timezone
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -27,7 +28,7 @@ def run_decay_batch(user_id: str):
     
     # Threshold for decay: 30 days of inactivity
     decay_threshold_days = 30
-    cutoff_date = (datetime.datetime.utcnow() - datetime.timedelta(days=decay_threshold_days)).isoformat()
+    cutoff_date = (datetime.datetime.now(timezone.utc) - datetime.timedelta(days=decay_threshold_days)).isoformat()
     
     # We want to decay active edges (valid_to is null) that haven't been observed recently.
     # Since every observation creates a new edge row, we need to find relation groups 
@@ -79,26 +80,23 @@ def run_decay_batch(user_id: str):
                 for e in group:
                     edges_to_decay.append(e['id'])
                     
-    now = datetime.datetime.utcnow().isoformat()
+    now = datetime.datetime.now(timezone.utc).isoformat()
     
     if edges_to_escalate:
         print(f"Found {len(edges_to_escalate)} stale commitments. Escalating to delayed_on...")
-        for edge_id in edges_to_escalate:
-            supabase.table("chronic_edges")\
-                .update({"relation_label": "delayed_on"})\
-                .eq("id", edge_id)\
-                .execute()
+        # Batch update — one request instead of N
+        supabase.table("chronic_edges")\
+            .update({"relation_label": "delayed_on"})\
+            .in_("id", edges_to_escalate)\
+            .execute()
                 
     if edges_to_decay:
         print(f"Found {len(edges_to_decay)} stale edges. Applying decay...")
-        # Update valid_to for stale edges
-        # Batch update is not natively supported by Supabase JS/Py easily without looping or RPC, 
-        # so we update in chunks or loop (safe for cron).
-        for edge_id in edges_to_decay:
-            supabase.table("chronic_edges")\
-                .update({"valid_to": now})\
-                .eq("id", edge_id)\
-                .execute()
+        # Batch update valid_to in a single request
+        supabase.table("chronic_edges")\
+            .update({"valid_to": now})\
+            .in_("id", edges_to_decay)\
+            .execute()
         print(f"Decay applied. {len(edges_to_decay)} edges shifted from Active to Historic.")
     else:
         print("No silence-based decay applied to other active edges.")

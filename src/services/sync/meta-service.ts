@@ -4,7 +4,6 @@ import { upsertSyncStatusSafely, upsertRawEventsSafely } from '@/utils/supabase/
 import { decryptToken } from '@/services/auth/tokens';
 
 export interface MetaPagingCursors {
-  whatsapp_after?: string;
   instagram_after?: string;
 }
 
@@ -78,64 +77,33 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       currentCursors = currentStatus.metadata.meta_cursors;
     }
 
-    const rawEvents: any[] = [];
-    let hasMoreWA = false;
-    let nextWaAfter: string | undefined = undefined;
-    let hasMoreIG = false;
-    let nextIgAfter: string | undefined = undefined;
+  const rawEvents: Array<{
+    user_id: string;
+    platform: string;
+    platform_id: string;
+    event_type: string;
+    title: string;
+    content: string;
+    author: string;
+    timestamp: string;
+    metadata: Record<string, unknown>;
+  }> = [];
+  let hasMoreIG = false;
+  let nextIgAfter: string | undefined = undefined;
 
-    // 4. Fetch WhatsApp messages
-    try {
-      const waUrl = new URL('https://graph.facebook.com/v26.0/me/messages');
-      waUrl.searchParams.set('access_token', accessToken);
-      waUrl.searchParams.set('limit', '50');
-      if (isBackfill && currentCursors.whatsapp_after) {
-        waUrl.searchParams.set('after', currentCursors.whatsapp_after);
-      }
-
-      const waRes = await fetch(waUrl.toString(), { cache: 'no-store' });
-      if (waRes.ok) {
-        const waData = await waRes.json();
-        const waMessages = waData.data || [];
-
-        for (const msg of waMessages) {
-          rawEvents.push({
-            user_id: userId,
-            platform: 'whatsapp',
-            platform_id: msg.id || `wa_${msg.created_time || Date.now()}`,
-            event_type: 'chat_message',
-            title: `WhatsApp Message from ${msg.from || 'Contact'}`,
-            content: msg.message || msg.text?.body || 'Media attachment',
-            author: msg.from || 'WhatsApp Contact',
-            timestamp: msg.created_time || new Date().toISOString(),
-            metadata: {
-              raw_id: msg.id,
-              from: msg.from,
-              type: msg.type || 'text',
-            },
-          });
-        }
-
-        if (waData.paging?.cursors?.after && waMessages.length >= 50) {
-          hasMoreWA = true;
-          nextWaAfter = waData.paging.cursors.after;
-        }
-      }
-    } catch (waErr) {
-      console.warn('[Meta Sync] WhatsApp sync warning:', waErr);
-    }
-
-    // 5. Fetch Instagram media / posts
+    // 4. Fetch Instagram media / posts
     try {
       const igUrl = new URL('https://graph.facebook.com/v26.0/me/media');
-      igUrl.searchParams.set('access_token', accessToken);
       igUrl.searchParams.set('fields', 'id,caption,timestamp,media_type,comments{text,timestamp,username}');
       igUrl.searchParams.set('limit', '50');
       if (isBackfill && currentCursors.instagram_after) {
         igUrl.searchParams.set('after', currentCursors.instagram_after);
       }
 
-      const igRes = await fetch(igUrl.toString(), { cache: 'no-store' });
+      const igRes = await fetch(igUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
       if (igRes.ok) {
         const igData = await igRes.json();
         const igPosts = igData.data || [];
@@ -171,10 +139,12 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
     try {
       // Fetch Facebook Profile
       const fbMeUrl = new URL('https://graph.facebook.com/v26.0/me');
-      fbMeUrl.searchParams.set('access_token', accessToken);
       fbMeUrl.searchParams.set('fields', 'id,name,picture,link');
 
-      const fbMeRes = await fetch(fbMeUrl.toString(), { cache: 'no-store' });
+      const fbMeRes = await fetch(fbMeUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
       if (fbMeRes.ok) {
         const fbMeData = await fbMeRes.json();
         if (fbMeData?.id) {
@@ -197,11 +167,13 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       }
 
       const fbFeedUrl = new URL('https://graph.facebook.com/v26.0/me/posts');
-      fbFeedUrl.searchParams.set('access_token', accessToken);
       fbFeedUrl.searchParams.set('fields', 'id,message,story,created_time');
       fbFeedUrl.searchParams.set('limit', '25');
 
-      const fbFeedRes = await fetch(fbFeedUrl.toString(), { cache: 'no-store' });
+      const fbFeedRes = await fetch(fbFeedUrl.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      });
       if (fbFeedRes.ok) {
         const fbFeedData = await fbFeedRes.json();
         const fbPosts = fbFeedData.data || [];
@@ -232,9 +204,8 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       await upsertRawEventsSafely(supabase, rawEvents);
     }
 
-    const hasMore = hasMoreWA || hasMoreIG;
+    const hasMore = hasMoreIG;
     const updatedCursors: MetaPagingCursors = {
-      whatsapp_after: nextWaAfter || currentCursors.whatsapp_after,
       instagram_after: nextIgAfter || currentCursors.instagram_after,
     };
 
@@ -246,7 +217,7 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
       total_items: (currentStatus?.total_items || 0) + rawEvents.length,
       last_sync_at: now,
       next_sync_at: new Date(Date.now() + 1000 * 60 * 30).toISOString(),
-      cursor: hasMore ? (nextWaAfter || nextIgAfter || null) : null,
+      cursor: hasMore ? (nextIgAfter || null) : null,
       metadata: { meta_cursors: updatedCursors },
       error_message: null,
     };
@@ -270,7 +241,7 @@ export async function executeMetaSync(actor: SyncActor, mode: string = 'delta'):
           userId,
           platform: 'meta',
           mode: 'backfill',
-          cursor: nextWaAfter || nextIgAfter,
+          cursor: nextIgAfter,
           delaySeconds: 3,
         });
       } catch (qErr) {

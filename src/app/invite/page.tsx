@@ -26,9 +26,9 @@ export default function InviteAcceptPage() {
     if (!token) return;
     
     if (!user) {
-      // Not logged in, save token and redirect to signup
-      sessionStorage.setItem('pending_invite_token', token);
-      router.push(`/signup`);
+      // Not logged in — pass the token via URL to /signup so it is never stored in sessionStorage
+      // where it would be accessible to any script (XSS risk).
+      router.push(`/signup?invite_token=${encodeURIComponent(token)}`);
       return;
     }
 

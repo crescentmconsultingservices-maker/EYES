@@ -139,6 +139,11 @@ export function createClient() {
         // preventing the race condition that originally motivated disabling this.
         autoRefreshToken: true,
         persistSession: true,
+        // detectSessionInUrl is intentionally false: this app uses a custom API route
+        // (e.g. /api/auth/callback) to handle the OAuth redirect and exchange the
+        // authorization code for a session. Enabling this would cause the default
+        // Supabase client listener to race against the custom callback handler.
+        // If the custom callback route is ever removed, this must be set back to true.
         detectSessionInUrl: false,
         storageKey,
         lock: withInTabAuthLock,

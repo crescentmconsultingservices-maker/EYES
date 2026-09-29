@@ -117,8 +117,14 @@ def run_phase5_organs(user_id: str) -> None:
 
     loops_saved = 0
     for loop in detected_loops[:10]:  # cap at 10 loops per run
+        # Use a deterministic ID so upsert correctly updates existing rows
+        # rather than always inserting a new duplicate.
+        loop_key = f"{user_id}:{loop['head']}:{loop['relation']}"
+        loop_digest = hashlib.sha256(loop_key.encode()).hexdigest()
+        loop_id = f"{loop_digest[:8]}-{loop_digest[8:12]}-4{loop_digest[13:16]}-{loop_digest[16:20]}-{loop_digest[20:32]}"
+
         loop_data = {
-            "id": str(uuid.uuid4()),
+            "id": loop_id,
             "user_id": user_id,
             "loop_description": (
                 f"Recurring: [{loop['head'].replace('_', ' ')}] "

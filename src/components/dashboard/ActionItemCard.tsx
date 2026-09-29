@@ -261,7 +261,8 @@ export function ActionItemCard({
             )}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <span className={styles.confidence}>
-                {Math.round(action.confidence * 100)}% CONFIDENCE
+                {/* Normalize: stored as decimal (0.85) or percentage (85) — display as % */}
+                {Math.round(action.confidence <= 1 ? action.confidence * 100 : action.confidence)}% CONFIDENCE
               </span>
               {!compact && (
                 <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>

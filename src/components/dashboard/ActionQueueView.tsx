@@ -1,34 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ActionQueue.module.css';
 import { ALL_POSSIBLE_PLATFORMS } from '@/config/platforms';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { BoltIcon } from '../common/icons/PlatformIcons';
 import { createClient } from '@/utils/supabase/client';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { ActionItemCard, getConversationalSummary } from './ActionItemCard';
+import { ActionItemCard } from './ActionItemCard';
 import type { ActionItem } from '@/types/dashboard';
 
-interface RecentlyHandledItem {
-  id: string;
-  platform: string;
-  title: string;
-  status: string;
-  executed_at: string | null;
-  extracted_at: string;
-}
 
 interface ActionQueueViewProps {
   onBack: () => void;
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const PLATFORM_ICONS: Record<string, string> = {
-  gmail: '📧', 'google-calendar': '📅', github: '🐙',
-  linear: '🔷', trello: '📋', slack: '💬', notion: '📄', discord: '🎮',
-};
 
 function useCountdown(lastRunAt: string | null, intervalMs = 30 * 60 * 1000) {
   const [remaining, setRemaining] = useState('');
@@ -49,73 +33,18 @@ function useCountdown(lastRunAt: string | null, intervalMs = 30 * 60 * 1000) {
   return remaining;
 }
 
-function parseCitations(desc: string) {
-  const citations: string[] = [];
-  const lines = desc.split('\n');
-  let inCitations = false;
-  for (const line of lines) {
-    if (line.toLowerCase().includes('citations:')) {
-      inCitations = true;
-      continue;
-    }
-    if (inCitations && line.trim().startsWith('-')) {
-      citations.push(line.trim().slice(1).trim());
-    }
-  }
-  return citations;
-}
-
-function getNativePlatformLink(action: ActionItem) {
-  if (action.platform_link) return action.platform_link;
-
-  const platform = action.platform.toLowerCase();
-  const sourceId = action.source_id;
-  
-  if (platform === 'gmail') {
-    if (sourceId) {
-      return `https://mail.google.com/mail/u/0/#all/${sourceId}`;
-    }
-    return `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(action.title)}`;
-  }
-  
-  if (platform === 'slack') {
-    if (sourceId && !sourceId.startsWith('test_')) {
-      return `https://slack.com/app_redirect?channel=${sourceId}`;
-    }
-    return 'https://slack.com';
-  }
-  
-  if (platform === 'github') {
-    if (sourceId) return `https://github.com/${sourceId}`;
-    return 'https://github.com';
-  }
-
-  if (platform === 'linear') {
-    if (sourceId) return `https://linear.app/issue/${sourceId}`;
-    return 'https://linear.app';
-  }
-  
-  return null;
-}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ActionQueueView({ onBack }: ActionQueueViewProps) {
   const [actions, setActions] = useState<ActionItem[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [recentlyHandled, setRecentlyHandled] = useState<RecentlyHandledItem[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [scanStats, setScanStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'priority' | 'meetings' | 'communications' | 'tasks' | 'gmail' | 'slack' | 'linear' | 'gcal'>('priority');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editedAction, setEditedAction] = useState<ActionItem | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lastRunAt, setLastRunAt] = useState<string | null>(null);
-  const [refiningId, setRefiningId] = useState<string | null>(null);
-  // undoToast: holds the dismissed item + its removal timer so Undo can cancel it
-  const [undoToast, setUndoToast] = useState<{ action: ActionItem; timerId: ReturnType<typeof setTimeout> } | null>(null);
+  // undoToast: holds the dismissed item so Undo can cancel the pending DB write
+  const [undoToast, setUndoToast] = useState<{ action: ActionItem } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdown = useCountdown(lastRunAt);
 
   // ── Step 1: Load instantly from DB ───────────────────────────────────────────
@@ -132,10 +61,8 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
       const fetchedActions: ActionItem[] = data.actions ?? [];
       setActions(fetchedActions);
       setLastRunAt(data.meta?.lastRunAt ?? new Date().toISOString());
-      setScanStats(data.meta?.scanStats ?? {});
-      setRecentlyHandled(data.recentlyHandled ?? []);
 
-      // ── Step 2: If stale, trigger background extraction (non-blocking) ─────
+      // Step 2: If stale, trigger background extraction (non-blocking)
       if (data.meta?.isStale) {
         console.log('[ActionQueue] Stale — triggering background extraction...');
         triggerBackgroundExtraction();
@@ -232,120 +159,58 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
 
   // ── Action handlers ──────────────────────────────────────────────────────────
 
-  // Single atomic call: approved → execute → executed|failed
-  const handleApprove = async (action: ActionItem) => {
-    // C5 fix: explicit null guard — editedAction || action would silently discard
-    // user edits if editedAction happened to be null due to a state race.
-    const finalAction = (editingId === action.id && editedAction != null)
-      ? editedAction
-      : action;
-    setProcessingId(action.id);
-    try {
-      const res = await fetch('/api/actions/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: finalAction.id,
-          title: finalAction.title,
-          suggested_action: finalAction.suggested_action,
-          startTime: finalAction.startTime,
-          endTime: finalAction.endTime,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error('[ActionQueue] Approve failed:', data.error);
-      }
-      // Realtime subscription will remove the card; do it optimistically too
-      setActions(prev => prev.filter(a => a.id !== action.id));
-      setEditingId(null);
-      setEditedAction(null);
-    } catch (e) {
-      console.error('[ActionQueue] Approve network error:', e);
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
   // Dismiss with 3-second undo window before committing to DB
   const handleDismiss = (action: ActionItem) => {
-    if (editingId === action.id) { setEditingId(null); setEditedAction(null); }
-
     // Cancel any previous pending toast first
-    if (undoToast) {
-      clearTimeout(undoToast.timerId);
-      // Commit the previous one immediately before showing new toast
-      fetch('/api/actions/queue', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: undoToast.action.id, status: 'dismissed' }),
-      }).catch(e => console.warn('[ActionQueue] Dismiss persist failed:', e));
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+      // Commit the previous dismissed item immediately before showing new toast
+      if (undoToast) {
+        fetch('/api/actions/queue', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: undoToast.action.id, status: 'dismissed' }),
+        }).catch(e => console.warn('[ActionQueue] Dismiss persist failed:', e));
+      }
     }
 
     // Optimistically remove from list
     setActions(prev => prev.filter(a => a.id !== action.id));
 
-    // Schedule DB write after 3 seconds (cancellable)
-    const timerId = setTimeout(() => {
+    // Schedule DB write after 3 seconds (cancellable via undoTimerRef)
+    undoTimerRef.current = setTimeout(() => {
       fetch('/api/actions/queue', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: action.id, status: 'dismissed' }),
       }).catch(e => console.warn('[ActionQueue] Dismiss persist failed:', e));
+      undoTimerRef.current = null;
       setUndoToast(null);
     }, 3000);
 
-    setUndoToast({ action, timerId });
+    setUndoToast({ action });
   };
 
   const handleUndoDismiss = () => {
     if (!undoToast) return;
-    clearTimeout(undoToast.timerId);
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
     // Restore the action to the top of the list
     setActions(prev => [undoToast.action, ...prev]);
     setUndoToast(null);
   };
 
-  const startEditing = (action: ActionItem) => {
-    setEditingId(action.id);
-    setEditedAction({ ...action });
-  };
-
-  const handleEditChange = (action: ActionItem, field: keyof ActionItem, value: string) => {
-    if (editingId !== action.id) {
-      setEditingId(action.id);
-      setEditedAction({ ...action, [field]: value });
-    } else if (editedAction) {
-      setEditedAction({ ...editedAction, [field]: value });
-    }
-  };
-
-  const applyQuickRefine = async (action: ActionItem, type: 'shorter' | 'formal' | 'calendar') => {
-    const currentText = editingId === action.id ? editedAction?.suggested_action || action.suggested_action : action.suggested_action;
-
-    // Enter edit mode immediately with the current text so user sees the field
-    if (editingId !== action.id) {
-      setEditingId(action.id);
-      setEditedAction({ ...action });
-    }
-    setRefiningId(action.id);
-
-    try {
-      const res = await fetch('/api/actions/refine', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: currentText, type }),
-      });
-      const data = await res.json();
-      if (res.ok && data.refined) {
-        setEditedAction(prev => prev ? { ...prev, suggested_action: data.refined } : { ...action, suggested_action: data.refined });
+  // Cleanup: cancel pending undo timer if the component unmounts (Bug #16)
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
       }
-    } catch (e) {
-      console.warn('[ActionQueue] Refine failed:', e);
-    } finally {
-      setRefiningId(null);
-    }
-  };
+    };
+  }, []);
 
   const filtered = actions.filter(a => {
     const p = a.platform.toLowerCase();

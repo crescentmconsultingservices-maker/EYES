@@ -23,10 +23,16 @@ api_key_header = APIKeyHeader(name="X-Engine-Secret", auto_error=False)
 
 async def verify_engine_secret(key: Optional[str] = Security(api_key_header)) -> bool:
     """Validates that the caller knows the CHRONIC_ENGINE_SECRET.
-    Allows unauthenticated calls only in local dev (no secret configured)."""
+    Allows unauthenticated calls only in explicit local dev (no secret AND debug mode)."""
+    is_dev = os.environ.get("APP_ENV", "").lower() in ("development", "dev", "local")
     if not CHRONIC_ENGINE_SECRET:
-        # No secret configured — allow all calls (local dev only)
-        return True
+        if is_dev:
+            # No secret configured — allow all calls in local dev only
+            return True
+        raise HTTPException(
+            status_code=500,
+            detail="Server misconfiguration: CHRONIC_ENGINE_SECRET is not set."
+        )
     if key != CHRONIC_ENGINE_SECRET:
         raise HTTPException(status_code=403, detail="Invalid engine secret.")
     return True
@@ -237,32 +243,31 @@ async def extract_entities(request: ExtractRequest, _: bool = Depends(verify_eng
                     
                     relations = json.loads(llm_output)
                     
-                    # Force normalize 'head' to 'User' as per system requirements
-                    if isinstance(relations, list):
-                        for rel in relations:
-                            if isinstance(rel, dict):
-                                rel["head"] = "User"
-                    
-                    # Fetch actual User entity ID and metadata instead of a placeholder
-                    has_user_entity = any(e.get("text") == "User" for e in entities)
-                    if not has_user_entity and relations and request.user_id and supabase:
+                    # Only replace the literal "User" placeholder with the real user's name.
+                    # Do NOT normalize all heads — this would destroy correctly extracted
+                    # 3rd-party names (e.g. "Ken Lay") that the LLM correctly produced.
+                    if isinstance(relations, list) and request.user_id and supabase:
                         try:
                             user_res = supabase.table("users").select("full_name").eq("id", request.user_id).execute()
                             user_name = user_res.data[0].get("full_name", "User") if user_res.data else "User"
                         except Exception:
                             user_name = "User"
                         
-                        entities.append({
-                            "label": "person",
-                            "text": user_name,
-                            "id": request.user_id,
-                            "score": 1.0,
-                            "start": 0,
-                            "end": 0
-                        })
                         for rel in relations:
                             if isinstance(rel, dict) and rel.get("head") == "User":
                                 rel["head"] = user_name
+
+                        # Inject the user entity into the entity list if not already present
+                        has_user_entity = any(e.get("text") == user_name for e in entities)
+                        if not has_user_entity and any(r.get("head") == user_name for r in relations):
+                            entities.append({
+                                "label": "person",
+                                "text": user_name,
+                                "id": request.user_id,
+                                "score": 1.0,
+                                "start": 0,
+                                "end": 0
+                            })
 
                 except Exception as llm_err:
                     print(f"[Relationship Engine] LiteLLM Error: {llm_err}. Skipping relation extraction.")

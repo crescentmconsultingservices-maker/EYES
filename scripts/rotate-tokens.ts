@@ -20,6 +20,9 @@
  *   TOKEN_ENCRYPTION_KEY_V2    - New key, base64 (for encrypting enc:v2)
  */
 
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
 import { createClient } from '@supabase/supabase-js';
 import { decryptToken, encryptToken } from '../src/services/auth/tokens';
 

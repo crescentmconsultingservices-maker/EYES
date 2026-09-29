@@ -148,7 +148,7 @@ export async function executeGoogleCalendarSync(actor: SyncActor, mode: string =
       .eq('user_id', userId);
 
     // Update status and save cursor
-    const [, profileUpdate] = await Promise.all([
+    const [syncStatusResult, profileUpdateResult] = await Promise.all([
       upsertSyncStatusSafely(supabase, {
         user_id: userId,
         platform: 'google_calendar',
@@ -166,7 +166,8 @@ export async function executeGoogleCalendarSync(actor: SyncActor, mode: string =
       }).eq('user_id', userId),
     ]);
 
-    if (profileUpdate.error) throw profileUpdate.error;
+    // profileUpdateResult is the Supabase response from the user_profiles update
+    if (profileUpdateResult.error) throw profileUpdateResult.error;
 
     // Auto-chain remaining backfill via QStash
     if (hasMore && mode === 'backfill') {

@@ -20,7 +20,6 @@ import {
   GoogleMapsIcon,
   YouTubeIconOfficial,
   MetaIconOfficial,
-  WhatsAppIconOfficial,
   InstagramIconOfficial,
   XIconOfficial
 } from '../components/common/icons/PlatformIcons';
