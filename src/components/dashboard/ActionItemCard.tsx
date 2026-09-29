@@ -110,19 +110,51 @@ export function ActionItemCard({
   action,
   onExecuted,
   onDismissed,
-  defaultExpanded = true,
+  defaultExpanded = false,
   compact = false,
 }: ActionItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(action.title);
-  const [editedAction, setEditedAction] = useState(action.suggested_action);
+  const [editedAction, setEditedAction] = useState(action.suggested_action || '');
+  const [currentDesc, setCurrentDesc] = useState(action.description || '');
   const [startTime, setStartTime] = useState(action.startTime || '');
   const [endTime, setEndTime] = useState(action.endTime || '');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [isEnriched, setIsEnriched] = useState(Boolean(action.enriched_at || (action.suggested_action && action.suggested_action.length > 0)));
   const [isExecuted, setIsExecuted] = useState(action.status === 'executed');
   const [isDismissed, setIsDismissed] = useState(action.status === 'dismissed');
   const [refiningTone, setRefiningTone] = useState<string | null>(null);
+
+  const handleToggleExpand = async () => {
+    if (compact) return;
+    const nextExpanded = !isExpanded;
+    setIsExpanded(nextExpanded);
+
+    if (nextExpanded && !isEnriched && !isEnriching) {
+      setIsEnriching(true);
+      try {
+        const res = await fetch(`/api/actions/${action.id}/enrich`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.action) {
+            if (data.action.suggested_action) {
+              setEditedAction(data.action.suggested_action);
+            }
+            if (data.action.description) {
+              setCurrentDesc(data.action.description);
+            }
+            setIsEnriched(true);
+          }
+        }
+      } catch (err) {
+        console.warn('[ActionItemCard] Lazy enrich request failed:', err);
+      } finally {
+        setIsEnriching(false);
+      }
+    }
+  };
 
   if (isDismissed) return null;
 
@@ -167,7 +199,7 @@ export function ActionItemCard({
         body: JSON.stringify({
           id: action.id,
           title: action.title,
-          suggested_action: action.suggested_action,
+          suggested_action: editedAction || action.suggested_action,
           auto_approved: true,
         }),
       });
@@ -231,15 +263,18 @@ export function ActionItemCard({
   };
 
   const nativeLink = getNativePlatformLink(action);
-  const citations = parseCitations(action.description || '');
-  const { sender, platformName, cleanDesc } = getConversationalSummary(action);
+  const citations = parseCitations(currentDesc || '');
+  const { sender, platformName, cleanDesc } = getConversationalSummary({
+    ...action,
+    description: currentDesc,
+  });
 
   return (
     <div
       className={`${styles.actionCard} ${isExecuted ? styles.executedCard : ''}`}
       style={compact ? { margin: '8px 0', borderRadius: '12px' } : undefined}
     >
-      <div className={styles.cardMain} onClick={() => !compact && setIsExpanded(!isExpanded)} style={{ cursor: compact ? 'default' : 'pointer' }}>
+      <div className={styles.cardMain} onClick={handleToggleExpand} style={{ cursor: compact ? 'default' : 'pointer' }}>
         <div className={styles.platformIcon} title={action.platform}>
           {PLATFORM_ICONS[action.platform.toLowerCase()] ?? '⚡'}
         </div>
@@ -260,6 +295,20 @@ export function ActionItemCard({
               </h4>
             )}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {action.is_aging && (
+                <span style={{
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.05em',
+                  padding: '2px 7px',
+                  borderRadius: '10px',
+                  background: 'rgba(234, 179, 8, 0.12)',
+                  color: '#eab308',
+                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                  fontWeight: '700',
+                }}>
+                  ⏳ AGING ({action.age_days ?? 7}D)
+                </span>
+              )}
               <span className={styles.confidence}>
                 {/* Normalize: stored as decimal (0.85) or percentage (85) — display as % */}
                 {Math.round(action.confidence <= 1 ? action.confidence * 100 : action.confidence)}% CONFIDENCE
@@ -274,6 +323,26 @@ export function ActionItemCard({
 
           {isExpanded && (
             <div className={styles.expandedDetails}>
+              {/* Lazy Enriching Status Banner */}
+              {isEnriching && (
+                <div style={{
+                  background: 'rgba(224, 106, 59, 0.08)',
+                  border: '1px solid rgba(224, 106, 59, 0.25)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-primary)',
+                  fontWeight: '600'
+                }}>
+                  <span style={{ fontSize: '1rem' }}>✨</span>
+                  <span>Synthesizing personalized draft & checking historical citations...</span>
+                </div>
+              )}
+
               {/* Conversational Assistant Banner */}
               <div style={{
                 background: 'rgba(0, 194, 255, 0.04)',
@@ -296,7 +365,7 @@ export function ActionItemCard({
                   🧠 SOURCE CITATION / CONTEXT
                 </span>
                 <p className={styles.actionDesc} style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                  {citations.length > 0 ? citations.join(' ──► ') : (action.description || 'No matching history context found.')}
+                  {citations.length > 0 ? citations.join(' ──► ') : (currentDesc || 'No matching history context found.')}
                 </p>
               </div>
 
@@ -314,7 +383,9 @@ export function ActionItemCard({
                     rows={3}
                   />
                 ) : (
-                  <p className={styles.suggestionText}>{editedAction}</p>
+                  <p className={styles.suggestionText}>
+                    {isEnriching && !editedAction ? 'Synthesizing draft...' : (editedAction || 'No draft generated yet.')}
+                  </p>
                 )}
 
                 {/* Quick refinement chips */}

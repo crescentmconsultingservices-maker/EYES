@@ -309,6 +309,7 @@ export function ActionQueueView({ onBack }: ActionQueueViewProps) {
                 <ActionItemCard
                   key={action.id}
                   action={action}
+                  defaultExpanded={expandedId === action.id}
                   onExecuted={(id) => {
                     setActions(prev => prev.filter(a => a.id !== id));
                   }}

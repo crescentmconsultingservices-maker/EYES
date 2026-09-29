@@ -66,17 +66,18 @@ export async function GET() {
       [key: string]: unknown;
     }
 
-    const memoriesMap: Record<string, { source_id: string | null; metadata: MemoryMetadata }> = {};
+    const memoriesMap: Record<string, { source_id: string | null; metadata: MemoryMetadata; timestamp?: string }> = {};
     if (memoryIds.length > 0) {
       const { data: memories } = await supabase
         .from('memories')
-        .select('id, source_id, metadata')
+        .select('id, source_id, metadata, timestamp')
         .in('id', memoryIds);
 
       (memories ?? []).forEach(m => {
         memoriesMap[m.id] = {
           source_id: m.source_id || null,
-          metadata: (m.metadata as MemoryMetadata) || {}
+          metadata: (m.metadata as MemoryMetadata) || {},
+          timestamp: m.timestamp || undefined,
         };
       });
     }
@@ -124,8 +125,70 @@ export async function GET() {
       };
     });
 
+    // ── STALENESS & AGING CHECKS (Per Action Type) ──────────────────────────
+    const now = Date.now();
+    const staleActionIds: string[] = [];
+    const activeActions: typeof actionsWithSource = [];
+
+    for (const action of actionsWithSource) {
+      const mem = action.memory_id ? memoriesMap[action.memory_id] : null;
+      let isStale = false;
+      let isAging = false;
+
+      const extractedTime = action.extracted_at ? new Date(action.extracted_at).getTime() : now;
+      const ageDays = Math.floor((now - extractedTime) / (1000 * 60 * 60 * 24));
+
+      if (action.action_type === 'CALENDAR') {
+        // If event date/time has already passed, auto-dismiss
+        const eventDateStr = (action.startTime || mem?.metadata?.start_time || mem?.metadata?.date || mem?.timestamp) as string | undefined;
+        if (eventDateStr) {
+          const eventTime = new Date(eventDateStr).getTime();
+          if (!isNaN(eventTime) && eventTime < now) {
+            isStale = true;
+          }
+        }
+      } else if (action.action_type === 'EMAIL_REPLY') {
+        // If the email reply recommendation has aged > 3 days without action, thread context is moot
+        if (ageDays >= 3) {
+          isStale = true;
+        }
+      } else if (action.action_type === 'SLACK_REPLY') {
+        // If Slack reply recommendation is > 2 days old, mark stale
+        if (ageDays >= 2) {
+          isStale = true;
+        }
+      } else if (action.action_type === 'LINEAR_TICKET' || action.action_type === 'REMINDER') {
+        // Keep open, but surface as aging if older than 7 days
+        if (ageDays >= 7) {
+          isAging = true;
+        }
+      }
+
+      if (isStale) {
+        staleActionIds.push(action.id);
+      } else {
+        activeActions.push({
+          ...action,
+          is_aging: isAging,
+          age_days: ageDays,
+        });
+      }
+    }
+
+    // Asynchronously auto-dismiss stale actions
+    if (staleActionIds.length > 0) {
+      supabase
+        .from('action_queue')
+        .update({ status: 'dismissed' })
+        .in('id', staleActionIds)
+        .then(({ error }) => {
+          if (error) console.warn('[ActionQueue] Auto-dismiss stale error:', error);
+          else console.log(`[ActionQueue] Auto-dismissed ${staleActionIds.length} stale actions.`);
+        });
+    }
+
     const lastRunAt = logRes.data?.last_run_at ? new Date(logRes.data.last_run_at) : null;
-    const isStale = !lastRunAt || (Date.now() - lastRunAt.getTime()) > 30 * 60 * 1000;
+    const isExtractionStale = !lastRunAt || (Date.now() - lastRunAt.getTime()) > 30 * 60 * 1000;
 
     // Build platform counts map
     const platformCounts: Record<string, number> = {};
@@ -134,10 +197,10 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      actions: actionsWithSource,
+      actions: activeActions,
       meta: {
-        count: actionsWithSource.length,
-        isStale,
+        count: activeActions.length,
+        isStale: isExtractionStale,
         lastRunAt: lastRunAt?.toISOString() ?? null,
         scanStats: platformCounts,
         totalMemoryCount: logRes.data?.memory_count ?? 0,

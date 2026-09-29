@@ -134,119 +134,32 @@ ${memoryContext}`;
 
   const extractedActions = Array.isArray(parsed.actions) ? parsed.actions : [];
 
-  // --- SECOND PASS: Vector Citation Chain ---
-  // For each extracted action, find past commitments using Gemini embeddings
   if (extractedActions.length > 0) {
-    let sentSample = '';
-    try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('email, display_name')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (profile?.email || profile?.display_name) {
-        const emailFilter = profile.email || 'xxxxxxxx';
-        const nameFilter = profile.display_name || 'xxxxxxxx';
-        const { data: sentMemories } = await supabase
-          .from('memories')
-          .select('content')
-          .eq('user_id', userId)
-          .eq('platform', 'gmail')
-          .or(`author.ilike.%${emailFilter}%,author.ilike.%${nameFilter}%`)
-          .limit(5);
-        if (sentMemories && sentMemories.length > 0) {
-          sentSample = sentMemories.map(m => m.content.slice(0, 500)).join('\n\n---\n\n');
-        }
-      }
-    } catch (e) {
-      console.warn('[ActionExtract] Could not fetch sent sample:', e);
-    }
-
-    for (const action of extractedActions) {
-      // Draft Generation (System Prompt 5)
-      if (action.actionType === 'EMAIL_REPLY' || action.actionType === 'SLACK_REPLY') {
-        try {
-          const voicePrompt = `You are EYES. A high-confidence commitment or ask has been detected in the user's incoming mail.
-Draft a reply the user could send, in their own voice as inferred from their past sent messages.
-The draft is a STARTING POINT for the user to edit and approve — it is never sent automatically. Keep it concise, match the register of the original thread, and never invent facts the user has not expressed. Output only the draft body.
-
-Original Message Context:
-Title: ${action.title}
-Context: ${action.description}
-
-User's Past Sent Messages (for tone and voice style):
-${sentSample || 'No prior samples available. Keep it direct and professional.'}
-
-Draft Reply:`;
-
-          const draftResult = await invokeModel({
-            capability: 'chat',
-            preference: 'gemini',
-            capture: false,
-            messages: [{ role: 'user', content: voicePrompt }]
-          });
-
-          if (typeof draftResult === 'string' && draftResult.trim().length > 0) {
-            action.suggestedAction = draftResult.trim();
-          }
-        } catch (e) {
-          console.warn(`[ActionExtract] Draft generation failed for action ${action.id}:`, e);
-        }
-      }
-
-      try {
-        const embedInput = `${action.title} ${action.description}`;
-        const embedRes = await invokeModel({ capability: 'embed', messages: [{ role: 'user', content: embedInput }] });
-
-        if (embedRes && typeof embedRes !== 'string' && 'embedding' in embedRes) {
-          const { data: matches } = await supabase.rpc('match_memories', {
-            query_embedding: embedRes.embedding,
-            match_threshold: 0.25, // Lower threshold to catch nuanced history
-            match_count: 3,
-            user_id_arg: userId
-          });
-
-          if (matches && matches.length > 0) {
-            const historyContext = matches.map((m: { platform: string; title?: string; content?: string }) => `[${m.platform}] ${m.title || 'Event'}: ${m.content}`).join('\n');
-            const synthesisPrompt = `You are building a citation chain for a task. 
-Task: ${action.title} - ${action.description}
-User's History:
-${historyContext}
-
-Write a 1-2 sentence description explaining the task AND citing the past commitment if it exists (e.g. "Valentin is asking about the deck. You promised it on April 17."). If the history is completely irrelevant, just return the original task description.
-DO NOT use markdown or quotation marks.`;
-
-            const synthesis = await invokeModel({
-              capability: 'chat',
-              preference: 'gemini',
-              capture: false,
-              messages: [{ role: 'user', content: synthesisPrompt }]
-            });
-
-            if (typeof synthesis === 'string' && synthesis.trim().length > 10) {
-              action.description = synthesis.trim(); // Replace basic description with citation chain
-            }
-          }
-        }
-      } catch (e) {
-        console.warn(`[ActionExtract] Citation chain failed for action ${action.id}:`, e);
-      }
-    }
-
+    // Deduplication key: memory_id + platform ONLY (one memory should never produce two action rows)
     const { data: existing } = await supabase
       .from('action_queue')
-      .select('memory_id, platform, title')
+      .select('memory_id, platform')
       .eq('user_id', userId);
 
     const existingKeys = new Set(
-      (existing ?? []).map((e: { memory_id: string; platform: string; title: string }) =>
-        `${e.memory_id}:${e.platform}:${e.title}`
-      )
+      (existing ?? [])
+        .filter((e: { memory_id?: string | null }) => Boolean(e.memory_id))
+        .map((e: { memory_id: string; platform: string }) =>
+          `${e.memory_id}:${(e.platform || '').toLowerCase()}`
+        )
     );
 
+    const seenInBatch = new Set<string>();
     const toInsert = extractedActions
-      .filter(a => !existingKeys.has(`${a.memoryId}:${a.platform}:${a.title}`))
+      .filter(a => {
+        if (!a.memoryId) return true;
+        const key = `${a.memoryId}:${(a.platform as string || '').toLowerCase()}`;
+        if (existingKeys.has(key) || seenInBatch.has(key)) {
+          return false;
+        }
+        seenInBatch.add(key);
+        return true;
+      })
       .map(a => {
         const mem = memoryMap.get(a.memoryId);
         return {
@@ -285,13 +198,21 @@ DO NOT use markdown or quotation marks.`;
  * POST /api/actions/extract
  *
  * Two auth modes:
- *   1. CRON_SECRET Bearer token → uses admin client, runs for ALL users
+ *   1. CRON_SECRET Bearer token → dispatches to Inngest fan-out (or runs direct fallback)
  *   2. Session cookie (user in browser) → runs for current user only
  */
 export async function POST(request: Request) {
   try {
     // ── Cron path: CRON_SECRET auth ────────────────────────────────────────
     if (isAuthorizedCron(request)) {
+      try {
+        const { inngest } = await import('@/services/inngest/client');
+        await inngest.send({ name: 'actions/queue.extract.all', data: {} });
+        return NextResponse.json({ success: true, dispatchedToInngest: true });
+      } catch (inngestErr) {
+        console.warn('[ActionExtract] Inngest dispatch unavailable, falling back to direct fanout:', inngestErr);
+      }
+
       const adminSupabase = createAdminClient();
 
       // Get all users with actionable memories
@@ -302,7 +223,7 @@ export async function POST(request: Request) {
         .limit(1000);
 
       const userIds = [...new Set((userRows ?? []).map((r: { user_id: string }) => r.user_id))];
-      console.log(`[ActionExtract] Cron: running for ${userIds.length} users.`);
+      console.log(`[ActionExtract] Cron direct fallback: running for ${userIds.length} users.`);
 
       let totalExtracted = 0;
       for (const userId of userIds) {

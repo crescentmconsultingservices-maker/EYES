@@ -180,9 +180,70 @@ export const reputationAuditWorker = inngest.createFunction(
   }
 );
 
+export const actionQueueExtractionSchedule = inngest.createFunction(
+  {
+    id: "action-queue-extraction-schedule",
+    name: "Action Queue Scheduled Fan-Out",
+    triggers: [
+      { cron: "*/30 * * * *" },
+      { event: "actions/queue.extract.all" },
+    ],
+  },
+  async ({ step }) => {
+    const userIds = await step.run("fetch-active-action-users", async () => {
+      const supabase = createAdminClient();
+      const { data: userRows } = await supabase
+        .from('memories')
+        .select('user_id')
+        .in('platform', ['gmail', 'google-calendar', 'github', 'linear', 'trello', 'slack', 'notion', 'discord'])
+        .limit(1000);
+
+      return [...new Set((userRows ?? []).map((r: { user_id: string }) => r.user_id))];
+    });
+
+    if (userIds.length === 0) {
+      return { status: "no_users" };
+    }
+
+    await step.sendEvent(
+      "fan-out-action-extraction",
+      userIds.map((userId) => ({
+        name: "actions/queue.extract.user",
+        data: { userId },
+      }))
+    );
+
+    return { status: "fanned_out", userCount: userIds.length };
+  }
+);
+
+export const actionQueueUserWorker = inngest.createFunction(
+  {
+    id: "action-queue-user-worker",
+    name: "Action Queue Single-User Extraction Worker",
+    triggers: [{ event: "actions/queue.extract.user" }],
+  },
+  async ({ event, step }) => {
+    const { userId } = (event.data || {}) as { userId: string };
+    if (!userId) {
+      throw new Error("Missing userId in actions/queue.extract.user event");
+    }
+
+    const result = await step.run("extract-actions-for-user", async () => {
+      const supabase = createAdminClient();
+      const { extractForUser } = await import("@/app/api/actions/extract/route");
+      return await extractForUser(userId, supabase);
+    });
+
+    return { status: "completed", userId, result };
+  }
+);
+
 export const functions = [
   staleCommitmentAlerts,
   proactiveAgenticScan,
   reputationAuditWorker,
+  actionQueueExtractionSchedule,
+  actionQueueUserWorker,
 ];
 

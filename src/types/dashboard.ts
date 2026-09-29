@@ -86,6 +86,9 @@ export interface ActionItem {
   extracted_at: string;
   startTime?: string;
   endTime?: string;
+  enriched_at?: string | null;
+  is_aging?: boolean;
+  age_days?: number;
 }
 
 export interface Message {
