@@ -158,6 +158,9 @@ export function isFalsePositiveRiskFinding(findingText: string): boolean {
     f.includes('resume') ||
     f.includes('curriculum vitae') ||
     f.includes('baseline neutral') ||
-    f.includes('neutral communication')
+    f.includes('neutral communication') ||
+    f.includes('sibling lens') ||
+    f.includes('lens analysis') ||
+    f.includes('cross-lens')
   );
 }

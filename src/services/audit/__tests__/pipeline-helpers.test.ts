@@ -436,6 +436,8 @@ describe('System notification and false positive risk filters', () => {
     expect(isFalsePositiveRiskFinding('Personal resume submission containing PII')).toBe(true);
     expect(isFalsePositiveRiskFinding('Google account data shared with Slack')).toBe(true);
     expect(isFalsePositiveRiskFinding('Baseline neutral communication patterns detected')).toBe(true);
+    expect(isFalsePositiveRiskFinding('Sibling lens analysis identified discrepancies')).toBe(true);
+    expect(isFalsePositiveRiskFinding('Cross-lens analysis flags inconsistent communication')).toBe(true);
   });
 
   it('preserves genuine reputation risks in isFalsePositiveRiskFinding', () => {

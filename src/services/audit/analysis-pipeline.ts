@@ -37,16 +37,20 @@ export class AuditAnalysisService {
 
       const connectorsCovered = Array.from(new Set(events.map(e => e.platform)));
 
-      // Calculate actual scan window date range
-      const timestamps = events.map(e => new Date(e.timestamp).getTime());
-      const minDate = new Date(Math.min(...timestamps));
-      const maxDate = new Date(Math.max(...timestamps));
-      
-      const formatQuarterYear = (date: Date) => {
-        const quarter = Math.floor(date.getMonth() / 3) + 1;
-        return `Q${quarter} ${date.getFullYear()}`;
-      };
-      const actualScanWindow = `${formatQuarterYear(minDate)} - ${formatQuarterYear(maxDate)}`;
+      // Calculate actual scan window date range (historical only, capped at current time)
+      const nowTs = Date.now();
+      const validPastTimestamps = events
+        .map(e => new Date(e.timestamp).getTime())
+        .filter(t => !isNaN(t) && t <= nowTs && t >= nowTs - 3 * 365 * 24 * 60 * 60 * 1000);
+
+      const minDate = validPastTimestamps.length > 0
+        ? new Date(Math.min(...validPastTimestamps))
+        : new Date(nowTs - 24 * 30 * 24 * 60 * 60 * 1000);
+      const maxDate = new Date(nowTs);
+
+      const startMonthYear = minDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const endMonthYear = maxDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const actualScanWindow = `${startMonthYear} – ${endMonthYear}`;
 
       // Stage: filter — smart record selection begins
       await setStage('filter', { metadata: { ...((auditRecord?.metadata as Record<string, unknown>) ?? {}), record_count: events.length } });
@@ -227,7 +231,6 @@ Return JSON ONLY:
         detectedPII?: string[];
       }
 
-      const nowTs = Date.now();
       let analysisResult: { analysis: AnalysisItem[] } = { analysis: [] };
       if (analysisRaw && typeof analysisRaw === 'string') {
         try {
@@ -527,26 +530,7 @@ Return JSON ONLY:
         dbPlatformCounts[pKey] = (dbPlatformCounts[pKey] || 0) + 1;
       });
 
-      // If it is a full audit, fetch sibling lenses to feed to crossLensConsistency
-      let siblingLensesText = '';
-      if (auditType === 'full') {
-        const { data: siblingAudits } = await supabase
-          .from('reputation_audits')
-          .select('risk_score, metadata')
-          .eq('user_id', userId)
-          .eq('status', 'completed')
-          .neq('id', auditId);
-          
-        if (siblingAudits && siblingAudits.length > 0) {
-          siblingLensesText = siblingAudits.map(s => {
-            const sType = ((s.metadata as Record<string, unknown>)?.audit_type as string) || 'unknown';
-            const sFindings = ((s.metadata as Record<string, unknown>)?.riskFindings as Array<{ finding: string }>) || [];
-            return `Sibling Lens: ${sType.toUpperCase()}
-- Risk Score: ${s.risk_score}/10
-- Key Findings: ${JSON.stringify(sFindings.slice(0, 3).map(f => f.finding))}`;
-          }).join('\n\n');
-        }
-      }
+      // End of entity calculation
 
 
 
@@ -647,28 +631,32 @@ ${SCORE_CONSISTENCY_RULE}
 ${crossLensSection}
 
 Data:
-- Total records analysed: ${selectedRecords.length} (out of ${events.length} total database records)
-- Platforms: ${connectorsCovered.join(', ')}
-- Platforms and record counts: ${JSON.stringify(dbPlatformCounts)}
+- EXACT TOTAL INTERACTIONS EVALUATED: ${events.length} (across ${connectorsCovered.join(', ')})
+- Platform breakdown: ${JSON.stringify(dbPlatformCounts)}
+- Scan Window: ${actualScanWindow}
 - Negative signals detected: ${negativeMentions}
 - Unfulfilled commitments extracted: ${unfulfilledCommitmentsCount}
-- Calculated baseline risk score (as reference): ${riskScore}/10
+- Calculated baseline risk score: ${riskScore}/10
 - Risk Sensitivity Config: ${riskSensitivity}
 - Most mentioned entities: ${topExtractedEntities.join(', ') || 'none detected'}
 - Failure rate: ${failureRate.toFixed(1)}%
 - Compliance rate: ${complianceRate.toFixed(1)}%
-- Scan Window: ${actualScanWindow}
-- Sibling Lens Reports (for cross-lens alignment):
-${siblingLensesText || 'No completed sibling lens reports found.'}
 - Real Extracted Commitments: ${JSON.stringify(resolvedCommitments.slice(0, 10).map(c => ({ text: c.text, platform: c.platform, date: c.date ? c.date.split('T')[0] : 'N/A' })))}
 - Real Extracted Risks/Sensitive Events: ${JSON.stringify(extractedFindings.slice(0, 10).map(f => ({ finding: f.finding, evidence: f.evidence, platform: f.platform })))}
 
-Rules for Opportunities and Cross-Lens Section:
-1. NEVER suggest opportunities for a platform/connector unless it has at least 5 records in the "Platforms and record counts" list above. Sourcing opportunities from connectors with 0 or 1 records is strictly forbidden.
-2. In full audit runs, compare the findings and risk scores of the sibling lenses provided. Call out contradictions (e.g. if the Investor lens shows an 8.0 score with flagged records while another lens shows 0) explicitly.
+Rules:
+1. NUMBERS AND TIMEFRAME ARE FIXED CONSTANTS - NEVER GUESS OR CHANGE THEM:
+   - Total Interactions Evaluated: ${events.length}. If referencing total volume, you MUST use "${events.length} interactions evaluated" or "${events.length} records" verbatim. NEVER state another count (such as 60 or sample sizes).
+   - Scan Window: "${actualScanWindow}". If referencing the audit timeframe or scan window, you MUST use "${actualScanWindow}" verbatim. NEVER invent multi-decade or future dates.
+   - Negative Signals: ${negativeMentions}.
+   - Unfulfilled Commitments: ${unfulfilledCommitmentsCount}.
+2. LENS FOCUS:
+   - This is the Full Audit report. Do NOT reference "sibling lenses", "other lenses", "investor perspective", "hiring perspective", "behaviorally", "professionally", or "four assessment dimensions". Provide a direct, cohesive summary of the audited interactions.
+   - Ground all statements directly in the concrete data.
+3. NEVER suggest opportunities for a platform/connector unless it has at least 5 records in the "Platform breakdown" list above. Sourcing opportunities from connectors with 0 or 1 records is strictly forbidden.
 
 Produce the following fields in JSON format:
-1. narrative: 3-4 sentences. State what the data volume shows, what the signal distribution shows, what the risk score means, and what the single most notable pattern is. Reference specific numbers. Do not flatter. Follow the lens-specific EXECUTIVE SUMMARY INSTRUCTIONS exactly.
+1. narrative: 3-4 sentences. State what the data volume shows (${events.length} interactions evaluated across ${connectorsCovered.join(', ')} over the ${actualScanWindow} scan window), what the signal distribution shows, what the risk score means (${riskScore}/10), and what the single most notable pattern is. Reference the exact numbers provided above verbatim. Do not flatter. Follow the lens-specific EXECUTIVE SUMMARY INSTRUCTIONS exactly.
 2. trajectory: "improving" | "stable" | "declining" — based on chronological distribution of negative signals.
 3. dominantPattern: One precise behavioral descriptor. Not a compliment. Example: "high-output with sparse follow-through" or "reactive communicator with deadline sensitivity".
 4. reputationProjection: 1-2 sentences. What would a skeptical external observer flag from this data? If nothing is flagged, say that plainly without framing it as praise.
@@ -682,28 +670,11 @@ Produce the following fields in JSON format:
    ]
 6. topEntities: Top 5 most frequently mentioned projects, companies, tools, or corporate entities. Use the entity list above if non-empty. Do NOT include platform/connector names (like Gmail, Slack, Discord, etc.). Do NOT include individual people's names (e.g. Tommy, Sabari, Sabarish) to protect privacy.
 7. riskScore: A single floating-point number between 0.0 and 10.0 representing the final score for this lens. Make it align perfectly with your narrative and findings.
-8. riskFindings: An array of up to 5 findings. If there are no actual risks, return []. Do NOT generate vague findings like "Discussion about protecting project assets" or "reputational concerns". Ground every finding in the concrete data (e.g. refer to the specific source event content or specific issue like "Slack debate about client code backup access"). For each finding, you must strictly ground it in the correct source platform as specified in the "Real Extracted Risks/Sensitive Events" list (do not mix them up or describe a Claude record as a Gmail record). For each finding, output:
+8. riskFindings: An array of up to 5 findings. If there are no actual risks, return []. Do NOT generate vague findings like "Discussion about protecting project assets" or "reputational concerns". Ground every finding in the concrete data (e.g. refer to the specific source event content or specific issue like "Slack debate about client code backup access"). For each finding, you must strictly ground it in the correct source platform as specified in the "Real Extracted Risks/Sensitive Events" list (do not mix them up or describe a Claude record as a Gmail record). Never reference "sibling lens" or internal pipeline analysis in evidence. For each finding, output:
    - severity: "Low" | "Medium" | "High"
    - finding: Concise, specific title (do not use generic placeholders, ground it in the data)
    - evidence: Context or event description (not just a generic string)
    - impact: Audience-specific consequence of this finding
-
-${auditKey === 'full' ? `
-9. crossLensConsistency: A mandatory object containing:
-   - consistencyRating: "HIGH" | "MEDIUM" | "LOW"
-   - dimensionScoreVariance: "X.X" (e.g. "1.5" representing difference between max and min dimension scores)
-   - contradictionFlags: An array of objects, or [] if none. Format:
-     [
-       {
-         "severity": "HIGH" | "MEDIUM" | "LOW",
-         "platformA": "Platform name",
-         "platformB": "Platform name",
-         "description": "What exactly contradicts what"
-       }
-     ]
-   - consistencyNarrative: 3-4 sentences describing how the subject presents similarly or differently across contexts.
-   - improvementRecommendation: "One specific recommendation to improve cross-platform consistency, backed by evidence"
-` : ''}
 
 Return JSON ONLY (no markdown, no explanation):
 {
@@ -724,25 +695,10 @@ Return JSON ONLY (no markdown, no explanation):
     {
       "severity": "High",
       "finding": "Stale deliverable timeline for client",
-      "evidence": "Email to investor regarding timeline alignment",
-      "impact": "Impairs external due diligence confidence"
+      "evidence": "Email to client regarding timeline alignment",
+      "impact": "Impairs external delivery confidence"
     }
   ]
-  ${auditKey === 'full' ? `,
-  "crossLensConsistency": {
-    "consistencyRating": "HIGH",
-    "dimensionScoreVariance": "1.5",
-    "contradictionFlags": [
-      {
-        "severity": "HIGH",
-        "platformA": "Slack",
-        "platformB": "Gmail",
-        "description": "Subject committed to same-day delivery on Slack but sent delayed timeline on Gmail"
-      }
-    ],
-    "consistencyNarrative": "Consistency is generally high, though informal commitments on Slack diverge from formal Gmail threads.",
-    "improvementRecommendation": "Align informal delivery estimates with official project timelines."
-  }` : ''}
 }
       `;
 
@@ -792,7 +748,7 @@ Return JSON ONLY (no markdown, no explanation):
 
       // Build data-driven fallback narrative (used when AI returns empty/short text)
       // Tone: cold, declarative, no flattery — matches spec Section 05
-      const fallbackNarrative = `${events.length} records were analysed across ${connectorsCovered.join(', ')} over a 24-month window. ${negativeMentions} negative signal${negativeMentions !== 1 ? 's' : ''} were detected, producing a failure rate of ${failureRate.toFixed(1)}%. ${unfulfilledCommitmentsCount > 0 ? `${unfulfilledCommitmentsCount} open commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} were extracted and remain unresolved.` : 'No commitment records were extracted from the dataset.'} Risk score: ${riskScore}/10 — ${riskScore <= 2 ? 'minimal exposure detected' : riskScore <= 5 ? 'moderate exposure detected' : 'elevated exposure detected'}.${topExtractedEntities.length > 0 ? ` Most referenced entities: ${topExtractedEntities.slice(0, 3).join(', ')}.` : ''}`;
+      const fallbackNarrative = `${events.length} interactions were evaluated across ${connectorsCovered.join(', ')} during the ${actualScanWindow} scan window. ${negativeMentions} negative signal${negativeMentions !== 1 ? 's' : ''} were detected, producing a failure rate of ${failureRate.toFixed(1)}%. ${unfulfilledCommitmentsCount > 0 ? `${unfulfilledCommitmentsCount} open commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} were extracted and remain unresolved.` : 'No unfulfilled commitments were identified in the dataset.'} Risk score: ${riskScore.toFixed(1)}/10 — ${riskScore <= 2 ? 'minimal exposure detected' : riskScore <= 5 ? 'moderate exposure detected' : 'elevated exposure detected'}.${topExtractedEntities.length > 0 ? ` Most referenced entities: ${topExtractedEntities.slice(0, 3).join(', ')}.` : ''}`;
 
       const fallbackOpportunities: Opportunity[] = [];
 
@@ -804,7 +760,10 @@ Return JSON ONLY (no markdown, no explanation):
         ? [...summaryResult.riskFindings]
         : [...extractedFindings];
 
-      const finalFindings = rawFindings.filter((f: RiskFinding) => !isFalsePositiveRiskFinding(f.finding || ''));
+      const finalFindings = rawFindings.filter((f: RiskFinding) => 
+        !isFalsePositiveRiskFinding(f.finding || '') &&
+        !isFalsePositiveRiskFinding(f.evidence || '')
+      );
 
       // Resolve platforms for all final findings
       finalFindings.forEach((f: RiskFinding) => {
@@ -873,8 +832,25 @@ Return JSON ONLY (no markdown, no explanation):
         cleanNarrative = fallbackNarrative;
       }
 
-      // Replace any numeric risk score mentions in narrative with the actual final score to prevent inconsistencies
       const finalScoreStr = finalRiskScore.toFixed(1);
+
+      // Programmatic hallucination prevention: lock narrative to computed facts
+      if (finalFindings.length === 0 && unfulfilledCommitmentsCount === 0 && negativeMentions === 0) {
+        cleanNarrative = `Analysis of ${events.length} interactions evaluated across ${connectorsCovered.join(', ')} during the ${actualScanWindow} scan window indicates a clean operational profile. Zero negative signals and zero unfulfilled commitments were identified. The computed risk score is 0.0/10, reflecting negligible exposure across all monitored platforms.`;
+      } else {
+        // Enforce exact interaction count, scan window, and eliminate cross-lens meta-framing
+        cleanNarrative = cleanNarrative
+          .replace(/\b\d+\s+platform records\b/gi, `${events.length} interactions evaluated`)
+          .replace(/\b\d+\s+records analysed\b/gi, `${events.length} records analysed`)
+          .replace(/\b\d+\s+total records\b/gi, `${events.length} total records`)
+          .replace(/\b\d+-year scan window\s*(\([^)]+\))?/gi, `${actualScanWindow} scan window`)
+          .replace(/Q\d\s+\d{4}\s*[-–]\s*Q\d\s+\d{4}/gi, actualScanWindow)
+          .replace(/\b(?:from an investor perspective|investor perspective|behaviorally|professionally|four assessment dimensions)\b[,:\s]*/gi, '')
+          .replace(/Sibling lens analysis[^.]+?\./gi, '')
+          .trim();
+      }
+
+      // Replace any numeric risk score mentions in narrative with the actual final score to prevent inconsistencies
       cleanNarrative = cleanNarrative.replace(/\b(risk score|score)\s+(?:of|is|:)?\s*\d+(\.\d+)?(?:\/10)?\b/gi, `$1 is ${finalScoreStr}/10`);
       cleanNarrative = cleanNarrative.replace(/\b\d+(\.\d+)?\/10\b/g, `${finalScoreStr}/10`);
 
