@@ -177,10 +177,24 @@ export class PDFGenerationService {
     const pendingComm = commitmentsList.filter(c => c.status === 'pending' || c.status === 'overdue').length;
     const unifiedCommitmentsCount = `${totalComm} tracked, ${completedComm} completed, ${pendingComm} pending`;
 
-    const findingsList = data.riskFindings || [];
+    // Filter out placeholder/neutral filler findings
+    const findingsList = (data.riskFindings || []).filter(f => {
+      const text = (f.finding || '').toLowerCase();
+      return !text.includes('baseline neutral') && !text.includes('neutral communication patterns');
+    });
+
     const hasCommitments = totalComm > 0;
     const hasFindings = findingsList.length > 0;
-    const hasOpportunities = (data.opportunities || []).length > 0;
+
+    // Only include real opportunities that react to actual data, discarding generic boilerplate
+    const realOpportunities = (data.opportunities || []).filter(o => {
+      if (!o || !o.title || !o.description) return false;
+      const text = `${o.title} ${o.description}`.toLowerCase();
+      if (totalComm === 0 && text.includes('commitment')) return false;
+      if (text.includes('untested under high-stakes conditions') || text.includes('verify commitment consistency') || text.includes('depth of follow-through')) return false;
+      return true;
+    });
+    const hasOpportunities = realOpportunities.length > 0;
     const hasEntities = (data.topEntities || []).length > 0;
 
     // Lens Display Name
@@ -200,16 +214,18 @@ export class PDFGenerationService {
 
     // 1. Plain summary line up top: one clear sentence
     let plainSummaryLine = '';
-    if (data.riskScore <= 2.5 && pendingComm === 0 && findingsList.length === 0) {
+    if (totalComm === 0 && findingsList.length === 0) {
+      plainSummaryLine = 'Your data shows no reputation risks. No commitments were tracked in this period.';
+    } else if (totalComm === 0 && findingsList.length > 0) {
+      plainSummaryLine = `No commitments were tracked in this period, but ${findingsList.length} flagged item${findingsList.length !== 1 ? 's' : ''} were identified for review.`;
+    } else if (pendingComm === 0 && findingsList.length === 0) {
       plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
-    } else if (pendingComm > 0 && findingsList.length > 0) {
-      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} and ${findingsList.length} flagged item${findingsList.length !== 1 ? 's' : ''} across audited channels.`;
-    } else if (pendingComm > 0) {
-      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} awaiting completion, with zero flagged reputation risks.`;
-    } else if (findingsList.length > 0) {
+    } else if (pendingComm === 0 && findingsList.length > 0) {
       plainSummaryLine = `All tracked commitments were kept, but ${findingsList.length} flagged item${findingsList.length !== 1 ? 's' : ''} were identified for review.`;
+    } else if (pendingComm > 0 && findingsList.length === 0) {
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} awaiting completion, with zero flagged reputation risks.`;
     } else {
-      plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} and ${findingsList.length} flagged item${findingsList.length !== 1 ? 's' : ''} across audited channels.`;
     }
 
     // ─── START DYNAMIC FLOW ───
@@ -372,12 +388,12 @@ export class PDFGenerationService {
     // SECTION 6: Strategic Recommendations (ONLY rendered if opportunities exist)
     if (hasOpportunities) {
       ensureSpace(50);
-      doc.font(FONT_BOLD).fontSize(12).fillColor(INK_BLACK).text(`Strategic Guidance & Recommendations (${data.opportunities.length})`, MARGIN_LEFT, doc.y);
+      doc.font(FONT_BOLD).fontSize(12).fillColor(INK_BLACK).text(`Strategic Guidance & Recommendations (${realOpportunities.length})`, MARGIN_LEFT, doc.y);
       doc.y += 4;
       doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
       doc.y += 8;
 
-      (data.opportunities || []).slice(0, 3).forEach(o => {
+      realOpportunities.slice(0, 3).forEach(o => {
         ensureSpace(36);
         const cardY = doc.y;
         doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 32).fill(CARD_BG);

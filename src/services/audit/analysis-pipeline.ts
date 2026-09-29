@@ -663,7 +663,7 @@ Produce the following fields in JSON format:
 2. trajectory: "improving" | "stable" | "declining" — based on chronological distribution of negative signals.
 3. dominantPattern: One precise behavioral descriptor. Not a compliment. Example: "high-output with sparse follow-through" or "reactive communicator with deadline sensitivity".
 4. reputationProjection: 1-2 sentences. What would a skeptical external observer flag from this data? If nothing is flagged, say that plainly without framing it as praise.
-5. opportunities: An array of exactly 3 objects (or 4 objects if full scan) representing specific gaps or under-leveraged patterns. Format:
+5. opportunities: An array of 1-3 objects ONLY if there are genuine, concrete gaps, commitments, or risks identified in the data. If the profile is clean with no commitments and no risk signals, return [] (empty array). Do NOT invent boilerplate recommendations about commitments if no commitments were tracked. Format if present:
    [
      {
        "title": "Short action-oriented title",
@@ -785,23 +785,7 @@ Return JSON ONLY (no markdown, no explanation):
       // Tone: cold, declarative, no flattery — matches spec Section 05
       const fallbackNarrative = `${events.length} records were analysed across ${connectorsCovered.join(', ')} over a 24-month window. ${negativeMentions} negative signal${negativeMentions !== 1 ? 's' : ''} were detected, producing a failure rate of ${failureRate.toFixed(1)}%. ${unfulfilledCommitmentsCount > 0 ? `${unfulfilledCommitmentsCount} open commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} were extracted and remain unresolved.` : 'No commitment records were extracted from the dataset.'} Risk score: ${riskScore}/10 — ${riskScore <= 2 ? 'minimal exposure detected' : riskScore <= 5 ? 'moderate exposure detected' : 'elevated exposure detected'}.${topExtractedEntities.length > 0 ? ` Most referenced entities: ${topExtractedEntities.slice(0, 3).join(', ')}.` : ''}`;
 
-      const fallbackOpportunities = [
-        {
-          title: "Verify commitment consistency across integrations",
-          description: `${complianceRate.toFixed(0)}% of records carried no negative signal — the pattern of low-risk activity is consistent but untested under high-stakes conditions.`,
-          source: `${connectorsCovered.slice(0, 2).join(' + ') || 'Platform'} connector`
-        },
-        {
-          title: "Increase thread completion discipline",
-          description: `Communication volume across ${connectorsCovered.slice(0, 3).join(', ')} is measurable but the depth of follow-through on initiated threads is not fully captured in this dataset.`,
-          source: `${connectorsCovered[0] || 'Platform'} connector`
-        },
-        {
-          title: "Implement structured timeline updates",
-          description: `${connectorsCovered.length} platforms are connected — cross-platform commitment consistency has not been independently verified.`,
-          source: `${connectorsCovered[0] || 'Platform'} connector`
-        }
-      ];
+      const fallbackOpportunities: Opportunity[] = [];
 
       // Always calculate the risk score programmatically using our robust, platform-weighted
       // and volume-calibrated formula to ensure statistical honesty and eliminate sample bias.
@@ -854,23 +838,9 @@ Return JSON ONLY (no markdown, no explanation):
       });
 
       // Programmatic consistency guard:
-      // If no risk findings exist, but finalRiskScore > 0, generate real findings based on actual user data to avoid overriding score to 0.0
-      if (finalFindings.length === 0 && finalRiskScore > 0.0) {
-        if (unfulfilledCommitmentsCount > 0) {
-          finalFindings.push({
-            severity: 'Low',
-            finding: `${unfulfilledCommitmentsCount} pending commitment${unfulfilledCommitmentsCount !== 1 ? 's' : ''} detected`,
-            evidence: 'Commitment ledger analysis',
-            impact: 'Reputational drift indicator'
-          });
-        } else if (weightedNeutralMentions > 0) {
-          finalFindings.push({
-            severity: 'Low',
-            finding: 'Baseline neutral communication patterns detected',
-            evidence: 'Linguistic distribution scanning',
-            impact: 'Standard baseline behavior'
-          });
-        } else {
+      // If no genuine risk findings exist, keep finalFindings empty (never inject fake filler findings)
+      if (finalFindings.length === 0) {
+        if (unfulfilledCommitmentsCount === 0 && negativeMentions === 0) {
           finalRiskScore = 0.0;
         }
       }
@@ -1028,10 +998,15 @@ Return JSON ONLY (no markdown, no explanation):
         connectors_covered: connectorsCovered,
         compliance_rate: complianceRate.toFixed(2),
         failure_rate: failureRate.toFixed(2),
-        scan_window: actualScanWindow,
-        opportunities: (summaryResult.opportunities && summaryResult.opportunities.length > 0)
-          ? summaryResult.opportunities
-          : fallbackOpportunities,
+        opportunities: (summaryResult.opportunities && Array.isArray(summaryResult.opportunities))
+          ? summaryResult.opportunities.filter((o: Opportunity) => {
+              if (!o || !o.title || !o.description) return false;
+              const text = `${o.title} ${o.description}`.toLowerCase();
+              if (resolvedCommitments.length === 0 && text.includes('commitment')) return false;
+              if (text.includes('untested under high-stakes conditions') || text.includes('verify commitment consistency') || text.includes('depth of follow-through')) return false;
+              return true;
+            })
+          : [],
       };
 
       const { error: updateError } = await supabase.from('reputation_audits').update({

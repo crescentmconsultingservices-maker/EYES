@@ -489,26 +489,41 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     // Findings extracted once and framed by lens
     const findingsData = (activeAudit.extractedFindings || {}) as Record<string, any>;
     const commitments = (findingsData.commitments || activeAudit.metadata?.commitments || []) as any[];
-    const flaggedItems = (findingsData.flagged_items || activeAudit.metadata?.riskFindings || []) as any[];
-    const opportunities = (findingsData.opportunities || activeAudit.metadata?.opportunities || []) as any[];
-    const entities = (findingsData.entities || activeAudit.metadata?.topEntities || []) as string[];
+    const rawFlaggedItems = (findingsData.flagged_items || activeAudit.metadata?.riskFindings || []) as any[];
+    const flaggedItems = rawFlaggedItems.filter((f: any) => {
+      const text = (f.finding || f.description || '').toLowerCase();
+      return !text.includes('baseline neutral') && !text.includes('neutral communication patterns');
+    });
 
     const totalComm = commitments.length;
     const completedComm = commitments.filter((c: any) => c.status === 'completed').length;
     const pendingComm = commitments.filter((c: any) => c.status === 'pending' || c.status === 'overdue').length;
     const unifiedCommitmentsCount = `${totalComm} tracked, ${completedComm} completed, ${pendingComm} pending`;
 
+    const rawOpportunities = (findingsData.opportunities || activeAudit.metadata?.opportunities || []) as any[];
+    const opportunities = rawOpportunities.filter((o: any) => {
+      if (!o || !o.title || !o.description) return false;
+      const text = `${o.title} ${o.description}`.toLowerCase();
+      if (totalComm === 0 && text.includes('commitment')) return false;
+      if (text.includes('untested under high-stakes conditions') || text.includes('verify commitment consistency') || text.includes('depth of follow-through')) return false;
+      return true;
+    });
+
+    const entities = (findingsData.entities || activeAudit.metadata?.topEntities || []) as string[];
+
     let plainSummaryLine = '';
-    if (currentScore <= 2.5 && pendingComm === 0 && flaggedItems.length === 0) {
+    if (totalComm === 0 && flaggedItems.length === 0) {
+      plainSummaryLine = 'Your data shows no reputation risks. No commitments were tracked in this period.';
+    } else if (totalComm === 0 && flaggedItems.length > 0) {
+      plainSummaryLine = `No commitments were tracked in this period, but ${flaggedItems.length} flagged item${flaggedItems.length !== 1 ? 's' : ''} were identified for review.`;
+    } else if (pendingComm === 0 && flaggedItems.length === 0) {
       plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
-    } else if (pendingComm > 0 && flaggedItems.length > 0) {
-      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} and ${flaggedItems.length} flagged item${flaggedItems.length !== 1 ? 's' : ''} across audited channels.`;
-    } else if (pendingComm > 0) {
-      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} awaiting completion, with zero flagged reputation risks.`;
-    } else if (flaggedItems.length > 0) {
+    } else if (pendingComm === 0 && flaggedItems.length > 0) {
       plainSummaryLine = `All tracked commitments were kept, but ${flaggedItems.length} flagged item${flaggedItems.length !== 1 ? 's' : ''} were identified for review.`;
+    } else if (pendingComm > 0 && flaggedItems.length === 0) {
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} awaiting completion, with zero flagged reputation risks.`;
     } else {
-      plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} and ${flaggedItems.length} flagged item${flaggedItems.length !== 1 ? 's' : ''} across audited channels.`;
     }
 
     return (
