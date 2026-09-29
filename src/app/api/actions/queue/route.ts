@@ -175,16 +175,18 @@ export async function GET() {
       }
     }
 
-    // Asynchronously auto-dismiss stale actions
+    // Auto-dismiss stale actions reliably before response returns
     if (staleActionIds.length > 0) {
-      supabase
-        .from('action_queue')
-        .update({ status: 'dismissed' })
-        .in('id', staleActionIds)
-        .then(({ error }) => {
-          if (error) console.warn('[ActionQueue] Auto-dismiss stale error:', error);
-          else console.log(`[ActionQueue] Auto-dismissed ${staleActionIds.length} stale actions.`);
-        });
+      try {
+        const { error: dismissError } = await supabase
+          .from('action_queue')
+          .update({ status: 'dismissed' })
+          .in('id', staleActionIds);
+        if (dismissError) console.warn('[ActionQueue] Auto-dismiss stale error:', dismissError);
+        else console.log(`[ActionQueue] Auto-dismissed ${staleActionIds.length} stale actions.`);
+      } catch (err) {
+        console.warn('[ActionQueue] Auto-dismiss stale caught error:', err);
+      }
     }
 
     const lastRunAt = logRes.data?.last_run_at ? new Date(logRes.data.last_run_at) : null;

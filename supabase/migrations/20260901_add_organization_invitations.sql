@@ -58,9 +58,15 @@ FOR UPDATE USING (
     )
 );
 
--- Anyone can select an invitation if they have the token (needed during the accept invite flow before being an org member)
-CREATE POLICY "Users can read invitations by token" ON public.organization_invitations
-FOR SELECT USING (true);
+-- Service role full access for server-side token validation
+CREATE POLICY "Service role full access on invitations" ON public.organization_invitations
+FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Authenticated users can view invitations sent to their email
+CREATE POLICY "Users can view invitations for their email" ON public.organization_invitations
+FOR SELECT TO authenticated USING (
+    email = (SELECT email FROM auth.users WHERE id = auth.uid())
+);
 
 -- ============================================================================
 -- ORGANIZATIONS & MEMBERS RLS POLICIES
