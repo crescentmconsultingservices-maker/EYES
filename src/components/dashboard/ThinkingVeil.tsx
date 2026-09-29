@@ -246,6 +246,52 @@ export function ThinkingVeil({
             <span className={styles.progressPct}>{progress}%</span>
           </div>
 
+          {/* Canonical 4-Stage Stepper: Fetching data → Extracting → Scoring → Done */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            margin: '16px 0 10px 0',
+            fontSize: '12px',
+            fontFamily: 'var(--font-mono)',
+            flexWrap: 'wrap'
+          }}>
+            {[
+              { key: 'fetching', label: 'Fetching data' },
+              { key: 'extracting', label: 'Extracting' },
+              { key: 'scoring', label: 'Scoring' },
+              { key: 'done', label: 'Done' },
+            ].map((cs, idx) => {
+              const cIndex = (['extract', 'extracting'].includes(stage)) ? 1
+                : (['cross-ref', 'score', 'scoring', 'synth', 'generating', 'render'].includes(stage)) ? 2
+                : (stage === 'completed') ? 3
+                : 0;
+              const active = idx === cIndex;
+              const done = idx < cIndex;
+              return (
+                <React.Fragment key={cs.key}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: active ? 800 : done ? 600 : 400,
+                    color: active ? 'var(--text-primary, #ffffff)' : done ? '#10b981' : 'var(--text-muted, #6b7280)',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    background: active ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  }}>
+                    {done ? '✓ ' : active ? '● ' : '○ '}
+                    {cs.label}
+                  </span>
+                  {idx < 3 && (
+                    <span style={{ color: 'var(--text-muted, #6b7280)', opacity: 0.5 }}>→</span>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
           {/* Stage breadcrumb */}
           <div className={styles.stageCrumbs}>
             {STAGE_ORDER.map((s, i) => (

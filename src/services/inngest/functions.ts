@@ -158,8 +158,31 @@ export const proactiveAgenticScan = inngest.createFunction(
   }
 );
 
-export const functions = [
+export const reputationAuditWorker = inngest.createFunction(
+  {
+    id: "reputation-audit-worker",
+    name: "Reputation Audit Analysis Worker",
+    triggers: [{ event: "audit/reputation.run" }],
+  },
+  async ({ event, step }) => {
+    const { auditId, userId } = (event.data || {}) as { auditId: string; userId: string };
 
+    if (!auditId || !userId) {
+      throw new Error("Missing auditId or userId in event data");
+    }
+
+    const result = await step.run("execute-audit-pipeline", async () => {
+      const { AuditAnalysisService } = await import("@/services/audit/analysis-pipeline");
+      return await AuditAnalysisService.runAnalysis(auditId, userId);
+    });
+
+    return { status: "completed", result };
+  }
+);
+
+export const functions = [
   staleCommitmentAlerts,
-  proactiveAgenticScan
+  proactiveAgenticScan,
+  reputationAuditWorker,
 ];
+

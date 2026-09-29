@@ -108,9 +108,30 @@ export interface Commitment {
   date: string;
 }
 
+export interface AuditLens {
+  id: string;
+  auditId: string;
+  lensType: 'full' | 'investor' | 'reputation' | 'hiring' | 'behavioral';
+  riskScore: number;
+  narrative: string;
+  metadata?: Record<string, unknown>;
+  generatedAt: string;
+}
+
+export interface AuditConsentGrant {
+  id: string;
+  subjectUserId: string;
+  organizationId: string;
+  grantedAt: string;
+  revokedAt: string | null;
+  scope: string[];
+}
+
 export interface ReputationAudit {
   id: string;
-  status: 'pending' | 'analysis' | 'generating' | 'completed' | 'failed';
+  userId?: string;
+  status: 'pending' | 'extracting' | 'scoring' | 'generating' | 'completed' | 'failed' | 'analysis';
+  stage?: string;
   riskScore: number;
   mentionsCount: number;
   commitmentsCount: number;
@@ -118,23 +139,28 @@ export interface ReputationAudit {
   connectorsCovered: string[];
   reportUrl: string | null;
   createdAt: string;
+  extractedFindings?: Record<string, unknown>;
+  lenses?: Record<string, AuditLens>;
   metadata: {
     audit_type?: string;
     subjectName?: string;
-    sentimentBalance: number;
-    unfulfilledCommitments: number;
-    commitments: Commitment[];
-    opportunities: string[];
-    topEntities: string[];
+    sentimentBalance?: number;
+    unfulfilledCommitments?: number;
+    commitments?: Commitment[];
+    opportunities?: any[];
+    topEntities?: string[];
     failureRate?: string;
     complianceRate?: string;
     trajectory?: string;
-    riskFindings: Array<{
-      severity: 'Low' | 'Medium' | 'High';
+    riskFindings?: Array<{
+      severity: string;
       finding: string;
       evidence: string;
       impact: string;
+      platform?: string;
     }>;
+    [key: string]: unknown;
   };
 }
+
 

@@ -46,24 +46,47 @@ export async function POST(
 
     const auditType = (audit.metadata as Record<string, string | undefined>)?.audit_type || 'full';
 
-    // Switch to Admin Client for database operations (RLS bypass) to avoid any potential update permissions issues
+    // Switch to Admin Client for database operations
     const adminSupabase = await createAdminClient();
 
-    // Reset to analysis state, preserving audit_type
+    // 1. Delete all existing lens rows for this audit
+    await adminSupabase
+      .from('audit_lenses')
+      .delete()
+      .eq('audit_id', id);
+
+    // 2. Reset audit status and stage to pending
     const { error: updateError } = await adminSupabase
       .from('reputation_audits')
-      .update({ status: 'analysis', metadata: { audit_type: auditType } })
+      .update({
+        status: 'pending',
+        stage: 'pending',
+        extracted_findings: {},
+        metadata: { audit_type: auditType }
+      })
       .eq('id', id);
 
     if (updateError) {
-      console.error(`[Reanalyze API] Failed to reset audit status to analysis for ID ${id}:`, updateError);
+      console.error(`[Reanalyze API] Failed to reset audit status for ID ${id}:`, updateError);
       return NextResponse.json({ error: 'Failed to update audit status.' }, { status: 500 });
     }
 
-    // Run analysis in background — don't await (static method)
-    AuditAnalysisService.runAnalysis(id, user.id).catch((err: unknown) =>
-      console.error(`[Reanalyze] Background failure for ${id}:`, err)
-    );
+    // 3. Trigger Inngest worker (with local async fallback)
+    try {
+      const { inngest } = await import('@/services/inngest/client');
+      await inngest.send({
+        name: 'audit/reputation.run',
+        data: {
+          auditId: id,
+          userId: user.id,
+        },
+      });
+    } catch (inngestErr) {
+      console.warn('[Reanalyze API] Inngest dispatch note (running directly in background):', inngestErr);
+      AuditAnalysisService.runAnalysis(id, user.id).catch((err: unknown) =>
+        console.error(`[Reanalyze] Background failure for ${id}:`, err)
+      );
+    }
 
     console.log(`[Reanalyze] Re-analysis triggered successfully for audit ${id} by user ${user.id}`);
     return NextResponse.json({ message: 'Re-analysis started.', auditId: id });

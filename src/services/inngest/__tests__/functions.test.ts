@@ -3,13 +3,15 @@ import {
   functions,
   staleCommitmentAlerts,
   proactiveAgenticScan,
+  reputationAuditWorker,
 } from '@/services/inngest/functions';
 
 describe('Inngest Automated Workflows', () => {
-  it('exports all 2 functions in the functions array', () => {
-    expect(functions).toHaveLength(2);
+  it('exports all functions in the functions array', () => {
+    expect(functions).toHaveLength(3);
     expect(functions).toContain(staleCommitmentAlerts);
     expect(functions).toContain(proactiveAgenticScan);
+    expect(functions).toContain(reputationAuditWorker);
   });
 
 

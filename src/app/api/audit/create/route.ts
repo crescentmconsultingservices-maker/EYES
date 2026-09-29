@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/utils/supabase/server';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { inngest } from '@/services/inngest/client';
 import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
-import { Client } from '@upstash/qstash';
 
 /**
- * API Route to initiate a Reputation Audit.
- * Uses the Admin Client to bypass RLS and ensure background persistence.
+ * POST /api/audit/create
+ * Initiates a Reputation Audit.
+ * - Authenticates the logged in user
+ * - Creates reputation_audits row with status = 'pending'
+ * - Hands off to background worker (Inngest)
  */
-export async function POST(request: Request) {
-  console.log('[Audit API] Received request to create audit...');
-  
+export async function POST(_request: Request) {
   try {
-    // 1. Authenticate the user session using the standard client
+    // 1. Authenticate user session
     const userClient = await createClient();
     const { data: { user }, error: authError } = await userClient.auth.getUser();
 
@@ -21,66 +21,55 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`[Audit API] Authenticated User: ${user.id}`);
+    console.log(`[Audit API] Initiating audit for User: ${user.id}`);
 
-    // 2. Switch to Admin Client for database operations (RLS bypass)
+    // 2. Create the pending audit record in reputation_audits
     const supabase = await createAdminClient();
-
-    let type = 'full';
-    try {
-      const body = await request.json();
-      if (body?.type) type = body.type;
-    } catch {}
-
-    // 3. Create the pending audit record
     const { data: audit, error: createError } = await supabase
       .from('reputation_audits')
       .insert({
         user_id: user.id,
         status: 'pending',
-        metadata: { audit_type: type }
+        stage: 'pending',
+        metadata: { audit_type: 'full' }
       })
       .select()
       .single();
 
     if (createError || !audit) {
       console.error('[Audit API] Database Insert Failed:', createError);
-      throw new Error(`Failed to create audit record: ${createError?.message}`);
+      return NextResponse.json({ error: 'Failed to create audit record' }, { status: 500 });
     }
 
-    console.log(`[Audit API] Record Created: ${audit.id}. Moving to analysis stage...`);
+    console.log(`[Audit API] Record Created: ${audit.id}. Handing off to Inngest background worker...`);
 
-    // 4. Update status to 'analysis' 
-    await supabase
-      .from('reputation_audits')
-      .update({ status: 'analysis' })
-      .eq('id', audit.id);
-
-    // 5. RUN ANALYSIS (Background - fire and forget via Upstash QStash)
-    const qstash = new Client({ token: process.env.QSTASH_TOKEN! });
-    
-    // Fallback to localhost for dev, but in production use the real SITE_URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    
-    await qstash.publishJSON({
-      url: `${baseUrl}/api/queue/audit`,
-      body: {
-        auditId: audit.id,
-        userId: user.id
-      },
-      // Give it up to 5 minutes to complete (though QStash supports up to 2 hours)
-      retries: 3
-    });
+    // 3. Hand off to Inngest background worker
+    try {
+      await inngest.send({
+        name: 'audit/reputation.run',
+        data: {
+          auditId: audit.id,
+          userId: user.id,
+        },
+      });
+    } catch (inngestErr) {
+      console.warn('[Audit API] Inngest dispatch unavailable (running asynchronous direct worker):', inngestErr);
+      // Fallback for local development if Inngest CLI daemon is not active
+      AuditAnalysisService.runAnalysis(audit.id, user.id).catch((err) => {
+        console.error('[Audit API] Asynchronous worker error:', err);
+      });
+    }
 
     return NextResponse.json({
       success: true,
       auditId: audit.id,
-      status: 'analysis',
+      status: 'pending',
+      stage: 'pending',
       message: 'Reputation audit initiated successfully.'
     });
 
   } catch (err) {
-    console.error('[Audit API] PRODUCTION CRASH:', err);
+    console.error('[Audit API] Fatal error:', err);
     return NextResponse.json({ 
       error: 'Execution failed.', 
       detail: err instanceof Error ? err.message : String(err) 

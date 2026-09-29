@@ -1,9 +1,8 @@
 'use client';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from './AuditView.module.css';
-import type { ReputationAudit, AuditSummary } from '@/types/dashboard';
+import type { ReputationAudit, AuditSummary, AuditLens } from '@/types/dashboard';
 import { AnimatedNumber } from '../common/AnimatedNumber';
 import { ThinkingVeil } from './ThinkingVeil';
 import { createClient } from '@/utils/supabase/client';
@@ -13,29 +12,33 @@ interface AuditViewProps {
   summary?: AuditSummary;
 }
 
- 
+type LensType = 'full' | 'investor' | 'hiring' | 'behavioral';
+
 export function AuditView({ onBack, summary }: AuditViewProps) {
   const [activeAudit, setActiveAudit] = useState<ReputationAudit | null>(null);
+  const [activeLensType, setActiveLensType] = useState<LensType>('full');
+  const [cachedLenses, setCachedLenses] = useState<Record<string, AuditLens>>({});
+  const [loadingLens, setLoadingLens] = useState(false);
+
   const [isInitiating, setIsInitiating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [auditMode, setAuditMode] = useState<'dashboard' | 'running' | 'completed' | 'error'>('dashboard');
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [rerunError, setRerunError] = useState<string | null>(null);
-  // Inline confirm state replaces window.confirm()
   const [rerunConfirming, setRerunConfirming] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [auditHistory, setAuditHistory] = useState<ReputationAudit[]>([]);
 
-  // Fetch the latest or selected audit on mount, and poll if returning from Stripe
+  // Fetch the latest or selected audit on mount
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const searchParams = new URLSearchParams(window.location.search);
     const targetAuditId = searchParams.get('auditId');
     const checkIsSuccessRedirect = typeof window !== 'undefined' && window.location.search.includes('audit=success');
-    
+
     if (checkIsSuccessRedirect) {
-      setAuditMode('running'); // Show thinking veil or loading state
+      setAuditMode('running');
     }
 
     const fetchLatest = async () => {
@@ -54,22 +57,30 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? 0),
               commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? 0),
               metadata: data.metadata || {},
+              extractedFindings: data.extractedFindings || data.extracted_findings || {},
+              lenses: data.lenses || {},
             };
 
-            // Check if the audit is recent (created in the last 2 minutes)
-            const auditCreatedAt = safeAudit.createdAt ? new Date(safeAudit.createdAt).getTime() : 0;
-            const ageMs = Date.now() - auditCreatedAt;
-            const isRecent = ageMs < 120000; // 120 seconds
+            setActiveAudit(safeAudit);
 
-            // If we are returning from a successful payment, we only care about the new audit.
-            // If the latest audit in the DB is old and completed, we must wait for the webhook to create the new one.
-            if (checkIsSuccessRedirect && safeAudit.status === 'completed' && !isRecent) {
-              return false; // Keep polling until the new audit is registered
+            // Populate cached lenses from audit
+            if (safeAudit.lenses) {
+              setCachedLenses(safeAudit.lenses);
+            }
+            if (safeAudit.summaryNarrative) {
+              setCachedLenses(prev => ({
+                ...prev,
+                full: prev.full || {
+                  id: `lens-full-${safeAudit.id}`,
+                  auditId: safeAudit.id,
+                  lensType: 'full',
+                  riskScore: safeAudit.riskScore,
+                  narrative: safeAudit.summaryNarrative || '',
+                  generatedAt: safeAudit.createdAt,
+                }
+              }));
             }
 
-            setActiveAudit(safeAudit);
-            
-            // If we came from Stripe, or loaded a specific history item, set correct mode
             if (checkIsSuccessRedirect || targetAuditId) {
               if (checkIsSuccessRedirect) {
                 const url = new URL(window.location.href);
@@ -81,20 +92,18 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
               } else {
                 setAuditMode('running');
               }
-            } else if (safeAudit.status === 'analysis' || safeAudit.status === 'pending') {
-              // If the latest audit is active, automatically show the progress screen
+            } else if (safeAudit.status === 'analysis' || safeAudit.status === 'pending' || safeAudit.status === 'extracting' || safeAudit.status === 'scoring') {
               setAuditMode('running');
             } else if (safeAudit.status === 'completed') {
-              // If the latest audit is already completed, allow viewing it directly in completed view
               setAuditMode('completed');
             }
-            return true; // Found the correct audit
+            return true;
           }
         }
       } catch (err) {
         console.error('Failed to fetch audit:', err);
       }
-      return false; // Not found yet
+      return false;
     };
 
     fetchLatest().then((found) => {
@@ -106,13 +115,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
       }
     });
 
-    return () => { 
-      if (interval) clearInterval(interval); 
+    return () => {
+      if (interval) clearInterval(interval);
     };
   }, []);
 
-  // Fetch audit history for the history table
-  useEffect(() => {
+  // Fetch audit history for the history list
+  const loadHistory = () => {
     fetch('/api/audit/history')
       .then(r => r.json())
       .then(d => {
@@ -128,70 +137,71 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           commitmentsCount: Number(a.commitmentsCount ?? a.commitments_count ?? 0),
           metadata: a.metadata || {},
         }));
-        setAuditHistory(safeList.slice(0, 8));
+        setAuditHistory(safeList);
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadHistory();
   }, []);
 
-  // Poll to refresh the activeAudit data when the certificate view is showing
-  // (the ThinkingVeil handles all completion detection while running)
-  useEffect(() => {
-    if (auditMode !== 'completed' || !activeAudit?.id) return;
+  // Handle on-demand tab switching
+  const handleSelectLens = async (type: LensType) => {
+    setActiveLensType(type);
+    if (!activeAudit?.id) return;
 
-    let stopped = false;
-    const poll = async () => {
-      if (stopped) return;
-      try {
-        const res = await fetch(`/api/audit/${activeAudit.id}`);
-        if (!res.ok) return;
+    if (cachedLenses[type]) {
+      return;
+    }
+
+    setLoadingLens(true);
+    try {
+      const res = await fetch(`/api/audit/${activeAudit.id}/lens?type=${type}`);
+      if (res.ok) {
         const data = await res.json();
-        if (!data) return;
-        setActiveAudit(prev => ({
-          ...(prev ?? {} as Partial<ReputationAudit>),
-          ...data,
-          riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore)
-            ? data.riskScore
-            : typeof data.risk_score === 'number' && !isNaN(data.risk_score)
-              ? data.risk_score
-              : (prev?.riskScore ?? 0),
-          mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? prev?.mentionsCount ?? 0),
-          commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? prev?.commitmentsCount ?? 0),
-          metadata: data.metadata || prev?.metadata || {},
-        } as ReputationAudit));
-        stopped = true; // single refresh on mount is enough
-      } catch (err) {
-        console.warn('[Audit Poll] failed:', err);
+        if (data?.lens) {
+          setCachedLenses(prev => ({
+            ...prev,
+            [type]: data.lens,
+          }));
+        }
       }
-    };
+    } catch (err) {
+      console.error('Failed to load lens:', err);
+    } finally {
+      setLoadingLens(false);
+    }
+  };
 
-    poll();
-    return () => { stopped = true; };
-  }, [activeAudit?.id, auditMode]);
-
-  const handleStartAudit = async (type: string = 'full') => {
+  // Start a new unified audit
+  const handleStartAudit = async () => {
     setIsInitiating(true);
     setErrorMessage(null);
     try {
       const res = await fetch('/api/audit/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type })
+        body: JSON.stringify({ type: 'full' }),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.auditId) {
           setActiveAudit({
             id: data.auditId,
-            status: 'analysis',
+            status: 'pending',
+            stage: 'pending',
             createdAt: new Date().toISOString(),
             riskScore: 0,
             mentionsCount: 0,
             commitmentsCount: 0,
             summaryNarrative: '',
-            reportUrl: undefined,
+            reportUrl: null,
             connectorsCovered: [],
             metadata: {},
           } as unknown as ReputationAudit);
+          setActiveLensType('full');
+          setCachedLenses({});
           setAuditMode('running');
         } else {
           setErrorMessage('Failed to initialize reputation audit.');
@@ -208,14 +218,14 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     }
   };
 
-  // 1. DASHBOARD MODE (Default Selection & Overview)
+  // 1. DASHBOARD / ENTRY SCREEN (Single "Run Audit" card + History List)
   if (auditMode === 'dashboard') {
     return (
       <div className={styles.auditContainer}>
-        {/* Modern Minimal Breadcrumb */}
+        {/* Navigation Breadcrumb */}
         <div className={styles.breadcrumbBar}>
-          <button 
-            className={styles.backBtnMinimal} 
+          <button
+            className={styles.backBtnMinimal}
             onClick={onBack}
             aria-label="Back to dashboard"
           >
@@ -228,30 +238,30 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           <span className={styles.breadcrumbCurrent}>REPUTATION AUDIT</span>
 
           {activeAudit && activeAudit.status === 'completed' && (
-            <button 
+            <button
               className={styles.viewLatestBtn}
               onClick={() => setAuditMode('completed')}
               style={{ marginLeft: 'auto' }}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
-              VIEW LATEST CERTIFICATE
+              VIEW LATEST DOSSIER
             </button>
           )}
         </div>
 
-        {/* Hero Section */}
+        {/* Hero Header */}
         <header className={styles.heroSection}>
           <div className={styles.heroPreTitle}>AI-POWERED THREAT INTELLIGENCE</div>
           <h1 className={styles.heroMainTitle}>Reputation & Risk Audit</h1>
           <p className={styles.heroSubtitle}>
-            Deep multi-source analysis of your public and internal digital footprint. We detect behavioral patterns, sentiment anomalies, and unfulfilled commitments that could impact your reputation.
+            Unified multi-source forensic assessment. Extract commitments, analyze behavioral signals, and unlock tailored perspective lenses for investors, hiring, and self-reflection on demand.
           </p>
         </header>
 
-        {/* Inline Error Notification — replaces alert() */}
+        {/* Error notification */}
         {errorMessage && (
           <div style={{
             margin: '0 0 24px',
@@ -274,134 +284,110 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </div>
         )}
 
-        {/* Audit Tier Cards */}
-        <div className={styles.grid}>
-          {/* Card 1: Full Reputation Audit */}
-          <div className={`${styles.card} ${styles.featuredCard}`}>
-            <div className={styles.cardGlow} />
-            <div className={styles.cardBadge}>RECOMMENDED</div>
-            <h2 className={styles.cardTitle}>Complete Audit Dossier</h2>
-            <p className={styles.cardSubtitle}>
-              Comprehensive behavioral and reputational assessment across all linked communication and work platforms.
+        {/* ONE CARD: "Run Audit" (Consolidating the 4 previous cards) */}
+        <div className={styles.singleCardContainer}>
+          <div className={styles.runAuditCard}>
+            <div className={styles.cardGlowOverlay} />
+            <div className={styles.runCardHeader}>
+              <span className={styles.runCardBadge}>COMPREHENSIVE AUDIT</span>
+            </div>
+            <h2 className={styles.runCardTitle}>Complete Audit Dossier</h2>
+            <p className={styles.runCardDesc}>
+              Runs a single comprehensive extraction across 100% of your memories. We index entities, track promises against your real calendar, score reputational risk, and prepare all perspective lenses on demand.
             </p>
 
-            <div className={styles.featureList}>
-              <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span>Sentiment & tone analysis across 100% of memories</span>
+            <div className={styles.runCardFeatures}>
+              <div className={styles.runFeatureItem}>
+                <svg viewBox="0 0 24 24" className={styles.runFeatureIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span>Automated keyword & recency filtering</span>
               </div>
-              <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span>Broken promises & unfulfilled commitments extraction</span>
+              <div className={styles.runFeatureItem}>
+                <svg viewBox="0 0 24 24" className={styles.runFeatureIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span>Calendar-verified commitment cross-check</span>
               </div>
-              <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span>Cryptographically verifiable PDF compliance certificate</span>
+              <div className={styles.runFeatureItem}>
+                <svg viewBox="0 0 24 24" className={styles.runFeatureIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span>On-demand Lenses: Full, Investor, Hiring, Behavioral</span>
               </div>
-              <div className={styles.featureItem}>
-                <svg viewBox="0 0 24 24" width="16" height="16" className={styles.checkIcon} style={{ minWidth: 16, minHeight: 16, flexShrink: 0 }}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span>Actionable remediation steps with risk scoring</span>
-              </div>
-            </div>
-
-            <div className={styles.cardAction}>
-              <button 
-                className={styles.ctaButtonPrimary}
-                disabled={isInitiating}
-                onClick={() => handleStartAudit('full')}
-              >
-                {isInitiating ? 'INITIALIZING...' : 'START COMPLIANCE AUDIT'}
-              </button>
-            </div>
-          </div>
-
-          {/* Card 2: Specialized Reports */}
-          <div className={styles.card}>
-            <div className={styles.cardBadgeSecondary}>TARGETED</div>
-            <h2 className={styles.cardTitle}>Specialized Audits</h2>
-            <p className={styles.cardSubtitle}>
-              Tailored analysis designed for specific high-stakes scenarios and audits.
-            </p>
-
-            <div className={styles.specializedAudits}>
-              <div className={styles.specializedItem}>
-                <div>
-                  <strong>Investor / Due Diligence</strong>
-                  <p>Focused on financial commitments, roadmap promises, and founder credibility.</p>
-                </div>
-                <button 
-                  className={styles.ctaButtonSecondary}
-                  disabled={isInitiating}
-                  onClick={() => handleStartAudit('reputation')}
-                >
-                  AUDIT
-                </button>
-              </div>
-
-              <div className={styles.specializedItem}>
-                <div>
-                  <strong>Hiring & Career History</strong>
-                  <p>Analyzes work ethics, collaboration health, and professional peer friction.</p>
-                </div>
-                <button 
-                  className={styles.ctaButtonSecondary}
-                  disabled={isInitiating}
-                  onClick={() => handleStartAudit('hiring')}
-                >
-                  AUDIT
-                </button>
-              </div>
-
-              <div className={styles.specializedItem}>
-                <div>
-                  <strong>Behavioral / Self Analysis</strong>
-                  <p>Private personal feedback on tone, commitments, and communication habits.</p>
-                </div>
-                <button 
-                  className={styles.ctaButtonSecondary}
-                  disabled={isInitiating}
-                  onClick={() => handleStartAudit('behavioral')}
-                >
-                  AUDIT
-                </button>
+              <div className={styles.runFeatureItem}>
+                <svg viewBox="0 0 24 24" className={styles.runFeatureIcon}><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <span>Instant cryptographic PDF dossier export</span>
               </div>
             </div>
+
+            <button
+              className={styles.runCardCtaBtn}
+              disabled={isInitiating}
+              onClick={handleStartAudit}
+            >
+              {isInitiating ? (
+                <>
+                  <svg className={styles.spinner} viewBox="0 0 50 50" style={{ width: 16, height: 16 }}>
+                    <circle cx="25" cy="25" r="20" fill="none" strokeWidth="5" stroke="currentColor" strokeDasharray="90 150" />
+                  </svg>
+                  INITIALIZING...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  START COMPLIANCE AUDIT
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Past Audits (Compact horizontal pill bar) */}
-        {auditHistory.length > 0 && (
-          <div className={styles.historyCompactBar}>
-            <span className={styles.historyCompactLabel}>PAST AUDITS</span>
-            <div className={styles.historyCompactList}>
-              {auditHistory.slice(0, 5).map(a => {
-                const score = typeof a.riskScore === 'number' && !isNaN(a.riskScore) ? a.riskScore : 0;
-                const isHigh = score > 7;
-                const isMed = score > 4;
-                const riskColor = isHigh ? 'var(--accent-red, #ef4444)' : isMed ? '#f59e0b' : 'var(--accent-green, #10b981)';
+        {/* History List below the card: One entry per audit run */}
+        <div className={styles.historySectionWrapper}>
+          <div className={styles.historyHeaderTitle}>PAST AUDITS</div>
+          {auditHistory.length > 0 ? (
+            <div className={styles.historyTableCard}>
+              {auditHistory.map((audit) => {
+                const score = typeof audit.riskScore === 'number' && !isNaN(audit.riskScore) ? audit.riskScore : 0;
+                const riskColor = score > 7 ? 'var(--accent-red, #ef4444)' : score > 4 ? '#f59e0b' : 'var(--accent-green, #10b981)';
+                const dateStr = audit.createdAt
+                  ? new Date(audit.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : 'Recent Run';
+
                 return (
-                  <button
-                    key={a.id}
-                    className={styles.historyPill}
-                    onClick={() => { setActiveAudit({ ...a, riskScore: score }); setAuditMode('completed'); }}
+                  <div
+                    key={audit.id}
+                    className={styles.historyItemRow}
+                    onClick={() => {
+                      setActiveAudit(audit);
+                      setActiveLensType('full');
+                      setCachedLenses(audit.lenses || {});
+                      setAuditMode('completed');
+                    }}
                   >
-                    <span className={styles.historyPillType}>
-                      {a.metadata?.audit_type === 'reputation' ? 'Investor' :
-                       a.metadata?.audit_type === 'behavioral' ? 'Behavioral' :
-                       a.metadata?.audit_type === 'hiring' ? 'Hiring' : 'Full'}
-                    </span>
-                    <span className={styles.historyPillDate}>
-                      {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recent'}
-                    </span>
-                    <span className={styles.historyPillScore} style={{ color: riskColor }}>
-                      {score.toFixed(1)}
-                    </span>
-                  </button>
+                    <div className={styles.historyRowLeft}>
+                      <span className={styles.historyRowDate}>{dateStr}</span>
+                      <span className={styles.historyRowMeta}>
+                        ID: {audit.id.slice(0, 8).toUpperCase()} • {audit.mentionsCount || 0} records • {audit.connectorsCovered?.length || 0} sources
+                      </span>
+                    </div>
+
+                    <div className={styles.historyRowRight}>
+                      <span className={styles.historyScoreBadge} style={{ color: riskColor }}>{score.toFixed(1)}</span>
+                      <span className={styles.historyViewBtn}>
+                        VIEW
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
                 );
               })}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', background: 'var(--bg-card, #11141c)', borderRadius: '12px' }}>
+              No audit runs recorded yet. Click &quot;START COMPLIANCE AUDIT&quot; above to run your first evaluation.
+            </div>
+          )}
+        </div>
 
         <div className={styles.readinessFooter}>
           <div className={styles.readinessStatus}>
@@ -415,14 +401,13 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     );
   }
 
-  // 2. RUNNING / FAILED STATE — Thinking Veil
+  // 2. RUNNING STATE — Thinking Veil (Polling: Fetching data → Extracting → Scoring → Done)
   if (auditMode === 'running') {
-    // If we don't have the audit ID yet, show initializing screen
     if (!activeAudit?.id) {
       return (
-        <div className={styles.auditContainer} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh'}}>
-          <div style={{textAlign: 'center', color: '#a9b1d6'}}>
-            <svg className={styles.spinner} viewBox="0 0 50 50" style={{width: '40px', height: '40px', margin: '0 auto 20px', animation: 'spin 2s linear infinite'}}>
+        <div className={styles.auditContainer} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <div style={{ textAlign: 'center', color: '#a9b1d6' }}>
+            <svg className={styles.spinner} viewBox="0 0 50 50" style={{ width: '40px', height: '40px', margin: '0 auto 20px', animation: 'spin 2s linear infinite' }}>
               <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="90 150" strokeLinecap="round" />
             </svg>
             <h2>Initializing Audit Analysis...</h2>
@@ -441,17 +426,18 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             if (res.ok) {
               const data = await res.json();
               if (data) {
-                setActiveAudit({
+                const refreshedAudit: ReputationAudit = {
                   ...data,
-                  riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore)
-                    ? data.riskScore
-                    : typeof data.risk_score === 'number' && !isNaN(data.risk_score)
-                      ? data.risk_score
-                      : 0,
+                  riskScore: typeof data.riskScore === 'number' && !isNaN(data.riskScore) ? data.riskScore : 0,
                   mentionsCount: Number(data.mentionsCount ?? data.mentions_count ?? 0),
                   commitmentsCount: Number(data.commitmentsCount ?? data.commitments_count ?? 0),
                   metadata: data.metadata || {},
-                });
+                  extractedFindings: data.extractedFindings || data.extracted_findings || {},
+                  lenses: data.lenses || {},
+                };
+                setActiveAudit(refreshedAudit);
+                if (refreshedAudit.lenses) setCachedLenses(refreshedAudit.lenses);
+                loadHistory();
               }
             }
           } catch (e) {
@@ -465,7 +451,7 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     );
   }
 
-  // C2 fix: error mode renders a static ErrorBanner — no auditId polling, no infinite loop.
+  // Error State
   if (auditMode === 'error') {
     return (
       <div className={styles.auditContainer} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', gap: '20px' }}>
@@ -486,34 +472,44 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     );
   }
 
-  // 3. COMPLETED PREVIEW
+  // 3. RESULT SCREEN (Top Risk Score + Tab Switcher + Lens Narrative + Extracted Findings)
   if (auditMode === 'completed' && activeAudit) {
-    const score = typeof activeAudit.riskScore === 'number' && !isNaN(activeAudit.riskScore)
-      ? activeAudit.riskScore
-      : typeof (activeAudit as any).risk_score === 'number' && !isNaN((activeAudit as any).risk_score)
-        ? (activeAudit as any).risk_score
+    const currentLens = cachedLenses[activeLensType];
+    const currentScore = typeof currentLens?.riskScore === 'number'
+      ? currentLens.riskScore
+      : typeof activeAudit.riskScore === 'number'
+        ? activeAudit.riskScore
         : 0;
+
+    const currentNarrative = currentLens?.narrative || activeAudit.summaryNarrative || 'No narrative generated yet.';
+
+    const riskColor = currentScore > 7 ? 'var(--accent-red, #ef4444)' : currentScore > 4 ? '#f59e0b' : 'var(--accent-green, #10b981)';
+    const statusText = currentScore > 7 ? 'ELEVATED EXPOSURE' : currentScore > 4 ? 'MODERATE OBSERVATION' : 'OPTIMAL / MINIMAL RISK';
+
+    // Findings extracted once and framed by lens
+    const findingsData = (activeAudit.extractedFindings || {}) as Record<string, any>;
+    const commitments = (findingsData.commitments || activeAudit.metadata?.commitments || []) as any[];
+    const flaggedItems = (findingsData.flagged_items || activeAudit.metadata?.riskFindings || []) as any[];
+    const opportunities = (findingsData.opportunities || activeAudit.metadata?.opportunities || []) as any[];
+    const entities = (findingsData.entities || activeAudit.metadata?.topEntities || []) as string[];
 
     return (
       <div className={styles.auditContainer}>
+        {/* Navigation Header */}
         <header className={styles.auditHeader}>
           <div>
-            <h1 className={styles.auditTitle}>
-              Audit Certificate: {
-                activeAudit.metadata?.audit_type === 'reputation' ? 'Investor / Reputation' :
-                activeAudit.metadata?.audit_type === 'behavioral' ? 'Behavioral / Self' :
-                activeAudit.metadata?.audit_type === 'hiring' ? 'Hiring / Professional' :
-                'Full Reputation'
-              }
-            </h1>
+            <h1 className={styles.auditTitle}>Audit Dossier</h1>
             <div className={styles.auditMeta}>
-              ID: {(activeAudit.id || '').slice(0, 8).toUpperCase()} <span className={styles.metaDivider}>•</span> {activeAudit.createdAt ? new Date(activeAudit.createdAt).toUTCString() : 'Recent'}
+              RUN ID: {(activeAudit.id || '').slice(0, 8).toUpperCase()} <span className={styles.metaDivider}>•</span> {activeAudit.createdAt ? new Date(activeAudit.createdAt).toUTCString() : 'Recent'}
             </div>
           </div>
           <div className={styles.headerRight}>
             <button
               className={styles.newAuditBtn}
-              onClick={() => setAuditMode('dashboard')}
+              onClick={() => {
+                setActiveAudit(null);
+                setAuditMode('dashboard');
+              }}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
                 <path d="M5 12h14M12 5v14" />
@@ -523,297 +519,299 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
           </div>
         </header>
 
-        {/* 1. Horizontal Bento Metrics Bar */}
-        <div className={`${styles.metricsGrid} stagger-1`}>
-          <div className={`${styles.metricCard} magnetic-card`}>
-            <div className={styles.metricHeader}>
-              <span className={styles.metricLabel}>Total Footprint</span>
+        {/* TOP: Risk score in big text for the currently selected lens */}
+        <div className={styles.resultHeroBanner}>
+          <div className={styles.bigScoreArea}>
+            <div className={styles.bigScoreNumber} style={{ color: riskColor }}>
+              {currentScore.toFixed(1)}
             </div>
-            <div className={styles.metricValue}>
-              <AnimatedNumber value={activeAudit.mentionsCount || 0} />
+            <div className={styles.bigScoreDetails}>
+              <span className={styles.bigScoreLabel}>{activeLensType.toUpperCase()} LENS RISK SCORE</span>
+              <span className={styles.bigScoreStatus} style={{ color: riskColor }}>{statusText}</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Scale 0.0 (spotless) to 10.0 (critical exposure)
+              </span>
             </div>
-            <div className={styles.metricSubText}>Aggregated indexed mentions</div>
-          </div>
-          <div className={`${styles.metricCard} magnetic-card`}>
-            <div className={styles.metricHeader}>
-              <span className={styles.metricLabel}>Sentiment Balance</span>
-            </div>
-            <div className={styles.metricValue}>
-              <AnimatedNumber value={Math.round((activeAudit.metadata?.sentimentBalance ?? 1) * 100)} />%
-            </div>
-            <div className={styles.metricSubText}>Positive linguistic alignment</div>
-          </div>
-          <div className={`${styles.metricCard} magnetic-card`}>
-            <div className={styles.metricHeader}>
-              <span className={styles.metricLabel}>Extracted Promises</span>
-            </div>
-            <div className={styles.metricValue}>
-              <AnimatedNumber value={activeAudit.commitmentsCount || 0} />
-            </div>
-            <div className={styles.metricSubText}>Identified active commitments</div>
-          </div>
-        </div>
-
-        {/* 2. Main Two-Column Layout */}
-        <div className={styles.grid}>
-          <div className={`${styles.mainContent} stagger-2`}>
-            <section className={styles.summaryBox}>
-              <div className={styles.summaryHeader}>
-                <h2 className={styles.sectionHeading}>Executive Summary</h2>
-                <span className={styles.summaryStatusBadge}>PREVIEW FINDINGS</span>
-              </div>
-
-              {/* Headline Narrative paragraph */}
-              <div className={styles.narrative}>
-                <p className={styles.headlineNarrativeText}>
-                  {activeAudit.summaryNarrative || 'No narrative generated yet. Re-run analysis to generate findings.'}
-                </p>
-              </div>
-
-              {/* Key Observations Grid */}
-              <div className={styles.obsGrid}>
-                <div className={`${styles.obsCard} magnetic-card`}>
-                  <div className={styles.obsLabel}>Compliance Rate</div>
-                  <div className={styles.obsValue}>
-                    {activeAudit.metadata?.complianceRate ?? '—'}
-                  </div>
-                </div>
-                <div className={`${styles.obsCard} magnetic-card`}>
-                  <div className={styles.obsLabel}>Linguistic Trajectory</div>
-                  <div className={styles.obsValue} style={{ textTransform: 'capitalize' }}>
-                    {activeAudit.metadata?.trajectory || (score > 6 ? 'attention required' : score > 3 ? 'stable' : 'optimal')}
-                  </div>
-                </div>
-                <div className={`${styles.obsCard} magnetic-card`}>
-                  <div className={styles.obsLabel}>Tracked Signals</div>
-                  <div className={styles.obsValue}>
-                    <AnimatedNumber value={activeAudit.metadata?.riskFindings?.length || (score > 0 ? score * 2 + 1 : 0)} /> Identified
-                  </div>
-                </div>
-                <div className={`${styles.obsCard} magnetic-card`}>
-                  <div className={styles.obsLabel}>Behavioral Footprint</div>
-                  <div className={styles.obsValue}>
-                    <AnimatedNumber value={activeAudit.mentionsCount || 0} /> Scanned
-                  </div>
-                </div>
-              </div>
-
-              {/* Connectors Audited Tags */}
-              <div className={styles.connectorsAudited}>
-                <span className={styles.connectorsAuditedLabel}>Sources Covered:</span>
-                {(activeAudit.connectorsCovered || []).length > 0 ? (
-                  activeAudit.connectorsCovered.map((c, i) => (
-                    <span key={i} className={styles.connectorPill}>{c}</span>
-                  ))
-                ) : (
-                  <span className={styles.connectorPillNone}>Vault Data Only</span>
-                )}
-              </div>
-
-              {/* Lock banner — only show if no PDF has been generated yet */}
-              {!activeAudit.reportUrl && (
-                <div className={styles.lockedContainer}>
-                  <div className={styles.lockedHeader}>
-                    <strong>SECURE REPORT ACCESS REQUIRED</strong>
-                  </div>
-                  <p className={styles.lockedText}>
-                    Full behavioral analysis, cross-platform source citations, exact context logs, and complete risk scoring breakdown are sealed. Download the verified cryptographic PDF report to view full findings.
-                  </p>
-                </div>
-              )}
-            </section>
           </div>
 
-          <aside className={`${styles.sidebarCard} stagger-3`}>
-            <div className={styles.sidebarSectionTitle}>RISK PROFILE</div>
-            {/* Minimalist Single Gauge Chart */}
-            {(() => {
-              const isCritical = score > 7;
-              const isModerate = score > 4;
-              const riskColor = isCritical ? 'var(--accent-red)' : isModerate ? '#f59e0b' : 'var(--accent-green)';
-
-              // Metric values 0–1
-              const promiseVal = score > 7 ? 0.72 : score > 4 ? 0.85 : 0.96;
-              const sentimentVal = Math.min(1, Math.max(0, (activeAudit.metadata?.sentimentBalance ?? 1)));
-              const safetyVal = Math.min(1, Math.max(0, (10 - score) / 10));
-
-              const riskFraction = Math.min(1, Math.max(0, score / 10));
-              const circumference = 2 * Math.PI * 60;
-
-              return (
-                <div className={styles.singleGaugeContainer}>
-                  <div className={styles.gaugeCenter}>
-                    <svg className={styles.gaugeSvg} width="160" height="160" viewBox="0 0 160 160">
-                      <defs>
-                        <filter id="glowSingle">
-                          <feGaussianBlur stdDeviation="4" result="blur" />
-                          <feMerge>
-                            <feMergeNode in="blur" />
-                            <feMergeNode in="SourceGraphic" />
-                          </feMerge>
-                        </filter>
-                      </defs>
-
-                      {/* Background Track */}
-                      <circle 
-                        className={styles.singleRingTrack} 
-                        cx="80" cy="80" r="60" 
-                        transform="rotate(-90 80 80)" 
-                      />
-                      
-                      {/* Active Fill */}
-                      <circle 
-                        className={styles.singleRingFill} 
-                        cx="80" cy="80" r="60"
-                        stroke={riskColor}
-                        strokeDasharray={circumference}
-                        strokeDashoffset={circumference * (1 - riskFraction)}
-                        transform="rotate(-90 80 80)"
-                        filter="url(#glowSingle)" 
-                      />
-                    </svg>
-                    <div className={styles.gaugeScore}>
-                      <span className={styles.scoreNumber} style={{ color: riskColor }}>
-                        {score.toFixed(1)}
-                      </span>
-                      <span className={styles.scoreText}>RISK SCORE</span>
-                    </div>
-                  </div>
-
-                  {/* 3-Column Minimal Grid */}
-                  <div className={styles.minimalGrid}>
-                    <div className={styles.minimalGridItem}>
-                      <span className={styles.gridVal}>{Math.round(promiseVal * 100)}%</span>
-                      <span className={styles.gridLabel}>Commitments</span>
-                      <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${promiseVal * 100}%`, background: riskColor }}/></div>
-                    </div>
-                    <div className={styles.minimalGridItem}>
-                      <span className={styles.gridVal}>{Math.round(sentimentVal * 100)}%</span>
-                      <span className={styles.gridLabel}>Sentiment</span>
-                      <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${sentimentVal * 100}%`, background: riskColor }}/></div>
-                    </div>
-                    <div className={styles.minimalGridItem}>
-                      <span className={styles.gridVal}>{Math.round(safetyVal * 100)}%</span>
-                      <span className={styles.gridLabel}>Mentions</span>
-                      <div className={styles.gridBar}><div className={styles.gridBarFill} style={{ width: `${safetyVal * 100}%`, background: riskColor }}/></div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className={styles.sidebarActions}>
-              <button
-                className={styles.downloadBtnPremium}
-                disabled={isDownloading}
-                onClick={async () => {
-                  if (!activeAudit?.id) return;
-                  setPdfError(null);
-                  setIsDownloading(true);
-                  try {
-                    const supabase = createClient();
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const res = await fetch(`/api/audit/${activeAudit.id}/pdf`, {
-                      headers: {
-                        'Authorization': `Bearer ${session?.access_token || ''}`
-                      }
-                    });
-                    if (!res.ok) throw new Error('PDF generation failed. Please try again.');
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `eyes-audit-${activeAudit.id.slice(0, 8)}.pdf`;
-                    a.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 2000);
-                  } catch (err) {
-                    console.error('[PDF Download] failed:', err);
-                    setPdfError(err instanceof Error ? err.message : 'PDF generation failed.');
-                  } finally {
-                    setIsDownloading(false);
-                  }
-                }}
-              >
-                {isDownloading ? (
-                  <span className={styles.downloadSpinnerWrapper}>
-                    <svg className={styles.spinner} viewBox="0 0 50 50">
-                      <circle className={styles.path} cx="25" cy="25" r="20" fill="none" strokeWidth="5"></circle>
-                    </svg>
-                    COMPILING PDF...
-                  </span>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                    </svg>
-                    DOWNLOAD DOSSIER PDF
-                  </>
-                )}
-              </button>
-
-              {/* Inline PDF error — replaces alert() */}
-              {pdfError && (
-                <p style={{ fontSize: '0.75rem', color: 'var(--accent-red, #ef4444)', marginTop: '6px', lineHeight: 1.4 }}>
-                  {pdfError}
-                </p>
-              )}
-
-              {/* Inline rerun confirm — replaces window.confirm() */}
-              {rerunConfirming ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '10px' }}>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-                    Re-run the AI analysis? This refreshes all findings, commitments, and risk scores.
-                  </p>
-                  {rerunError && (
-                    <p style={{ fontSize: '0.72rem', color: 'var(--accent-red, #ef4444)', margin: 0 }}>{rerunError}</p>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      style={{ flex: 1, background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: '6px', padding: '7px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', letterSpacing: '0.5px' }}
-                      onClick={async () => {
-                        if (!activeAudit?.id) return;
-                        setRerunError(null);
-                        try {
-                          const res = await fetch(`/api/audit/${activeAudit.id}/reanalyze`, { method: 'POST' });
-                          if (!res.ok) {
-                            const errData = await res.json().catch(() => ({}));
-                            throw new Error(errData.detail || errData.error || 'Failed to start re-analysis');
-                          }
-                          setActiveAudit(prev => prev ? { ...prev, status: 'pending' } : null);
-                          setErrorMessage(null);
-                          setRerunConfirming(false);
-                          setAuditMode('running');
-                        } catch (err) {
-                          console.error('[Reanalyze] failed:', err);
-                          setRerunError(err instanceof Error ? err.message : 'Failed to start re-analysis.');
-                        }
-                      }}
-                    >
-                      CONFIRM
-                    </button>
-                    <button
-                      style={{ flex: 1, background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '7px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
-                      onClick={() => { setRerunConfirming(false); setRerunError(null); }}
-                    >
-                      CANCEL
-                    </button>
-                  </div>
-                </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {/* Download PDF button */}
+            <button
+              className={styles.downloadBtnPremium}
+              disabled={isDownloading}
+              onClick={async () => {
+                if (!activeAudit?.id) return;
+                setPdfError(null);
+                setIsDownloading(true);
+                try {
+                  const supabase = createClient();
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const res = await fetch(`/api/audit/${activeAudit.id}/pdf?lens=${activeLensType}`, {
+                    headers: {
+                      'Authorization': `Bearer ${session?.access_token || ''}`
+                    }
+                  });
+                  if (!res.ok) throw new Error('PDF generation failed. Please try again.');
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `eyes-audit-${activeLensType}-${activeAudit.id.slice(0, 8)}.pdf`;
+                  a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 2000);
+                } catch (err) {
+                  console.error('[PDF Download] failed:', err);
+                  setPdfError(err instanceof Error ? err.message : 'PDF generation failed.');
+                } finally {
+                  setIsDownloading(false);
+                }
+              }}
+            >
+              {isDownloading ? (
+                <span className={styles.downloadSpinnerWrapper}>
+                  <svg className={styles.spinner} viewBox="0 0 50 50">
+                    <circle className={styles.path} cx="25" cy="25" r="20" fill="none" strokeWidth="5"></circle>
+                  </svg>
+                  COMPILING PDF...
+                </span>
               ) : (
+                <>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  DOWNLOAD PDF ({activeLensType.toUpperCase()})
+                </>
+              )}
+            </button>
+
+            {/* Reanalyze button */}
+            {rerunConfirming ? (
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <button
                   className={styles.rerunBtnPremium}
-                  onClick={() => setRerunConfirming(true)}
+                  style={{ background: 'var(--accent-red, #ef4444)', color: '#ffffff', borderColor: 'transparent' }}
+                  onClick={async () => {
+                    if (!activeAudit?.id) return;
+                    setRerunError(null);
+                    try {
+                      const res = await fetch(`/api/audit/${activeAudit.id}/reanalyze`, { method: 'POST' });
+                      if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.detail || errData.error || 'Failed to start re-analysis');
+                      }
+                      setActiveAudit(prev => prev ? { ...prev, status: 'pending' } : null);
+                      setCachedLenses({});
+                      setRerunConfirming(false);
+                      setAuditMode('running');
+                    } catch (err) {
+                      setRerunError(err instanceof Error ? err.message : 'Failed to re-run');
+                    }
+                  }}
                 >
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                  </svg>
-                  RE-RUN ANALYSIS
+                  CONFIRM
                 </button>
-              )}
-            </div>
-          </aside>
+                <button
+                  className={styles.rerunBtnPremium}
+                  onClick={() => setRerunConfirming(false)}
+                >
+                  CANCEL
+                </button>
+              </div>
+            ) : (
+              <button
+                className={styles.rerunBtnPremium}
+                onClick={() => setRerunConfirming(true)}
+              >
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                </svg>
+                REANALYZE
+              </button>
+            )}
+          </div>
         </div>
 
+        {pdfError && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--accent-red, #ef4444)', marginTop: '-12px', marginBottom: '16px' }}>
+            {pdfError}
+          </p>
+        )}
+        {rerunError && (
+          <p style={{ fontSize: '0.75rem', color: 'var(--accent-red, #ef4444)', marginTop: '-12px', marginBottom: '16px' }}>
+            {rerunError}
+          </p>
+        )}
+
+        {/* TAB SWITCHER: Full | Investor | Hiring | Behavioral */}
+        <div className={styles.lensTabSwitcherBar}>
+          {[
+            { key: 'full' as LensType, label: 'Full 360°' },
+            { key: 'investor' as LensType, label: 'Investor' },
+            { key: 'hiring' as LensType, label: 'Hiring' },
+            { key: 'behavioral' as LensType, label: 'Behavioral' },
+          ].map((tab) => {
+            const isActive = activeLensType === tab.key;
+            const isTabLoading = loadingLens && isActive;
+            const isCached = Boolean(cachedLenses[tab.key]);
+
+            return (
+              <button
+                key={tab.key}
+                className={`${styles.lensTabButton} ${isActive ? styles.lensTabButtonActive : ''}`}
+                onClick={() => handleSelectLens(tab.key)}
+              >
+                {isTabLoading && <span className={styles.tabLoadingSpinner} />}
+                <span>{tab.label}</span>
+                {isCached && !isActive && (
+                  <span style={{ fontSize: '9px', opacity: 0.6 }}>●</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Narrative Box */}
+        <section className={styles.findingPanelCard} style={{ marginBottom: '24px' }}>
+          <h2 className={styles.findingPanelTitle}>
+            <span>{activeLensType.toUpperCase()} Narrative Assessment</span>
+          </h2>
+          {loadingLens ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-muted)', padding: '24px 0' }}>
+              <span className={styles.tabLoadingSpinner} style={{ width: 20, height: 20 }} />
+              <span>Generating targeted {activeLensType} lens narrative from forensic findings...</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--text-primary)', whiteSpace: 'pre-line' }}>
+              {currentNarrative}
+            </div>
+          )}
+        </section>
+
+        {/* Below tabs: narrative text, commitments list, flagged items, opportunities, key entities */}
+        <div className={styles.findingsSectionGrid}>
+          {/* Commitments List */}
+          <section className={styles.findingPanelCard}>
+            <h2 className={styles.findingPanelTitle}>
+              <span>Commitments & Follow-Through ({commitments.length})</span>
+            </h2>
+            {commitments.length > 0 ? (
+              <div className={styles.itemsList}>
+                {commitments.slice(0, 8).map((c, i) => {
+                  const isPending = c.status === 'pending';
+                  return (
+                    <div key={i} className={styles.itemRowCard}>
+                      <div className={styles.itemRowContent}>
+                        <span className={styles.itemRowTitle}>{c.text || 'Commitment'}</span>
+                        <span className={styles.itemRowMeta}>
+                          {c.platform ? `Platform: ${c.platform}` : 'Source: Vault'} • {c.date ? new Date(c.date).toLocaleDateString() : 'Recent'}
+                        </span>
+                      </div>
+                      <span
+                        className={styles.itemSeverityBadge}
+                        style={{
+                          background: isPending ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                          color: isPending ? '#ef4444' : '#10b981',
+                        }}
+                      >
+                        {c.status || 'pending'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+                No unresolved commitments detected in this audit dataset.
+              </p>
+            )}
+          </section>
+
+          {/* Flagged Items */}
+          <section className={styles.findingPanelCard}>
+            <h2 className={styles.findingPanelTitle}>
+              <span>Flagged Risk Findings ({flaggedItems.length})</span>
+            </h2>
+            {flaggedItems.length > 0 ? (
+              <div className={styles.itemsList}>
+                {flaggedItems.slice(0, 8).map((f, i) => {
+                  const sev = (f.severity || 'Medium').toLowerCase();
+                  const sevColor = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : '#3b82f6';
+                  return (
+                    <div key={i} className={styles.itemRowCard}>
+                      <div className={styles.itemRowContent}>
+                        <span className={styles.itemRowTitle}>{f.finding || f.description || 'Flagged finding'}</span>
+                        <span className={styles.itemRowMeta}>
+                          {f.platform ? `Source: ${f.platform}` : 'Internal'} • Impact: {f.impact || 'Reputational drift indicator'}
+                        </span>
+                      </div>
+                      <span
+                        className={styles.itemSeverityBadge}
+                        style={{
+                          background: `${sevColor}20`,
+                          color: sevColor,
+                        }}
+                      >
+                        {f.severity || 'Medium'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+                Zero flagged negative items found across connected platforms.
+              </p>
+            )}
+          </section>
+
+          {/* Opportunities */}
+          <section className={styles.findingPanelCard}>
+            <h2 className={styles.findingPanelTitle}>
+              <span>Strategic Opportunities ({opportunities.length})</span>
+            </h2>
+            {opportunities.length > 0 ? (
+              <div className={styles.itemsList}>
+                {opportunities.slice(0, 4).map((o, i) => (
+                  <div key={i} className={styles.itemRowCard}>
+                    <div className={styles.itemRowContent}>
+                      <span className={styles.itemRowTitle}>{o.title || 'Opportunity'}</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: '2px' }}>
+                        {o.description}
+                      </span>
+                      <span className={styles.itemRowMeta} style={{ marginTop: '4px' }}>
+                        {o.source || 'Intelligence Model'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+                Maintain current platform communication discipline.
+              </p>
+            )}
+          </section>
+
+          {/* Key Entities */}
+          <section className={styles.findingPanelCard}>
+            <h2 className={styles.findingPanelTitle}>
+              <span>Key Entities & Associations ({entities.length})</span>
+            </h2>
+            {entities.length > 0 ? (
+              <div className={styles.entityPillList}>
+                {entities.map((ent, i) => (
+                  <span key={i} className={styles.entityPillTag}>
+                    {ent}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+                No external organization or project entities extracted.
+              </p>
+            )}
+          </section>
+        </div>
       </div>
     );
   }

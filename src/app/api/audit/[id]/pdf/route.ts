@@ -69,25 +69,51 @@ export async function GET(
       return NextResponse.json({ error: 'Audit not found or not yet completed.' }, { status: 404 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const targetLens = searchParams.get('lens') || searchParams.get('type') || 'full';
+
+    // Fetch or generate the requested lens on demand
+    let lensRiskScore = Number(audit.risk_score || 0);
+    let lensNarrative = audit.summary_narrative || '';
+    let lensMetadata = audit.metadata || {};
+
+    try {
+      const { AuditLensService } = await import('@/services/audit/lens-service');
+      const lens = await AuditLensService.getOrCreateLens(audit.id, targetLens, userId);
+      if (lens) {
+        lensRiskScore = lens.riskScore;
+        lensNarrative = lens.narrative;
+        lensMetadata = {
+          ...lensMetadata,
+          audit_type: lens.lensType,
+        };
+      }
+    } catch (lensErr) {
+      console.warn('[PDF GET] Error fetching/generating lens for PDF, falling back to base audit:', lensErr);
+    }
+
     // Map DB fields to camelCase ReputationAudit type
     const mappedAudit: ReputationAudit = {
       id: audit.id,
       status: audit.status,
-      riskScore: Number(audit.risk_score || 0),
+      riskScore: lensRiskScore,
       mentionsCount: audit.mentions_count || 0,
       commitmentsCount: audit.commitments_count || 0,
-      summaryNarrative: audit.summary_narrative,
+      summaryNarrative: lensNarrative,
       connectorsCovered: audit.connectors_covered || [],
-      reportUrl: audit.report_url,
+      reportUrl: null,
       createdAt: audit.created_at,
-      metadata: audit.metadata || {}
+      metadata: {
+        ...lensMetadata,
+        audit_type: targetLens,
+      }
     };
 
     // Generate PDF in-memory buffer via shared PDFGenerationService
     const pdfBuffer = await PDFGenerationService.generateBuffer(mappedAudit, userId);
 
     const shortId = audit.id.slice(0, 8).toUpperCase();
-    const filename = `eyes-audit-${shortId}.pdf`;
+    const filename = `eyes-audit-${targetLens}-${shortId}.pdf`;
 
     console.log(`[PDF GET] Generated booklet buffer: ${pdfBuffer.length} bytes | Filename: ${filename}`);
 

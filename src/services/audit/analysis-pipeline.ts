@@ -1002,14 +1002,37 @@ Return JSON ONLY (no markdown, no explanation):
       const pendingCommitmentsCount = resolvedCommitments.filter(c => c.status === 'pending').length;
       console.log(`[Audit] Commitment resolution: ${resolvedCommitments.length} total, ${pendingCommitmentsCount} pending, ${resolvedCommitments.length - pendingCommitmentsCount} completed via calendar match.`);
       console.log(`[Audit] Finalizing database record for ${auditId}...`);
+
+      const extractedFindingsData = {
+        entities: topExtractedEntities,
+        commitments: resolvedCommitments,
+        sentiment: {
+          balance: weightedTotalMentions > 0 ? (1 - (weightedNegativeMentions / weightedTotalMentions)) : 1.0,
+          negativeMentions,
+          platformSentiment,
+        },
+        flagged_items: finalFindings,
+        all_extracted_findings: extractedFindings,
+        mentions_count: events.length,
+        connectors_covered: connectorsCovered,
+        compliance_rate: complianceRate.toFixed(2),
+        failure_rate: failureRate.toFixed(2),
+        scan_window: actualScanWindow,
+        opportunities: (summaryResult.opportunities && summaryResult.opportunities.length > 0)
+          ? summaryResult.opportunities
+          : fallbackOpportunities,
+      };
+
       const { error: updateError } = await supabase.from('reputation_audits').update({
         status: 'completed',
+        stage: 'completed',
         risk_score: finalRiskScore,
         mentions_count: events.length,
         commitments_count: pendingCommitmentsCount,
         summary_narrative: cleanNarrative,
         connectors_covered: connectorsCovered,
         report_url: null,
+        extracted_findings: extractedFindingsData,
         metadata: {
           commitments: resolvedCommitments,  // ← calendar-verified statuses (pending/completed)
           riskFindings: finalFindings,
@@ -1025,9 +1048,7 @@ Return JSON ONLY (no markdown, no explanation):
               return true;
             });
           })(),
-          opportunities: (summaryResult.opportunities && summaryResult.opportunities.length > 0)
-            ? summaryResult.opportunities
-            : fallbackOpportunities,
+          opportunities: extractedFindingsData.opportunities,
           trajectory: summaryResult.trajectory || 'stable',
           dominantPattern: summaryResult.dominantPattern || null,
           reputationProjection: summaryResult.reputationProjection || null,
@@ -1039,6 +1060,24 @@ Return JSON ONLY (no markdown, no explanation):
           platformSentiment: platformSentiment
         }
       }).eq('id', auditId);
+
+      // Generate the "Full" lens row immediately
+      try {
+        await supabase.from('audit_lenses').upsert({
+          audit_id: auditId,
+          lens_type: 'full',
+          risk_score: finalRiskScore,
+          narrative: cleanNarrative,
+          metadata: {
+            dominantPattern: summaryResult.dominantPattern || null,
+            reputationProjection: summaryResult.reputationProjection || null,
+            opportunities: extractedFindingsData.opportunities,
+          },
+          generated_at: new Date().toISOString()
+        }, { onConflict: 'audit_id, lens_type' });
+      } catch (lensErr) {
+        console.warn(`[Audit] Could not write full lens row for ${auditId}:`, lensErr);
+      }
 
       if (updateError) {
         console.error(`[Audit] Database update failed for ${auditId}:`, updateError);
