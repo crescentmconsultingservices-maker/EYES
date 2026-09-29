@@ -18,34 +18,28 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const url = new URL(request.url);
-    const bypass = url.searchParams.get('bypass_auth');
     let userId = '';
 
-    if (bypass === 'true') {
-      userId = '4d2f3e3c-b834-43fc-852a-c3cdbb535b68';
+    const authClient = await createClient();
+    let user, authError;
+
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1]?.trim();
+      const res = await authClient.auth.getUser(token);
+      user = res.data.user;
+      authError = res.error;
     } else {
-      const authClient = await createClient();
-      let user, authError;
-
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1]?.trim();
-        const res = await authClient.auth.getUser(token);
-        user = res.data.user;
-        authError = res.error;
-      } else {
-        const res = await authClient.auth.getUser();
-        user = res.data.user;
-        authError = res.error;
-      }
-
-      if (authError || !user) {
-        console.error('[PDF GET] Unauthorized. Error:', authError, 'User:', user ? 'exists' : 'missing');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      userId = user.id;
+      const res = await authClient.auth.getUser();
+      user = res.data.user;
+      authError = res.error;
     }
+
+    if (authError || !user) {
+      console.error('[PDF GET] Unauthorized. Error:', authError, 'User:', user ? 'exists' : 'missing');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    userId = user.id;
 
     const cleanId = id.trim().toLowerCase();
     console.log('[PDF GET] Querying for cleanId:', cleanId, 'userId:', userId);

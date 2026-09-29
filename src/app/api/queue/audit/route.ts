@@ -50,8 +50,26 @@ async function handler(request: Request) {
   }
 }
 
-// verifySignatureAppRouter protects this endpoint so ONLY Upstash can call it
-export const POST = verifySignatureAppRouter(handler, {
-  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY || 'dummy_build_key',
-  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY || 'dummy_build_key'
-});
+export async function POST(req: Request) {
+  const isDev = process.env.NODE_ENV === 'development';
+  const hasKeys =
+    Boolean(process.env.QSTASH_CURRENT_SIGNING_KEY) &&
+    Boolean(process.env.QSTASH_NEXT_SIGNING_KEY);
+
+  if (isDev && !hasKeys) {
+    // Local dev without QStash keys — bypass signature check
+    return handler(req);
+  }
+
+  if (!hasKeys) {
+    console.error('[Queue: Audit] Missing QStash signing keys in production.');
+    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+  }
+
+  const verifier = verifySignatureAppRouter(handler, {
+    currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
+    nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!
+  });
+
+  return verifier(req);
+}

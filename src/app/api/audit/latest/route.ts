@@ -3,6 +3,8 @@ import { createClient, createAdminClient } from '@/utils/supabase/server';
 import { AuditAnalysisService } from '@/services/audit/analysis-pipeline';
 import { waitUntil } from '@vercel/functions';
 
+const RECENT_TRIGGERS = new Map<string, number>();
+
 /**
  * API Route to fetch the latest Reputation Audit for the user.
  */
@@ -35,27 +37,38 @@ export async function GET() {
     // was created but the background task got terminated by Vercel's 10s execution limit.
     // We lock it and trigger it now from the current active server session.
     if (audit.status === 'pending') {
-      const adminSupabase = await createAdminClient();
+      const now = Date.now();
+      const lastTrigger = RECENT_TRIGGERS.get(audit.id) || 0;
       
-      // Update status to 'analysis' atomically to prevent double triggers
-      const { data: updatedAudit } = await adminSupabase
-        .from('reputation_audits')
-        .update({ status: 'analysis' })
-        .eq('id', audit.id)
-        .eq('status', 'pending')
-        .select()
-        .maybeSingle();
-
-      if (updatedAudit) {
-        console.log(`[Audit Latest API] Self-healing triggered: starting analysis for audit ${audit.id} in background...`);
-        // Run analysis in background
-        waitUntil(
-          AuditAnalysisService.runAnalysis(audit.id, user.id).catch(err => {
-            console.error('[Audit Latest API] Background self-healing analysis failed:', err);
-          })
-        );
-        // Mutate the local status so the response immediately tells the frontend it is running
+      if (now - lastTrigger < 60000) {
+        // Rate limited: it was triggered within the last minute. 
+        // Keep the local status as 'analysis' so the frontend stops polling immediately.
         audit.status = 'analysis';
+      } else {
+        RECENT_TRIGGERS.set(audit.id, now);
+        
+        const adminSupabase = await createAdminClient();
+        
+        // Update status to 'analysis' atomically to prevent double triggers
+        const { data: updatedAudit } = await adminSupabase
+          .from('reputation_audits')
+          .update({ status: 'analysis' })
+          .eq('id', audit.id)
+          .eq('status', 'pending')
+          .select()
+          .maybeSingle();
+
+        if (updatedAudit) {
+          console.log(`[Audit Latest API] Self-healing triggered: starting analysis for audit ${audit.id} in background...`);
+          // Run analysis in background
+          waitUntil(
+            AuditAnalysisService.runAnalysis(audit.id, user.id).catch(err => {
+              console.error('[Audit Latest API] Background self-healing analysis failed:', err);
+            })
+          );
+          // Mutate the local status so the response immediately tells the frontend it is running
+          audit.status = 'analysis';
+        }
       }
     }
 
