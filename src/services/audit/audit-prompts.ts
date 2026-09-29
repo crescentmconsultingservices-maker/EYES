@@ -199,8 +199,11 @@ export const sensitiveKeywords = /\b(salary|budget|invoice|payment|debt|legal|la
 // Unified extraction instruction (identical across all lenses to maintain strict data-layer consistency)
 export const finalRiskInstruction = `
 - Be precise and objective. Do not over-flag or hallucinate risks.
-- Flag standard reputational risks, unmet commitments, and moderate negative sentiment.
-- Treat automated notifications or emails from external parties as neutral and isCommitment=false.
+- REPUTATION RISKS ONLY: A reputation risk must be a genuine human behavior or integrity issue: interpersonal conflicts, broken commitments/promises to clients/colleagues, harassment, offensive conduct, ethical violations, leaked API keys/credentials, or legal disputes.
+- NEVER flag standard security/system notification emails (e.g. "new sign-in detected on Vercel/Google account", "new device login alert", "password reset", "verification code", "security alert") as risks or sensitive. They are routine automated security operations, NOT reputation risks.
+- NEVER flag personal resume submissions or CVs as PII exposure or risk. A resume naturally contains names and email addresses.
+- NEVER flag standard OAuth authorizations or app connections (e.g. "Google account data shared with Slack", "Slack access granted") as risks. They are routine integration workflows, NOT data leaks.
+- Treat automated notifications or emails from external parties as neutral (sentiment: 0), isSensitive: false, and isCommitment=false.
 - CONTEXT-AWARE SENTIMENT: Conversations where the subject is actively debugging code, discussing technical bugs, compilation issues, or product errors (especially in developer platforms or Claude sessions) are standard software engineering activities. Classify them as neutral (sentiment: 0), NOT negative, unless there is a genuine interpersonal conflict, project failure, or professional misconduct.
 - FALSE POSITIVES FILTER: Internal development and debugging sessions where the subject is discussing product issues to improve/debug EYES (e.g., discussing "contradictory data in executive summary" or "fixing the PDF generator") are self-improvement/product feedback loops, NOT reputational risks. Do NOT flag them as sensitive or risks.
 - NORMAL TRANSACTION / RECEIVED EMAILS: Standard received transactions, service alerts, trial expirations, or social invites (e.g., birthday invitations) are neutral (sentiment: 0) and do NOT constitute PII exposures or security/reputation risks unless they expose raw secret credentials or financial account keys.

@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server';
 import { invokeModel } from '@/services/ai/ai';
 import { Commitment } from '@/types/dashboard';
 import { SECTION_TITLES, EXECUTIVE_SUMMARY_INSTRUCTIONS, OPPORTUNITIES_INSTRUCTIONS, CROSS_LENS_SECTION, commitmentKeywords, sensitiveKeywords, finalRiskInstruction } from './audit-prompts';
-import { resolveCommitmentStatuses, computeRecencyWeight } from './audit-scoring';
+import { resolveCommitmentStatuses, computeRecencyWeight, isRoutineNotificationOrSystemEmail, isFalsePositiveRiskFinding } from './audit-scoring';
 import { fetchAuditData, updateAuditStage, markAuditFailed } from './audit-db';
 /**
  * Reputation Audit: Core Analysis Pipeline (REAL WORLD ONLY)
@@ -62,8 +62,11 @@ export class AuditAnalysisService {
       // Pass B — Smart sampling: add recent records + per-platform diversity + 
       //          historical samples to give AI full behavioral context.
       //
-      // Result: ~80-120 high-value records sent to AI, covering      // Pass A: keyword-matched records from ALL events
-      const commitmentCandidates = events.filter(e => {
+      // Result: ~80-120 high-value records sent to AI, covering      // Pre-filter: skip standard security/system notification emails entirely before scoring
+      const scoredEvents = events.filter(e => !isRoutineNotificationOrSystemEmail(e));
+
+      // Pass A: keyword-matched records from candidate pool
+      const commitmentCandidates = scoredEvents.filter(e => {
         const text = `${e.title ?? ''} ${e.content ?? ''}`;
         return commitmentKeywords.test(text) || sensitiveKeywords.test(text);
       });
@@ -73,7 +76,7 @@ export class AuditAnalysisService {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       // Recent records (last 30 days) — highest weight in scoring
-      const recentRecords = events
+      const recentRecords = scoredEvents
         .filter(e => new Date(e.timestamp) >= thirtyDaysAgo)
         .slice(0, 30);
 
@@ -84,7 +87,7 @@ export class AuditAnalysisService {
       ]);
       const platformSamples: typeof events = [];
       const platformCounts: Record<string, number> = {};
-      for (const e of events) {
+      for (const e of scoredEvents) {
         if (seenIds.has(e.id)) continue;
         const count = platformCounts[e.platform] ?? 0;
         if (count < 10) {
@@ -95,7 +98,7 @@ export class AuditAnalysisService {
       }
 
       // Historical sample — 20 evenly-spaced older records for longitudinal context
-      const olderEvents = events.filter(e => !seenIds.has(e.id));
+      const olderEvents = scoredEvents.filter(e => !seenIds.has(e.id));
       const step = Math.max(1, Math.floor(olderEvents.length / 20));
       const historicalSample = olderEvents.filter((_, i) => i % step === 0).slice(0, 20);
 
@@ -291,13 +294,16 @@ Return JSON ONLY:
         }
 
         if (a.isSensitive || a.sentiment === -1) {
-          extractedFindings.push({
-            severity: a.sentiment === -1 ? 'High' : 'Medium',
-            finding: a.riskDescription || a.commitmentText || `Reputational risk in ${resolvedPlatform}`,
-            evidence: `Source event: ${evt.id}`,
-            impact: 'Potential diligence concern.',
-            platform: resolvedPlatform
-          });
+          const findingText = a.riskDescription || a.commitmentText || `Reputational risk in ${resolvedPlatform}`;
+          if (!isFalsePositiveRiskFinding(findingText)) {
+            extractedFindings.push({
+              severity: a.sentiment === -1 ? 'High' : 'Medium',
+              finding: findingText,
+              evidence: `Source event: ${evt.id}`,
+              impact: 'Potential diligence concern.',
+              platform: resolvedPlatform
+            });
+          }
         }
 
         if (a.detectedPII && a.detectedPII.length > 0) {
@@ -312,15 +318,18 @@ Return JSON ONLY:
         }
       });
 
-      // Add high-severity finding ONLY for genuine sensitive PII leaks
+      // Add high-severity finding ONLY for genuine sensitive PII leaks (excluding routine resumes/applications)
       sensitivePiiFound.slice(0, 3).forEach(s => {
-        extractedFindings.push({
-          severity: 'High',
-          finding: `Sensitive ${s.label} detected in ${s.platform}`,
-          evidence: `Source event: ${s.eventId}`,
-          impact: 'Potential sensitive data exposure requiring review.',
-          platform: s.platform
-        });
+        const findingText = `Sensitive ${s.label} detected in ${s.platform}`;
+        if (!isFalsePositiveRiskFinding(findingText)) {
+          extractedFindings.push({
+            severity: 'High',
+            finding: findingText,
+            evidence: `Source event: ${s.eventId}`,
+            impact: 'Potential sensitive data exposure requiring review.',
+            platform: s.platform
+          });
+        }
       });
 
       // Deduplicate extracted findings by finding description to prevent copy-pasted repeated findings
@@ -791,9 +800,11 @@ Return JSON ONLY (no markdown, no explanation):
       // and volume-calibrated formula to ensure statistical honesty and eliminate sample bias.
       let finalRiskScore = riskScore;
 
-      const finalFindings = (summaryResult.riskFindings && Array.isArray(summaryResult.riskFindings))
+      const rawFindings = (summaryResult.riskFindings && Array.isArray(summaryResult.riskFindings))
         ? [...summaryResult.riskFindings]
         : [...extractedFindings];
+
+      const finalFindings = rawFindings.filter((f: RiskFinding) => !isFalsePositiveRiskFinding(f.finding || ''));
 
       // Resolve platforms for all final findings
       finalFindings.forEach((f: RiskFinding) => {

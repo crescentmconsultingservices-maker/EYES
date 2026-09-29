@@ -6,6 +6,7 @@ import type { ReputationAudit, AuditSummary, AuditLens } from '@/types/dashboard
 import { AnimatedNumber } from '../common/AnimatedNumber';
 import { ThinkingVeil } from './ThinkingVeil';
 import { createClient } from '@/utils/supabase/client';
+import { isFalsePositiveRiskFinding } from '@/services/audit/audit-scoring';
 
 interface AuditViewProps {
   onBack: () => void;
@@ -491,8 +492,8 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     const commitments = (findingsData.commitments || activeAudit.metadata?.commitments || []) as any[];
     const rawFlaggedItems = (findingsData.flagged_items || activeAudit.metadata?.riskFindings || []) as any[];
     const flaggedItems = rawFlaggedItems.filter((f: any) => {
-      const text = (f.finding || f.description || '').toLowerCase();
-      return !text.includes('baseline neutral') && !text.includes('neutral communication patterns');
+      const text = `${f.finding || ''} ${f.description || ''} ${f.evidence || ''}`.toLowerCase();
+      return !isFalsePositiveRiskFinding(text);
     });
 
     const totalComm = commitments.length;

@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@/utils/supabase/server';
 import { ReputationAudit } from '@/types/dashboard';
+import { isFalsePositiveRiskFinding } from './audit-scoring';
 
 interface Opportunity {
   title: string;
@@ -177,10 +178,10 @@ export class PDFGenerationService {
     const pendingComm = commitmentsList.filter(c => c.status === 'pending' || c.status === 'overdue').length;
     const unifiedCommitmentsCount = `${totalComm} tracked, ${completedComm} completed, ${pendingComm} pending`;
 
-    // Filter out placeholder/neutral filler findings
+    // Filter out placeholder/neutral filler findings and false positive routine security alerts
     const findingsList = (data.riskFindings || []).filter(f => {
-      const text = (f.finding || '').toLowerCase();
-      return !text.includes('baseline neutral') && !text.includes('neutral communication patterns');
+      const text = `${f.finding || ''} ${f.evidence || ''}`.toLowerCase();
+      return !isFalsePositiveRiskFinding(text);
     });
 
     const hasCommitments = totalComm > 0;

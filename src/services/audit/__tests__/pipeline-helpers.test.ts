@@ -372,22 +372,75 @@ describe('buildFallbackNarrative', () => {
   });
 });
 
-describe('SCORE_CONSISTENCY_RULE programmatic guard', () => {
-  it('overrides score to 0.0 if findings are empty', () => {
-    let finalRiskScore = 0.5;
-    const finalFindings: unknown[] = [];
-    if (!finalFindings || finalFindings.length === 0) {
-      finalRiskScore = 0.0;
-    }
-    expect(finalRiskScore).toBe(0.0);
+import { isRoutineNotificationOrSystemEmail, isFalsePositiveRiskFinding } from '../audit-scoring';
+
+describe('System notification and false positive risk filters', () => {
+  it('correctly filters routine security notification emails', () => {
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Security alert: New sign-in detected on Vercel account',
+      content: 'A new sign-in was detected from Chrome on Windows.',
+      author: 'notifications@vercel.com'
+    })).toBe(true);
+
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Google Account: New sign-in detected',
+      content: 'Your Google Account was accessed from a new device.',
+      author: 'no-reply@accounts.google.com'
+    })).toBe(true);
+
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Your verification code is 492019',
+      content: 'Use this code to complete two-factor authentication.',
+      author: 'auth@slack.com'
+    })).toBe(true);
   });
 
-  it('keeps score unchanged if findings are non-empty', () => {
-    let finalRiskScore = 0.5;
-    const finalFindings: unknown[] = [{ severity: 'Low', finding: 'Some finding', evidence: 'Some evidence', impact: 'Some impact' }];
-    if (!finalFindings || finalFindings.length === 0) {
-      finalRiskScore = 0.0;
-    }
-    expect(finalRiskScore).toBe(0.5);
+  it('correctly filters resume submissions and job applications', () => {
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Personal resume submission containing PII',
+      content: 'Attached is the updated resume and cover letter.',
+      author: 'user@example.com'
+    })).toBe(true);
+
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Job application received: Senior Engineer',
+      content: 'Thank you for applying. We have received your CV.',
+      author: 'jobs@company.com'
+    })).toBe(true);
+  });
+
+  it('correctly filters OAuth connection notices', () => {
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Google account data shared with Slack',
+      content: 'You granted Slack access to your Google account details.',
+      author: 'accounts@google.com'
+    })).toBe(true);
+  });
+
+  it('does NOT filter real interpersonal messages or work deliverables', () => {
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Project deadline update',
+      content: 'I will finish the backend migration by Friday afternoon.',
+      author: 'colleague@company.com'
+    })).toBe(false);
+
+    expect(isRoutineNotificationOrSystemEmail({
+      title: 'Client dispute regarding deliverable quality',
+      content: 'We need to discuss the missed contract requirements immediately.',
+      author: 'client@partner.com'
+    })).toBe(false);
+  });
+
+  it('correctly identifies false positive risk findings to exclude', () => {
+    expect(isFalsePositiveRiskFinding('New sign-in detected on Vercel/Google account')).toBe(true);
+    expect(isFalsePositiveRiskFinding('Personal resume submission containing PII')).toBe(true);
+    expect(isFalsePositiveRiskFinding('Google account data shared with Slack')).toBe(true);
+    expect(isFalsePositiveRiskFinding('Baseline neutral communication patterns detected')).toBe(true);
+  });
+
+  it('preserves genuine reputation risks in isFalsePositiveRiskFinding', () => {
+    expect(isFalsePositiveRiskFinding('Late deliverable timeline causing client dispute')).toBe(false);
+    expect(isFalsePositiveRiskFinding('API secret key exposed in public chat')).toBe(false);
+    expect(isFalsePositiveRiskFinding('Hostile communication during team retro')).toBe(false);
   });
 });
