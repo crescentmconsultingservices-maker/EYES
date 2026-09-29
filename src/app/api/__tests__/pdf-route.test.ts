@@ -47,24 +47,39 @@ vi.mock('@/utils/supabase/server', () => ({
     };
   }),
   createAdminClient: vi.fn(async () => {
-    const adminQueryBuilder = {
+    const adminQueryBuilder: any = {
       select: vi.fn(() => adminQueryBuilder),
       eq: vi.fn(() => adminQueryBuilder),
       like: vi.fn(() => adminQueryBuilder),
+      in: vi.fn(() => adminQueryBuilder),
       maybeSingle: vi.fn(async () => {
         return { data: hoisted.audit, error: null };
       }),
-      in: vi.fn(async () => {
-        return {
+      then: (resolve: any) => {
+        return Promise.resolve({
           data: [
             { platform: 'gmail' },
             { platform: 'slack' }
           ],
           error: null
-        };
-      })
+        }).then(resolve);
+      }
     };
     return {
+      auth: {
+        admin: {
+          getUserById: vi.fn(async () => ({
+            data: {
+              user: {
+                id: hoisted.userId,
+                email: 'thomasshelby251890@gmail.com',
+                user_metadata: { full_name: 'Tommy Shelby' }
+              }
+            },
+            error: null
+          }))
+        }
+      },
       from: vi.fn(() => adminQueryBuilder)
     };
   })

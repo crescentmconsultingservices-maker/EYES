@@ -493,6 +493,24 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
     const opportunities = (findingsData.opportunities || activeAudit.metadata?.opportunities || []) as any[];
     const entities = (findingsData.entities || activeAudit.metadata?.topEntities || []) as string[];
 
+    const totalComm = commitments.length;
+    const completedComm = commitments.filter((c: any) => c.status === 'completed').length;
+    const pendingComm = commitments.filter((c: any) => c.status === 'pending' || c.status === 'overdue').length;
+    const unifiedCommitmentsCount = `${totalComm} tracked, ${completedComm} completed, ${pendingComm} pending`;
+
+    let plainSummaryLine = '';
+    if (currentScore <= 2.5 && pendingComm === 0 && flaggedItems.length === 0) {
+      plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
+    } else if (pendingComm > 0 && flaggedItems.length > 0) {
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} and ${flaggedItems.length} flagged item${flaggedItems.length !== 1 ? 's' : ''} across audited channels.`;
+    } else if (pendingComm > 0) {
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} awaiting completion, with zero flagged reputation risks.`;
+    } else if (flaggedItems.length > 0) {
+      plainSummaryLine = `All tracked commitments were kept, but ${flaggedItems.length} flagged item${flaggedItems.length !== 1 ? 's' : ''} were identified for review.`;
+    } else {
+      plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
+    }
+
     return (
       <div className={styles.auditContainer}>
         {/* Navigation Header */}
@@ -518,6 +536,18 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
             </button>
           </div>
         </header>
+
+        {/* Plain summary line up top: one sentence a non-technical person understands immediately */}
+        <div className={styles.plainSummaryBanner}>
+          <svg className={styles.plainSummaryIcon} viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {currentScore <= 2.5 && pendingComm === 0 && flaggedItems.length === 0 ? (
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3" />
+            ) : (
+              <circle cx="12" cy="12" r="10" />
+            )}
+          </svg>
+          <span className={styles.plainSummaryText}>{plainSummaryLine}</span>
+        </div>
 
         {/* TOP: Risk score in big text for the currently selected lens */}
         <div className={styles.resultHeroBanner}>
@@ -689,12 +719,21 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
 
         {/* Below tabs: narrative text, commitments list, flagged items, opportunities, key entities */}
         <div className={styles.findingsSectionGrid}>
-          {/* Commitments List */}
-          <section className={styles.findingPanelCard}>
-            <h2 className={styles.findingPanelTitle}>
-              <span>Commitments & Follow-Through ({commitments.length})</span>
-            </h2>
-            {commitments.length > 0 ? (
+          {/* Commitments List - Only rendered if commitments exist */}
+          {commitments.length > 0 && (
+            <section className={styles.findingPanelCard}>
+              <h2 className={styles.findingPanelTitle} style={{ justifyContent: 'space-between' }}>
+                <span>Tracked Commitments</span>
+                <span
+                  className={styles.itemSeverityBadge}
+                  style={{
+                    background: pendingComm > 0 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                    color: pendingComm > 0 ? '#f59e0b' : '#10b981',
+                  }}
+                >
+                  {unifiedCommitmentsCount}
+                </span>
+              </h2>
               <div className={styles.itemsList}>
                 {commitments.slice(0, 8).map((c, i) => {
                   const isPending = c.status === 'pending';
@@ -719,19 +758,15 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                   );
                 })}
               </div>
-            ) : (
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                No unresolved commitments detected in this audit dataset.
-              </p>
-            )}
-          </section>
+            </section>
+          )}
 
-          {/* Flagged Items */}
-          <section className={styles.findingPanelCard}>
-            <h2 className={styles.findingPanelTitle}>
-              <span>Flagged Risk Findings ({flaggedItems.length})</span>
-            </h2>
-            {flaggedItems.length > 0 ? (
+          {/* Flagged Items - Only rendered if findings exist */}
+          {flaggedItems.length > 0 && (
+            <section className={styles.findingPanelCard}>
+              <h2 className={styles.findingPanelTitle}>
+                <span>Flagged Risk Findings ({flaggedItems.length})</span>
+              </h2>
               <div className={styles.itemsList}>
                 {flaggedItems.slice(0, 8).map((f, i) => {
                   const sev = (f.severity || 'Medium').toLowerCase();
@@ -757,19 +792,15 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                   );
                 })}
               </div>
-            ) : (
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                Zero flagged negative items found across connected platforms.
-              </p>
-            )}
-          </section>
+            </section>
+          )}
 
-          {/* Opportunities */}
-          <section className={styles.findingPanelCard}>
-            <h2 className={styles.findingPanelTitle}>
-              <span>Strategic Opportunities ({opportunities.length})</span>
-            </h2>
-            {opportunities.length > 0 ? (
+          {/* Opportunities - Only rendered if opportunities exist */}
+          {opportunities.length > 0 && (
+            <section className={styles.findingPanelCard}>
+              <h2 className={styles.findingPanelTitle}>
+                <span>Strategic Opportunities ({opportunities.length})</span>
+              </h2>
               <div className={styles.itemsList}>
                 {opportunities.slice(0, 4).map((o, i) => (
                   <div key={i} className={styles.itemRowCard}>
@@ -785,19 +816,15 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                Maintain current platform communication discipline.
-              </p>
-            )}
-          </section>
+            </section>
+          )}
 
-          {/* Key Entities */}
-          <section className={styles.findingPanelCard}>
-            <h2 className={styles.findingPanelTitle}>
-              <span>Key Entities & Associations ({entities.length})</span>
-            </h2>
-            {entities.length > 0 ? (
+          {/* Key Entities - Only rendered if entities exist */}
+          {entities.length > 0 && (
+            <section className={styles.findingPanelCard}>
+              <h2 className={styles.findingPanelTitle}>
+                <span>Key Entities & Associations ({entities.length})</span>
+              </h2>
               <div className={styles.entityPillList}>
                 {entities.map((ent, i) => (
                   <span key={i} className={styles.entityPillTag}>
@@ -805,12 +832,20 @@ export function AuditView({ onBack, summary }: AuditViewProps) {
                   </span>
                 ))}
               </div>
-            ) : (
+            </section>
+          )}
+
+          {/* If completely clean profile with no items across all 4 categories */}
+          {commitments.length === 0 && flaggedItems.length === 0 && opportunities.length === 0 && entities.length === 0 && (
+            <section className={styles.findingPanelCard} style={{ textAlign: 'center', padding: '36px 24px' }}>
+              <div style={{ color: 'var(--accent-green, #10b981)', fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
+                Clean Assessment Record
+              </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                No external organization or project entities extracted.
+                No reputation risks, pending commitments, or negative findings identified across connected platforms.
               </p>
-            )}
-          </section>
+            </section>
+          )}
         </div>
       </div>
     );

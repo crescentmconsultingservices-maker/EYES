@@ -143,7 +143,7 @@ ${JSON.stringify(batch)}
 For EVERY record output:
 - id: same uuid as input
 - sentiment: -1 (negative), 0 (neutral), 1 (positive) — integer only, no + prefix
-- isCommitment: true ONLY if the record contains a first-person active commitment, promise, task, or scheduled intention made BY the subject of this audit ("${subjectName}"). It must be a personal commitment from the subject, NOT a received notification, system message, automated email, or statement from another person (e.g. "we will notify you" is NOT a commitment by the subject). If the message is automated, passive, or received from someone else, set isCommitment to false.
+- isCommitment: true ONLY if the record contains an explicit promise, commitment, or deliverable made to SOMEONE ELSE (client, colleague, team, manager, external partner) by the subject ("${subjectName}"). Do NOT count private personal to-dos, reading notes, self-reminders, or personal chores as commitments. Only keep real promises made to other people.
 - commitmentText: exact verbatim text if isCommitment=true, else ""
 - isSensitive: true for financial, legal, conflict, stress, missed deadlines, or confidential content
 - riskDescription: if isSensitive=true or sentiment=-1, a brief 5-10 word description of why it is flagged/sensitive. Be highly concrete and specific (e.g. "API key leak in code block", "Late night deliverable tension"). Avoid vague generalities like "Discussion about protecting assets". Refer to concrete details in the text. Else ""
@@ -225,15 +225,11 @@ Return JSON ONLY:
       }
 
       const nowTs = Date.now();
-      // CRITICAL: Guard against null/undefined from AI — calling .match() on null throws TypeError
-      // which crashes the entire audit into the catch block, producing "AI Analysis failed" errors.
       let analysisResult: { analysis: AnalysisItem[] } = { analysis: [] };
       if (analysisRaw && typeof analysisRaw === 'string') {
         try {
           const jsonMatch = analysisRaw.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            // Groq returns +1 for positive sentiment which is invalid JSON.
-            // Sanitize: replace `: +1` → `: 1` and `: +0` → `: 0` etc.
             const sanitized = jsonMatch[0].replace(/:\s*\+(\d)/g, ': $1');
             analysisResult = JSON.parse(sanitized);
           }
@@ -241,6 +237,10 @@ Return JSON ONLY:
           console.warn(`[Audit] Failed to parse AI analysis JSON for ${auditId}:`, parseErr);
         }
       }
+
+      // Track PII signals without generating copy-pasted findings for routine emails
+      const routinePiiSources = new Set<string>();
+      const sensitivePiiFound: Array<{ label: string; platform: string; eventId: string }> = [];
 
       analysisResult.analysis.forEach((a: AnalysisItem) => {
         const evt = events.find(e => e.id === a.id);
@@ -256,8 +256,7 @@ Return JSON ONLY:
           weightedNeutralMentions += weight;
         }
 
-        // Proactive platform routing: map external notifications (e.g. Sentry/Vercel/GitHub alerts received in Gmail)
-        // to their respective platform.
+        // Proactive platform routing: map external notifications
         let resolvedPlatform = evt.platform;
         const lowerContent = ((evt.content || '') + ' ' + (evt.title || '')).toLowerCase();
         if (evt.platform === 'gmail') {
@@ -276,7 +275,6 @@ Return JSON ONLY:
           }
         }
 
-        // Datadog trial emails: force to gmail since it is a trial expiration email received via Gmail
         if (lowerContent.includes('datadog') && lowerContent.includes('trial')) {
           resolvedPlatform = 'gmail';
         }
@@ -304,26 +302,39 @@ Return JSON ONLY:
 
         if (a.detectedPII && a.detectedPII.length > 0) {
           a.detectedPII.forEach((piiType: string) => {
-            let label = piiType;
-            if (piiType === 'name') label = 'Full legal names';
-            else if (piiType === 'email') label = 'Email addresses';
-            else if (piiType === 'phone') label = 'Phone numbers (intl.)';
-            else if (piiType === 'address') label = 'Physical addresses';
-            else if (piiType === 'id') label = 'National ID / SSN';
-            else if (piiType === 'financial') label = 'Financial identifiers';
-            else if (piiType === 'health') label = 'Health / medical data';
-            else if (piiType === 'biometric') label = 'Biometric identifiers';
-
-            extractedFindings.push({
-              severity: 'Medium',
-              finding: `PII exposure: ${label} detected in ${resolvedPlatform}`,
-              evidence: `Source event: ${evt.id}`,
-              impact: 'Potential PII compliance exposure.',
-              platform: resolvedPlatform
-            });
+            if (['id', 'financial', 'health', 'biometric'].includes(piiType)) {
+              let label = piiType === 'id' ? 'National ID / SSN' : piiType === 'financial' ? 'Financial account numbers' : piiType === 'health' ? 'Health data' : 'Biometric data';
+              sensitivePiiFound.push({ label, platform: resolvedPlatform, eventId: evt.id });
+            } else {
+              routinePiiSources.add(resolvedPlatform);
+            }
           });
         }
       });
+
+      // Add high-severity finding ONLY for genuine sensitive PII leaks
+      sensitivePiiFound.slice(0, 3).forEach(s => {
+        extractedFindings.push({
+          severity: 'High',
+          finding: `Sensitive ${s.label} detected in ${s.platform}`,
+          evidence: `Source event: ${s.eventId}`,
+          impact: 'Potential sensitive data exposure requiring review.',
+          platform: s.platform
+        });
+      });
+
+      // Deduplicate extracted findings by finding description to prevent copy-pasted repeated findings
+      const seenFindingTexts = new Set<string>();
+      const deduplicatedFindings: RiskFinding[] = [];
+      for (const f of extractedFindings) {
+        const key = f.finding.trim().toLowerCase();
+        if (!seenFindingTexts.has(key)) {
+          seenFindingTexts.add(key);
+          deduplicatedFindings.push(f);
+        }
+      }
+      extractedFindings.length = 0;
+      extractedFindings.push(...deduplicatedFindings);
 
       // Stage: cross-ref — commitment vs calendar check begins
       await setStage('cross-ref');

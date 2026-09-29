@@ -97,20 +97,14 @@ function extractEntitiesFromTitles(titles: string[]): string[] {
     'change', 'changed', 'run', 'test', 'build', 'deploy', 'deployment', 'release', 'version', 'new', 'old', 'create', 'created',
     'issue', 'task', 'ticket', 'project', 'user', 'client', 'server', 'api', 'app', 'web', 'site', 'page', 'doc', 'docs', 'document',
     'meeting', 'scheduled', 'scheduled_meeting', 'call', 'calendar', 'schedule', 'event', 'invite', 'accepted', 'declined', 'tentative', 'sync', 'status', 'daily',
-    'weekly', 'monthly', 'coaching', 'guidance', 'upsc', 'ias', 'cse', 'upsc cse', 'ias cse',
-    'tommy', 'alex', 'john', 'david', 'sarah', 'emma', 'james', 'robert', 'michael', 'william', 'mary', 'patricia', 'linda', 'elizabeth',
-    'barbara', 'susan', 'jessica', 'karen', 'nancy', 'lisa', 'sabari', 'sabarish', 'chandra', 'mohan', 'sanjay', 'ram', 'raj', 'kumar',
-    'aaron', 'adam', 'alan', 'albert', 'ben', 'bill', 'bob', 'brian', 'charles', 'chris', 'daniel', 'don', 'donald', 'edward', 'eric',
-    'frank', 'gary', 'george', 'harry', 'henry', 'jack', 'jerry', 'jim', 'joe', 'joseph', 'ken', 'kevin', 'mark', 'paul', 'peter',
-    'philip', 'richard', 'ron', 'sam', 'steve', 'steven', 'thomas', 'tim', 'timothy', 'tony', 'walter', 'friend', 'boss', 'guy', 'dude'
+    'weekly', 'monthly', 'coaching', 'guidance'
   ]);
 
   const freq: Record<string, number> = {};
-  const knownEntities = ['Nirnay IAS', 'Sentry', 'Supabase', 'Mixpanel', 'SAP', 'Vercel', 'Linear', 'ClickUp', 'Notion', 'Asana', 'Twitter', 'Slack', 'Discord', 'Google Calendar', 'Dropbox', 'Canva', 'Strava', 'Fitbit', 'Withings', 'Resend', 'Google'];
-  
+  const knownEntities = ['Sentry', 'Supabase', 'Mixpanel', 'SAP', 'Vercel', 'Linear', 'ClickUp', 'Notion', 'Asana', 'Twitter', 'Slack', 'Discord', 'Google Calendar', 'Dropbox', 'Canva', 'Resend', 'Google'];
+
   titles.forEach(title => {
     if (!title) return;
-    
     knownEntities.forEach(ke => {
       const regex = new RegExp(`\\b${ke}\\b`, 'i');
       if (regex.test(title)) {
@@ -135,13 +129,17 @@ function extractEntitiesFromTitles(titles: string[]): string[] {
 }
 
 /**
- * Reputation & Security Audit: PDF Generation Service
- * Client-Facing & Content-Adaptive: Professional executive language, zero developer jargon.
+ * Reputation & Trust Audit: Dynamic Section-Based PDF Generation
+ *
+ * Rules:
+ * 1. Content fix: One clear count for commitments ("X tracked, Y completed, Z pending").
+ * 2. Only real commitments and real findings. No copy-pasted duplicates.
+ * 3. No unverifiable claims ("Top 15%", "SOC2 Aligned", "Zero AI Training" removed). Factual statements only.
+ * 4. Plain summary line up top: one sentence understandable immediately.
+ * 5. Dynamic layout: Built as flowing sections, NOT fixed forced pages.
+ *    Empty sections are skipped entirely. New pages start only when space is exhausted.
  */
 export class PDFGenerationService {
-  /**
-   * Draws the structured PDF document onto the provided PDFKit instance.
-   */
   static draw(doc: PDFKit.PDFDocument, data: NormalizedAuditData) {
     const FONT_BODY = 'Helvetica';
     const FONT_BOLD = 'Helvetica-Bold';
@@ -151,507 +149,319 @@ export class PDFGenerationService {
     const INK_BLACK = '#0A0A0A';
     const FOREST_GREEN = '#1F4D3F';
     const MUTED_RED = '#8B2E2E';
+    const AMBER_GOLD = '#B8860B';
     const GRAY_FOOTER = '#555555';
     const LIGHT_GRAY = '#E5E5DF';
     const CARD_BG = '#F4F4EE';
 
     const W = doc.page.width;
     const H = doc.page.height;
+    const MARGIN_LEFT = 50;
+    const MARGIN_BOTTOM = 60;
+    const CONTENT_WIDTH = W - 100; // 495pt
 
     const drawBackground = () => doc.rect(0, 0, W, H).fill(BG_CREAM);
 
-    const getSectionTitles = (auditType: string) => {
-      const type = auditType === 'reputation' ? 'investor_reputation' :
-                   auditType === 'behavioral' ? 'behavioral_self' :
-                   auditType === 'hiring' ? 'hiring_professional' : 'full_reputation_audit';
-      
-      const SECTION_TITLES = {
-        behavioral_self: {
-          section2: "BEHAVIORAL TRAJECTORY & SELF-AWARENESS ASSESSMENT",
-          section6: "PERSONAL COMMITMENTS & DEVELOPMENT OPPORTUNITIES",
-          section7: "PERSONAL BEHAVIORAL PATTERNS TO ADDRESS",
-        },
-        investor_reputation: {
-          section2: "REPUTATIONAL STANDING & INVESTOR DILIGENCE ASSESSMENT",
-          section6: "COMMITMENT INTEGRITY & REPUTATIONAL OPPORTUNITIES",
-          section7: "INVESTOR DILIGENCE ATTENTION AREAS",
-        },
-        hiring_professional: {
-          section2: "PROFESSIONAL PROFILE & WORK ETHIC ASSESSMENT",
-          section6: "PROFESSIONAL COMMITMENTS & COLLABORATION OPPORTUNITIES",
-          section7: "PROFESSIONAL INTEGRITY OBSERVATIONS",
-        },
-        full_reputation_audit: {
-          section2: "360° REPUTATION PROFILE & INTEGRITY ASSESSMENT",
-          section6: "COMMITMENT INTEGRITY & STRATEGIC RECOMMENDATIONS",
-          section7: "FULL-SPECTRUM RISK & COMPLIANCE FINDINGS",
-        },
-      };
-      return SECTION_TITLES[type] || SECTION_TITLES.full_reputation_audit;
+    const ensureSpace = (neededHeight: number) => {
+      if (doc.y + neededHeight > H - MARGIN_BOTTOM) {
+        doc.addPage();
+        drawBackground();
+        doc.y = 50;
+      }
     };
 
-    const titles = getSectionTitles(data.auditType || 'full');
+    // Calculate unified commitments metrics: ONE number, ONE meaning
+    const commitmentsList = data.commitments || [];
+    const totalComm = commitmentsList.length;
+    const completedComm = commitmentsList.filter(c => c.status === 'completed').length;
+    const pendingComm = commitmentsList.filter(c => c.status === 'pending' || c.status === 'overdue').length;
+    const unifiedCommitmentsCount = `${totalComm} tracked, ${completedComm} completed, ${pendingComm} pending`;
 
-    const hasFindings = (data.riskFindings || []).length > 0;
-    const hasCommitments = (data.commitments || []).length > 0;
-    const isCleanAudit = !hasFindings && !hasCommitments;
+    const findingsList = data.riskFindings || [];
+    const hasCommitments = totalComm > 0;
+    const hasFindings = findingsList.length > 0;
+    const hasOpportunities = (data.opportunities || []).length > 0;
+    const hasEntities = (data.topEntities || []).length > 0;
 
-    // Lens Name
+    // Lens Display Name
     let lensDisplayName = 'Full Reputation & Trust Audit';
-    if (data.auditType === 'reputation') {
-      lensDisplayName = 'Investor / Due Diligence';
-    } else if (data.auditType === 'behavioral') {
-      lensDisplayName = 'Personal Behavioral Analysis';
+    if (data.auditType === 'investor' || data.auditType === 'reputation') {
+      lensDisplayName = 'Investor & Diligence Lens';
     } else if (data.auditType === 'hiring') {
-      lensDisplayName = 'Executive & Professional Profile';
+      lensDisplayName = 'Professional & Hiring Lens';
+    } else if (data.auditType === 'behavioral') {
+      lensDisplayName = 'Behavioral & Self-Reflection Lens';
     }
 
     const dateObj = new Date(data.createdAt);
     const dateStr = `${dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · ${dateObj.getUTCHours().toString().padStart(2, '0')}:${dateObj.getUTCMinutes().toString().padStart(2, '0')} UTC`;
-    const startRange = new Date(new Date(data.createdAt).getTime() - 24 * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const endRange = new Date(data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const startRange = new Date(new Date(data.createdAt).getTime() - 24 * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const endRange = new Date(data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-    // =========================================================================
-    // MODE 1: CONTENT-ADAPTIVE CLEAN DOSSIER (Client-Facing & Executive Grade)
-    // Used when there are 0 broken commitments and 0 risk findings.
-    // =========================================================================
-    if (isCleanAudit) {
-      // ─── PAGE 1: CERTIFICATE SEAL & EXECUTIVE PROFILE ─────────────────────
-      drawBackground();
-
-      // Top EYES Wordmark & Official Attestation Tag
-      doc.fillColor(FOREST_GREEN).font(FONT_BOLD).fontSize(14).text('EYES', 50, 52);
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text('Reputation & Digital Trust Intelligence', 50, 67);
-      doc.font(FONT_BOLD).fontSize(8).fillColor(MUTED_RED).text('CONFIDENTIAL · VERIFIED AUDIT CERTIFICATE', 50, 82);
-
-      // Main Certificate Title
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(22).text('Reputation Audit Certificate', 50, 110);
-      doc.moveTo(50, 138).lineTo(W - 50, 138).strokeColor(FOREST_GREEN).lineWidth(1.5).stroke();
-
-      // Executive Metadata 2-Column Grid
-      let metaY = 150;
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SELECTED LENS', 50, metaY);
-      doc.font(FONT_BODY).fontSize(9).fillColor(INK_BLACK).text(lensDisplayName, 150, metaY);
-
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SCAN WINDOW', 315, metaY);
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(`${startRange} to ${endRange}`, 415, metaY);
-
-      metaY += 19;
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('PREPARED FOR', 50, metaY);
-      doc.font(FONT_BOLD).fontSize(9).fillColor(INK_BLACK).text(data.subjectName, 150, metaY);
-
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('CERTIFICATE ID', 315, metaY);
-      doc.font(FONT_MONO).fontSize(8.5).fillColor(INK_BLACK).text(`EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, 415, metaY);
-
-      metaY += 19;
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('DATE CERTIFIED', 50, metaY);
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(dateStr, 150, metaY);
-
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('AUDIT STANDARD', 315, metaY);
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(FOREST_GREEN).text('Privacy-First · SOC2 & GDPR Aligned', 415, metaY);
-
-      metaY += 19;
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SOURCES EVALUATED', 50, metaY);
-      const friendlyConnectors = (data.connectorsCovered || []).map(formatPlatformName).join(', ');
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(friendlyConnectors, 150, metaY, { width: 395 });
-
-      // Composite Risk Score Card
-      const scoreBoxY = 236;
-      doc.rect(50, scoreBoxY, 495, 56).fill(CARD_BG);
-      doc.rect(50, scoreBoxY, 495, 56).strokeColor(LIGHT_GRAY).lineWidth(0.8).stroke();
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('COMPOSITE REPUTATION RISK SCORE', 65, scoreBoxY + 10);
-      doc.font(FONT_BOLD).fontSize(20).fillColor(FOREST_GREEN).text(`${data.riskScore.toFixed(1)} / 10.0`, 65, scoreBoxY + 24);
-
-      doc.font(FONT_BOLD).fontSize(12).fillColor(FOREST_GREEN).text('LOW RISK · OPTIMAL STANDING', 280, scoreBoxY + 12, { align: 'right', width: 250 });
-      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Top 15% of Founders & Operators (Industry Benchmark: 1.8)', 280, scoreBoxY + 31, { align: 'right', width: 250 });
-
-      // Section 2: Executive Summary
-      const execY = scoreBoxY + 68;
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(13).text('Executive Summary', 50, execY);
-      doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(`§ 2 — ${titles.section2}`, 50, execY + 15);
-      doc.moveTo(50, execY + 26).lineTo(W - 50, execY + 26).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
-
-      // 3 Bento Metric Cards
-      const bentoY = execY + 34;
-      const bentoW = (495 - 20) / 3;
-      
-      // Card 1: Total Records
-      doc.rect(50, bentoY, bentoW, 46).fill(CARD_BG);
-      doc.rect(50, bentoY, bentoW, 46).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(String(data.mentionsCount), 62, bentoY + 8);
-      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Total Interactions Evaluated', 62, bentoY + 28);
-
-      // Card 2: Tone & Sentiment
-      const bento2X = 50 + bentoW + 10;
-      doc.rect(bento2X, bentoY, bentoW, 46).fill(CARD_BG);
-      doc.rect(bento2X, bentoY, bentoW, 46).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(14).fillColor(FOREST_GREEN).text(`${Math.round(data.sentimentBalance * 100)}%`, bento2X + 12, bentoY + 8);
-      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Positive & Professional Tone', bento2X + 12, bentoY + 28);
-
-      // Card 3: Commitments
-      const bento3X = bento2X + bentoW + 10;
-      doc.rect(bento3X, bentoY, bentoW, 46).fill(CARD_BG);
-      doc.rect(bento3X, bentoY, bentoW, 46).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text('0', bento3X + 12, bentoY + 8);
-      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Unfulfilled Commitments', bento3X + 12, bentoY + 28);
-
-      // Narrative Summary paragraph
-      const narrY = bentoY + 54;
-      doc.font(FONT_BODY).fontSize(9).fillColor(INK_BLACK);
-      const narrativeText = data.summaryNarrative || 'No summary narrative available.';
-      doc.text(narrativeText, 50, narrY, { width: 495, lineGap: 3.5 });
-      const narrHeight = doc.heightOfString(narrativeText, { width: 495, lineGap: 3.5 });
-
-      // Clean Verification Box
-      const cleanBoxY = narrY + narrHeight + 12;
-      doc.rect(50, cleanBoxY, 495, 46).fill(CARD_BG);
-      doc.rect(50, cleanBoxY, 495, 46).strokeColor(FOREST_GREEN).lineWidth(0.8).stroke();
-      doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('[VERIFIED] CLEAN REPUTATIONAL BASELINE', 65, cleanBoxY + 11);
-      doc.font(FONT_BODY).fontSize(7.5).fillColor(INK_BLACK).text(
-        'All audited communications, commitments, and calendar interactions conform to optimal business standards with 0 broken promises and 0 conflict markers detected.',
-        65, cleanBoxY + 24, { width: 465 }
-      );
-
-      // Published Methodology & Evaluation Framework
-      const methY = cleanBoxY + 56;
-      doc.rect(50, methY, 495, 84).fill(CARD_BG);
-      doc.rect(50, methY, 495, 84).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(FOREST_GREEN).text('EVALUATION CRITERIA & REPUTATIONAL FRAMEWORK', 65, methY + 10);
-      doc.font(FONT_BODY).fontSize(7.5).fillColor(INK_BLACK).text(
-        '• Sentiment & Professional Tone: Analyzes linguistic patterns across emails and messages to detect friction or escalations.\n' +
-        '• Commitment Accountability: Cross-references promises and deadlines against calendar follow-through to ensure integrity.\n' +
-        '• Recency Focus: Recent interactions (within 30 days) carry primary weight, ensuring the score reflects your current operating standards.',
-        65, methY + 25, { width: 465, lineGap: 3 }
-      );
-
-      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(
-        'This official certificate is digitally bound to the verified identifier above and is non-transferable.',
-        50, H - 52, { align: 'center', width: W - 100 }
-      );
-
-      // ─── PAGE 2: INVENTORY, RECOMMENDATIONS & PRIVACY RIGHTS ─────────────
-      doc.addPage();
-      drawBackground();
-
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(14).text('Data Source Inventory & Strategic Guidance', 50, 68);
-      doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text('§ 3 — SOURCE MATRIX, STRATEGIC RECOMMENDATIONS & GUARANTEED PRIVACY RIGHTS', 50, 84);
-      doc.moveTo(50, 96).lineTo(W - 50, 96).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
-
-      // Platform Inventory Table
-      let invY = 108;
-      doc.font(FONT_BOLD).fontSize(9).fillColor(FOREST_GREEN).text('DATA SOURCE INVENTORY MATRIX', 50, invY);
-      invY += 14;
-
-      // Table Header
-      doc.rect(50, invY, 495, 20).fill(CARD_BG);
-      doc.rect(50, invY, 495, 20).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER);
-      doc.text('PLATFORM', 62, invY + 6);
-      doc.text('CATEGORY', 150, invY + 6);
-      doc.text('VOLUME EVALUATED', 240, invY + 6);
-      doc.text('KEY TOPICS & ENTITIES', 345, invY + 6);
-      doc.text('STATUS', 465, invY + 6);
-
-      invY += 20;
-      const targetPlatforms = data.connectorsCovered && data.connectorsCovered.length > 0 
-        ? data.connectorsCovered 
-        : ['gmail', 'google_calendar', 'github', 'facebook'];
-
-      targetPlatforms.forEach((p) => {
-        const key = p.toLowerCase();
-        const pInfo = data.platformData[key] || { count: 0, category: 'Productivity' };
-        const pName = formatPlatformName(p);
-        const friendlyCount = formatInteractionType(p, pInfo.count);
-        const entList = (pInfo.entities && pInfo.entities.length > 0) ? pInfo.entities.slice(0, 2).join(', ') : 'Verified Vault Data';
-
-        doc.rect(50, invY, 495, 22).fill(BG_CREAM);
-        doc.rect(50, invY, 495, 22).strokeColor(LIGHT_GRAY).lineWidth(0.3).stroke();
-
-        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(pName, 62, invY + 6);
-        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(pInfo.category || 'Productivity', 150, invY + 6);
-        doc.font(FONT_BODY).fontSize(7.5).fillColor(INK_BLACK).text(friendlyCount, 240, invY + 6);
-        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(entList, 345, invY + 6, { width: 110, ellipsis: true });
-        doc.font(FONT_BOLD).fontSize(7.5).fillColor(FOREST_GREEN).text('VERIFIED', 465, invY + 6);
-
-        invY += 22;
-      });
-
-      // Strategic Recommendations Section
-      invY += 14;
-      doc.font(FONT_BOLD).fontSize(9).fillColor(FOREST_GREEN).text('STRATEGIC GROWTH & REPUTATIONAL RECOMMENDATIONS', 50, invY);
-      invY += 14;
-
-      const opps = (data.opportunities || []).slice(0, 3);
-      opps.forEach((o) => {
-        doc.rect(50, invY, 495, 36).fill(CARD_BG);
-        doc.rect(50, invY, 495, 36).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-
-        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(o.title, 62, invY + 6);
-        doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(o.description, 62, invY + 17, { width: 335, height: 16, ellipsis: true });
-        
-        doc.font(FONT_BOLD).fontSize(6.5).fillColor(FOREST_GREEN).text(
-          `Priority: ${o.priority || 'Medium'}  ·  Impact: Positive Risk Reduction`,
-          405, invY + 13, { align: 'right', width: 130 }
-        );
-
-        invY += 41;
-      });
-
-      // Cross-Lens Consistency Note
-      invY += 6;
-      doc.rect(50, invY, 495, 36).fill(CARD_BG);
-      doc.rect(50, invY, 495, 36).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-      doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('CROSS-PLATFORM ALIGNMENT & CONSISTENCY', 62, invY + 6);
-      doc.font(FONT_BOLD).fontSize(8).fillColor(FOREST_GREEN).text('CONSISTENCY RATING: HIGH (EXEMPLARY)', 62, invY + 17);
-      doc.font(FONT_BODY).fontSize(7).fillColor(INK_BLACK).text(
-        'Zero cross-platform contradictions or conflicting commitments detected across your active communication channels.',
-        235, invY + 17, { width: 295 }
-      );
-      invY += 46;
-
-      // User Privacy Rights & Statutory Protections (Empowering & Client-First)
-      doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('YOUR GUARANTEED PRIVACY RIGHTS & STATUTORY PROTECTIONS', 50, invY);
-      invY += 12;
-      doc.rect(50, invY, 495, 62).fill(CARD_BG);
-      doc.rect(50, invY, 495, 62).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
-
-      doc.font(FONT_BODY).fontSize(7).fillColor(INK_BLACK).text(
-        '• 100% Data Sovereignty: All analysis is conducted strictly read-only via authorized OAuth connectors. We never search public web brokers or external scrapers.\n' +
-        '• Zero AI Model Training: Your private emails, calendar events, and internal communications are strictly confidential and are NEVER used to train AI models.\n' +
-        '• GDPR Articles 15, 17 & 20 Rights: You retain the unconditional right to export, inspect, or permanently erase your data vault (Right to be Forgotten) at any time.\n' +
-        '• Enterprise-Grade Encryption: All connector access tokens are encrypted in Supabase using military-grade AES-256-GCM encryption.',
-        62, invY + 8, { width: 470, lineGap: 3 }
-      );
-
-      // Cryptographic Digital Authenticity Seal
-      const sigY = H - 110;
-      doc.moveTo(50, sigY - 8).lineTo(W - 50, sigY - 8).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-
-      doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text('CRYPTOGRAPHIC DIGITAL AUTHENTICITY SEAL', 50, sigY);
-      const shaHash = crypto.createHash('sha256').update(data.id + data.createdAt + data.riskScore).digest('hex');
-      doc.font(FONT_MONO).fontSize(8).fillColor(FOREST_GREEN).text(`SHA-256: ${shaHash.slice(0, 32)}`, 50, sigY + 12);
-      doc.text(`         ${shaHash.slice(32)}`, 50, sigY + 22);
-
-      doc.font(FONT_BODY).fontSize(6.5).fillColor(GRAY_FOOTER).text(
-        'This certificate is digitally sealed. Any tampering or unauthorized modification immediately invalidates this verification.',
-        50, sigY + 34, { width: 280 }
-      );
-
-      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Certificate ID: EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, 350, sigY + 12);
-      doc.text(`Certified: ${dateStr}`, 350, sigY + 22);
-
-      return;
+    // 1. Plain summary line up top: one clear sentence
+    let plainSummaryLine = '';
+    if (data.riskScore <= 2.5 && pendingComm === 0 && findingsList.length === 0) {
+      plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
+    } else if (pendingComm > 0 && findingsList.length > 0) {
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} and ${findingsList.length} flagged item${findingsList.length !== 1 ? 's' : ''} across audited channels.`;
+    } else if (pendingComm > 0) {
+      plainSummaryLine = `Your data shows ${pendingComm} open commitment${pendingComm !== 1 ? 's' : ''} awaiting completion, with zero flagged reputation risks.`;
+    } else if (findingsList.length > 0) {
+      plainSummaryLine = `All tracked commitments were kept, but ${findingsList.length} flagged item${findingsList.length !== 1 ? 's' : ''} were identified for review.`;
+    } else {
+      plainSummaryLine = 'Your data shows no reputation risks. All tracked commitments were kept.';
     }
 
-    // =========================================================================
-    // MODE 2: DYNAMIC MULTI-PAGE DOSSIER (Expanded When Issues / Evidence Exist)
-    // =========================================================================
-
-    // --- PAGE 1: COVER ---
+    // ─── START DYNAMIC FLOW ───
     drawBackground();
-    
-    doc.fillColor(FOREST_GREEN).font(FONT_BOLD).fontSize(14).text('EYES', 50, 60);
-    doc.font(FONT_BODY).fontSize(9).fillColor(GRAY_FOOTER).text('Reputation & Digital Trust Intelligence', 50, 75);
-    doc.font(FONT_BOLD).fontSize(8.5).fillColor(MUTED_RED).text('CONFIDENTIAL · AUDIT CERTIFICATE', 50, 95);
+    doc.y = 50;
 
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(24).text('Reputation Audit Certificate', 50, 160);
-    doc.moveTo(50, 195).lineTo(W - 50, 195).strokeColor(FOREST_GREEN).lineWidth(2).stroke();
+    // Header Wordmark & Tag
+    doc.fillColor(FOREST_GREEN).font(FONT_BOLD).fontSize(14).text('EYES', MARGIN_LEFT, doc.y);
+    doc.font(FONT_BODY).fontSize(8.5).fillColor(GRAY_FOOTER).text('Reputation & Digital Trust Intelligence', MARGIN_LEFT, doc.y + 2);
+    doc.font(FONT_BOLD).fontSize(8).fillColor(MUTED_RED).text('CONFIDENTIAL · AUDIT CERTIFICATE', MARGIN_LEFT, doc.y + 3);
 
-    let covY = 230;
-    const renderCoverField = (label: string, val: string) => {
-      doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text(label.toUpperCase(), 50, covY);
-      doc.font(FONT_BODY).fontSize(10).fillColor(INK_BLACK).text(val, 200, covY);
-      covY += 26;
-    };
+    // Title
+    doc.y += 10;
+    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(20).text('Reputation Audit Certificate', MARGIN_LEFT, doc.y);
+    doc.y += 6;
+    doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(1.5).stroke();
+    doc.y += 10;
 
-    renderCoverField('SELECTED LENS', lensDisplayName);
-    renderCoverField('PREPARED FOR', data.subjectName);
-    renderCoverField('DATE CERTIFIED', dateStr);
-    renderCoverField('SCAN WINDOW', `${startRange} to ${endRange}`);
-    renderCoverField('CERTIFICATE ID', `EYES-RA-${data.id.slice(0, 8).toUpperCase()}`);
-    renderCoverField('AUDIT STANDARD', 'Privacy-First · SOC2 & GDPR Aligned');
+    // Metadata 2-Column Grid
+    const metaStartY = doc.y;
+    const col2X = MARGIN_LEFT + 250;
 
-    // Risk Score Box
-    doc.rect(50, 430, 495, 65).fill(CARD_BG);
-    doc.rect(50, 430, 495, 65).strokeColor(LIGHT_GRAY).lineWidth(0.8).stroke();
-    doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text('COMPOSITE REPUTATION RISK SCORE', 65, 442);
-    doc.font(FONT_BOLD).fontSize(20).fillColor(INK_BLACK).text(`${data.riskScore.toFixed(1)} / 10.0`, 65, 457);
-    
-    const riskLabel = data.riskScore > 7.5 ? 'CRITICAL RISK' : data.riskScore > 5.0 ? 'HIGH RISK' : data.riskScore > 2.5 ? 'MODERATE RISK' : 'LOW RISK';
-    const riskColor = data.riskScore > 5 ? MUTED_RED : data.riskScore > 2.5 ? '#B8860B' : FOREST_GREEN;
-    doc.font(FONT_BOLD).fontSize(13).fillColor(riskColor).text(riskLabel, 300, 443, { align: 'right', width: 230 });
-    
-    const riskBenchmark = data.riskScore > 7.5 
-      ? 'Bottom 10% of Founders (Benchmark: 5.2)' 
-      : data.riskScore > 5.0 
-        ? 'Bottom 30% of Founders (Benchmark: 4.8)' 
-        : data.riskScore > 2.5 
-          ? 'Top 40% of Founders (Benchmark: 3.2)' 
-          : 'Top 15% of Founders & Operators (Benchmark: 1.8)';
-    doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(riskBenchmark, 300, 468, { align: 'right', width: 230 });
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SELECTED LENS', MARGIN_LEFT, metaStartY);
+    doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(lensDisplayName, MARGIN_LEFT + 100, metaStartY);
 
-    doc.font(FONT_BOLD).fontSize(8).fillColor(GRAY_FOOTER).text('SOURCES EVALUATED', 50, 520);
-    const friendlyConnectorsCovered = (data.connectorsCovered || []).map(formatPlatformName).join(', ');
-    doc.font(FONT_BODY).fontSize(9).fillColor(INK_BLACK).text(friendlyConnectorsCovered, 50, 535, { width: 495, lineGap: 4 });
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SCAN WINDOW', col2X, metaStartY);
+    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(`${startRange} to ${endRange}`, col2X + 85, metaStartY);
 
-    doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('This certificate is digitally bound to the verified identifier above and is non-transferable.', 50, 720, { align: 'center', width: W - 100 });
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('PREPARED FOR', MARGIN_LEFT, metaStartY + 15);
+    doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(data.subjectName, MARGIN_LEFT + 100, metaStartY + 15);
 
-    // --- PAGE 2: EXECUTIVE SUMMARY ---
-    doc.addPage();
-    drawBackground();
-    
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Executive Summary', 50, 60);
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ 2 — ${titles.section2}`, 50, 78);
-    doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('CERTIFICATE ID', col2X, metaStartY + 15);
+    doc.font(FONT_MONO).fontSize(8).fillColor(INK_BLACK).text(`EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, col2X + 85, metaStartY + 15);
 
-    doc.font(FONT_BODY).fontSize(10).fillColor(INK_BLACK);
-    const narrativeText = data.summaryNarrative || 'No summary narrative available.';
-    doc.text(narrativeText, 50, 115, { width: 495, lineGap: 4 });
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('DATE CERTIFIED', MARGIN_LEFT, metaStartY + 30);
+    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(dateStr, MARGIN_LEFT + 100, metaStartY + 30);
 
-    const metricY = 220;
-    doc.rect(50, metricY, 495, 60).fill(CARD_BG);
-    doc.rect(50, metricY, 495, 60).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('DATA STANDARD', col2X, metaStartY + 30);
+    doc.font(FONT_BODY).fontSize(8).fillColor(FOREST_GREEN).text('Read-only access · Data not shared with third parties', col2X + 85, metaStartY + 30);
 
-    doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(String(data.mentionsCount), 70, metricY + 12);
-    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text('Total Interactions\nEvaluated', 70, metricY + 30);
+    doc.y = metaStartY + 48;
 
-    doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(`${(data.sentimentBalance * 100).toFixed(0)}%`, 240, metricY + 12);
-    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text('Positive &\nProfessional Tone', 240, metricY + 30);
+    // SECTION 1: Plain Summary Line Up Top Banner
+    ensureSpace(44);
+    const sumBannerY = doc.y;
+    doc.rect(MARGIN_LEFT, sumBannerY, CONTENT_WIDTH, 38).fill(CARD_BG);
+    doc.rect(MARGIN_LEFT, sumBannerY, CONTENT_WIDTH, 38).strokeColor(FOREST_GREEN).lineWidth(1).stroke();
+    doc.font(FONT_BOLD).fontSize(9).fillColor(FOREST_GREEN).text(plainSummaryLine, MARGIN_LEFT + 14, sumBannerY + 12, { width: CONTENT_WIDTH - 28 });
+    doc.y = sumBannerY + 48;
 
-    doc.font(FONT_BOLD).fontSize(14).fillColor(INK_BLACK).text(String(data.commitmentsCount), 410, metricY + 12);
-    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text('Unfulfilled\nCommitments', 410, metricY + 30);
+    // SECTION 2: Composite Risk Score & Unified Metrics
+    ensureSpace(60);
+    const scoreBoxY = doc.y;
+    const scoreCardW = 160;
+    const metricsW = CONTENT_WIDTH - scoreCardW - 12;
 
-    const barY = 320;
-    doc.font(FONT_BOLD).fontSize(10).fillColor(INK_BLACK).text('COMPOSITE REPUTATION RISK EVALUATION', 50, barY);
-    doc.rect(50, barY + 18, 495, 12).fill(LIGHT_GRAY);
-    const scoreWidth = Math.min(495, (data.riskScore / 10.0) * 495);
-    doc.rect(50, barY + 18, scoreWidth, 12).fill(riskColor);
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(INK_BLACK).text(`Risk level evaluated at ${data.riskScore.toFixed(1)} / 10.0.`, 50, barY + 38);
+    // Left: Score Box
+    doc.rect(MARGIN_LEFT, scoreBoxY, scoreCardW, 54).fill(CARD_BG);
+    doc.rect(MARGIN_LEFT, scoreBoxY, scoreCardW, 54).strokeColor(LIGHT_GRAY).lineWidth(0.8).stroke();
+    doc.font(FONT_BOLD).fontSize(7).fillColor(GRAY_FOOTER).text('RISK SCORE', MARGIN_LEFT + 12, scoreBoxY + 8);
+    doc.font(FONT_BOLD).fontSize(20).fillColor(data.riskScore > 5 ? MUTED_RED : data.riskScore > 2.5 ? AMBER_GOLD : FOREST_GREEN)
+       .text(`${data.riskScore.toFixed(1)} / 10.0`, MARGIN_LEFT + 12, scoreBoxY + 22);
 
-    // Published Methodology
-    const methodY = 460;
-    doc.rect(50, methodY, 495, 150).fill(CARD_BG);
-    doc.rect(50, methodY, 495, 150).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-    doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('EVALUATION CRITERIA & REPUTATIONAL FRAMEWORK', 65, methodY + 15);
-    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(
-      '• Sentiment & Professional Tone: Analyzes linguistic patterns across emails and messages to detect friction or escalations.\n' +
-      '• Commitment Accountability: Cross-references promises and deadlines against calendar follow-through to ensure integrity.\n' +
-      '• Recency Focus: Recent interactions (within 30 days) carry primary weight, ensuring the score reflects your current operating standards.',
-      65, methodY + 32, { width: 465, lineGap: 3 }
-    );
+    // Right: Unified Metrics (Interactions, Commitments, Tone)
+    const metricsX = MARGIN_LEFT + scoreCardW + 12;
+    doc.rect(metricsX, scoreBoxY, metricsW, 54).fill(CARD_BG);
+    doc.rect(metricsX, scoreBoxY, metricsW, 54).strokeColor(LIGHT_GRAY).lineWidth(0.8).stroke();
 
-    // Dynamic Commitments Page (Only rendered if commitments exist)
+    const mColW = (metricsW - 20) / 3;
+    // Col 1: Interactions
+    doc.font(FONT_BOLD).fontSize(11).fillColor(INK_BLACK).text(String(data.mentionsCount), metricsX + 10, scoreBoxY + 10);
+    doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Interactions evaluated', metricsX + 10, scoreBoxY + 28);
+
+    // Col 2: Commitments (One number, one meaning: unified count)
+    const m2X = metricsX + mColW + 10;
+    doc.font(FONT_BOLD).fontSize(8.5).fillColor(pendingComm > 0 ? AMBER_GOLD : FOREST_GREEN).text(unifiedCommitmentsCount, m2X, scoreBoxY + 10, { width: mColW + 35 });
+    doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Tracked commitments', m2X, scoreBoxY + 34);
+
+    // Col 3: Tone
+    const m3X = m2X + mColW + 10;
+    doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text(`${Math.round(data.sentimentBalance * 100)}%`, m3X, scoreBoxY + 10);
+    doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text('Positive / neutral tone', m3X, scoreBoxY + 28);
+
+    doc.y = scoreBoxY + 64;
+
+    // SECTION 3: Executive Summary & Narrative
+    ensureSpace(60);
+    doc.font(FONT_BOLD).fontSize(12).fillColor(INK_BLACK).text('Executive Summary', MARGIN_LEFT, doc.y);
+    doc.y += 2;
+    doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+    doc.y += 8;
+
+    const narrative = data.summaryNarrative || plainSummaryLine;
+    doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(narrative, MARGIN_LEFT, doc.y, { width: CONTENT_WIDTH, lineGap: 3.5 });
+    doc.y += 14;
+
+    // SECTION 4: Tracked Commitments (ONLY rendered if commitments exist)
     if (hasCommitments) {
-      doc.addPage();
-      drawBackground();
+      ensureSpace(50);
+      doc.font(FONT_BOLD).fontSize(12).fillColor(INK_BLACK).text(`Tracked Commitments (${unifiedCommitmentsCount})`, MARGIN_LEFT, doc.y);
+      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Direct deliverables and promises made to other people', MARGIN_LEFT, doc.y + 1);
+      doc.y += 4;
+      doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      doc.y += 8;
 
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Commitments & Accountability Ledger', 50, 60);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ 3 — ${titles.section6}`, 50, 78);
-      doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      commitmentsList.slice(0, 10).forEach(c => {
+        ensureSpace(34);
+        const cardY = doc.y;
+        const isDone = c.status === 'completed';
+        const stColor = isDone ? FOREST_GREEN : AMBER_GOLD;
+        const stLabel = isDone ? 'COMPLETED' : 'PENDING';
 
-      const colWidth = 235;
-      const colGap = 25;
-      const col1X = 50;
-      const col2X = col1X + colWidth + colGap;
-      const listY = 115;
+        doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 30).fill(CARD_BG);
+        doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 30).strokeColor(LIGHT_GRAY).lineWidth(0.4).stroke();
 
-      doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('IDENTIFIED COMMITMENTS', col1X, listY);
-      let commY = listY + 20;
-      (data.commitments || []).slice(0, 8).forEach((c) => {
-        doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(c.text, col1X, commY, { width: colWidth, height: 24, ellipsis: true });
-        const statusLabel = (c.status || 'pending').toUpperCase();
-        const statusColor = c.status === 'completed' ? FOREST_GREEN : c.status === 'overdue' ? MUTED_RED : '#B8860B';
-        doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Status: `, col1X, commY + 26);
-        const stW = doc.widthOfString('Status: ');
-        doc.font(FONT_BOLD).fillColor(statusColor).text(statusLabel, col1X + stW, commY + 26);
-        const metaW = doc.widthOfString(statusLabel);
-        doc.font(FONT_MONO).fillColor(GRAY_FOOTER).text(` · Ref: ${(c.citation || '').slice(0, 8).toUpperCase() || 'N/A'}`, col1X + stW + metaW, commY + 26);
-        commY += 45;
+        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(c.text, MARGIN_LEFT + 10, cardY + 6, { width: CONTENT_WIDTH - 110, ellipsis: true });
+        doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(`Source: ${formatPlatformName(c.platform)} · Ref: ${(c.citation || '').slice(0, 8).toUpperCase()}`, MARGIN_LEFT + 10, cardY + 18);
+
+        // Status pill
+        doc.rect(MARGIN_LEFT + CONTENT_WIDTH - 90, cardY + 7, 80, 16).fill(isDone ? '#E6F4EA' : '#FEF3C7');
+        doc.font(FONT_BOLD).fontSize(7).fillColor(stColor).text(stLabel, MARGIN_LEFT + CONTENT_WIDTH - 90, cardY + 11, { align: 'center', width: 80 });
+
+        doc.y = cardY + 34;
       });
-
-      doc.font(FONT_BOLD).fontSize(11).fillColor(FOREST_GREEN).text('STRATEGIC RECOMMENDATIONS', col2X, listY);
-      let oppY = listY + 20;
-      (data.opportunities || []).slice(0, 5).forEach((o) => {
-        doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(o.title, col2X, oppY, { width: colWidth });
-        const titleHeight = doc.heightOfString(o.title, { width: colWidth });
-        doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text(o.description, col2X, oppY + titleHeight + 2, { width: colWidth, height: 28, ellipsis: true });
-        oppY += titleHeight + 36;
-      });
+      doc.y += 8;
     }
 
-    // Dynamic Risk Findings Page (Only rendered if findings exist)
+    // SECTION 5: Risk Findings & Diligence Observations (ONLY rendered if findings exist)
     if (hasFindings) {
-      doc.addPage();
-      drawBackground();
+      ensureSpace(50);
+      doc.font(FONT_BOLD).fontSize(12).fillColor(INK_BLACK).text(`Risk Findings & Observations (${findingsList.length})`, MARGIN_LEFT, doc.y);
+      doc.font(FONT_BODY).fontSize(7.5).fillColor(GRAY_FOOTER).text('Forensic risk indicators identified across connected sources', MARGIN_LEFT, doc.y + 1);
+      doc.y += 4;
+      doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      doc.y += 8;
 
-      doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Full-Spectrum Risk & Compliance Findings', 50, 60);
-      doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text(`§ 4 — ${titles.section7}`, 50, 78);
-      doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      findingsList.slice(0, 8).forEach(f => {
+        ensureSpace(46);
+        const cardY = doc.y;
+        const sev = (f.severity || 'Medium').toUpperCase();
+        const sevColor = sev === 'HIGH' || sev === 'CRITICAL' ? MUTED_RED : sev === 'MEDIUM' ? AMBER_GOLD : FOREST_GREEN;
 
-      let findY = 115;
-      (data.riskFindings || []).slice(0, 5).forEach((f) => {
-        const findingHeight = doc.heightOfString(f.finding, { width: 380 });
-        const evidenceHeight = doc.heightOfString(`Evidence: ${f.evidence}`, { width: 380 });
-        const impactHeight = doc.heightOfString(`Impact: ${f.impact}`, { width: 380 });
-        const cardHeight = Math.max(60, findingHeight + evidenceHeight + impactHeight + 32);
+        doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 40).fill(CARD_BG);
+        doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 40).strokeColor(LIGHT_GRAY).lineWidth(0.4).stroke();
 
-        doc.rect(50, findY, 495, cardHeight).fill(CARD_BG);
-        doc.rect(50, findY, 495, cardHeight).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
+        // Severity tag
+        doc.rect(MARGIN_LEFT + 10, cardY + 12, 50, 16).fill(sevColor);
+        doc.font(FONT_BOLD).fontSize(7).fillColor('#FFFFFF').text(sev, MARGIN_LEFT + 10, cardY + 16, { align: 'center', width: 50 });
 
-        const sev = (f.severity || 'LOW').toUpperCase();
-        const sevColor = sev === 'HIGH' || sev === 'CRITICAL' ? MUTED_RED : sev === 'MEDIUM' ? '#B8860B' : FOREST_GREEN;
-        doc.rect(65, findY + 14, 50, 14).fill(sevColor);
-        doc.font(FONT_BOLD).fontSize(7).fillColor('#FCFCFC').text(sev, 65, findY + 18, { align: 'center', width: 50 });
+        // Finding details
+        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(f.finding, MARGIN_LEFT + 70, cardY + 6, { width: CONTENT_WIDTH - 80, ellipsis: true });
+        doc.font(FONT_MONO).fontSize(7).fillColor(GRAY_FOOTER).text(`Evidence: ${f.evidence} · Platform: ${formatPlatformName(f.platform || 'Connected Vault')}`, MARGIN_LEFT + 70, cardY + 17, { width: CONTENT_WIDTH - 80, ellipsis: true });
+        doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(`Impact: ${f.impact || 'Diligence observation'}`, MARGIN_LEFT + 70, cardY + 27, { width: CONTENT_WIDTH - 80, ellipsis: true });
 
-        doc.y = findY + 12;
-        doc.font(FONT_BOLD).fontSize(9).fillColor(INK_BLACK).text(f.finding, 130, doc.y, { width: 380 });
-        doc.y += 2;
-        doc.font(FONT_MONO).fontSize(7.5).fillColor(GRAY_FOOTER).text(`Evidence: ${f.evidence}`, 130, doc.y, { width: 380 });
-        doc.y += 2;
-        doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(`Impact: ${f.impact}`, 130, doc.y, { width: 380 });
-
-        findY += cardHeight + 12;
+        doc.y = cardY + 44;
       });
+      doc.y += 8;
     }
 
-    // Final Page: Guaranteed Rights & Cryptographic Digital Seal
-    doc.addPage();
-    drawBackground();
+    // SECTION 6: Strategic Recommendations (ONLY rendered if opportunities exist)
+    if (hasOpportunities) {
+      ensureSpace(50);
+      doc.font(FONT_BOLD).fontSize(12).fillColor(INK_BLACK).text(`Strategic Guidance & Recommendations (${data.opportunities.length})`, MARGIN_LEFT, doc.y);
+      doc.y += 4;
+      doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      doc.y += 8;
 
-    doc.fillColor(INK_BLACK).font(FONT_BOLD).fontSize(16).text('Guaranteed Privacy Rights & Digital Attestation', 50, 60);
-    doc.font(FONT_BODY).fontSize(9.5).fillColor(GRAY_FOOTER).text('§ 5 — PRIVACY PROTECTIONS, STATUTORY NOTICES & DIGITAL SEAL', 50, 78);
-    doc.moveTo(50, 95).lineTo(W - 50, 95).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+      (data.opportunities || []).slice(0, 3).forEach(o => {
+        ensureSpace(36);
+        const cardY = doc.y;
+        doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 32).fill(CARD_BG);
+        doc.rect(MARGIN_LEFT, cardY, CONTENT_WIDTH, 32).strokeColor(LIGHT_GRAY).lineWidth(0.4).stroke();
 
-    let citY = 115;
-    doc.font(FONT_BOLD).fontSize(8.5).fillColor(FOREST_GREEN).text('YOUR GUARANTEED PRIVACY RIGHTS & STATUTORY PROTECTIONS', 50, citY);
-    citY += 14;
-    doc.rect(50, citY, 495, 75).fill(CARD_BG);
-    doc.rect(50, citY, 495, 75).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+        doc.font(FONT_BOLD).fontSize(8).fillColor(INK_BLACK).text(o.title, MARGIN_LEFT + 10, cardY + 6, { width: CONTENT_WIDTH - 20, ellipsis: true });
+        doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(o.description, MARGIN_LEFT + 10, cardY + 17, { width: CONTENT_WIDTH - 20, ellipsis: true });
 
-    doc.font(FONT_BODY).fontSize(7.5).fillColor(INK_BLACK).text(
-      '• 100% Data Sovereignty: All analysis is conducted strictly read-only via authorized OAuth connectors. We never search public web brokers or external scrapers.\n' +
-      '• Zero AI Model Training: Your private emails, calendar events, and internal communications are strictly confidential and are NEVER used to train AI models.\n' +
-      '• GDPR Articles 15, 17 & 20 Rights: You retain the unconditional right to export, inspect, or permanently erase your data vault (Right to be Forgotten) at any time.\n' +
-      '• Enterprise-Grade Encryption: All connector access tokens are encrypted in Supabase using military-grade AES-256-GCM encryption.',
-      62, citY + 10, { width: 470, lineGap: 3.5 }
+        doc.y = cardY + 36;
+      });
+      doc.y += 8;
+    }
+
+    // SECTION 7: Key Entities & Associations (ONLY rendered if entities exist)
+    if (hasEntities) {
+      ensureSpace(40);
+      doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('KEY ENTITIES & REPUTATIONAL ASSOCIATIONS', MARGIN_LEFT, doc.y);
+      doc.y += 4;
+      const entitiesList = (data.topEntities || []).slice(0, 8).join('  ·  ');
+      doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(entitiesList, MARGIN_LEFT, doc.y, { width: CONTENT_WIDTH });
+      doc.y += 14;
+    }
+
+    // SECTION 8: Data Sources Inventory Matrix
+    ensureSpace(60);
+    doc.font(FONT_BOLD).fontSize(10).fillColor(FOREST_GREEN).text('AUDITED DATA SOURCES MATRIX', MARGIN_LEFT, doc.y);
+    doc.y += 6;
+
+    const sources = (data.connectorsCovered && data.connectorsCovered.length > 0)
+      ? data.connectorsCovered
+      : ['gmail', 'google_calendar'];
+
+    const invLineY = doc.y;
+    doc.rect(MARGIN_LEFT, invLineY, CONTENT_WIDTH, 18).fill(CARD_BG);
+    doc.rect(MARGIN_LEFT, invLineY, CONTENT_WIDTH, 18).strokeColor(LIGHT_GRAY).lineWidth(0.4).stroke();
+    doc.font(FONT_BOLD).fontSize(7).fillColor(GRAY_FOOTER);
+    doc.text('PLATFORM', MARGIN_LEFT + 10, invLineY + 5);
+    doc.text('CATEGORY', MARGIN_LEFT + 160, invLineY + 5);
+    doc.text('VOLUME', MARGIN_LEFT + 320, invLineY + 5);
+    doc.text('STATUS', MARGIN_LEFT + 420, invLineY + 5);
+    doc.y = invLineY + 18;
+
+    sources.forEach(p => {
+      ensureSpace(18);
+      const rowY = doc.y;
+      const key = p.toLowerCase();
+      const pInfo = data.platformData[key] || { count: 0, category: 'Productivity' };
+      const friendlyCount = formatInteractionType(p, pInfo.count);
+
+      doc.rect(MARGIN_LEFT, rowY, CONTENT_WIDTH, 16).fill(BG_CREAM);
+      doc.rect(MARGIN_LEFT, rowY, CONTENT_WIDTH, 16).strokeColor(LIGHT_GRAY).lineWidth(0.2).stroke();
+
+      doc.font(FONT_BOLD).fontSize(7.5).fillColor(INK_BLACK).text(formatPlatformName(p), MARGIN_LEFT + 10, rowY + 4);
+      doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(pInfo.category || 'Productivity', MARGIN_LEFT + 160, rowY + 4);
+      doc.font(FONT_BODY).fontSize(7).fillColor(INK_BLACK).text(friendlyCount, MARGIN_LEFT + 320, rowY + 4);
+      doc.font(FONT_BOLD).fontSize(7).fillColor(FOREST_GREEN).text('VERIFIED', MARGIN_LEFT + 420, rowY + 4);
+
+      doc.y = rowY + 16;
+    });
+    doc.y += 12;
+
+    // SECTION 9: Factual Data Privacy Standards & Cryptographic Seal
+    ensureSpace(100);
+    const privacyY = doc.y;
+    doc.rect(MARGIN_LEFT, privacyY, CONTENT_WIDTH, 48).fill(CARD_BG);
+    doc.rect(MARGIN_LEFT, privacyY, CONTENT_WIDTH, 48).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
+
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(FOREST_GREEN).text('VERIFIED PRIVACY STANDARDS', MARGIN_LEFT + 10, privacyY + 7);
+    doc.font(FONT_BODY).fontSize(7).fillColor(INK_BLACK).text(
+      '• Read-only access: Connected services are evaluated via authenticated, read-only OAuth tokens.\n' +
+      '• Private by design: Customer data is never shared with third parties or public brokers.\n' +
+      '• User data sovereignty: You retain the right to inspect, export, or erase your indexed records at any time.',
+      MARGIN_LEFT + 10, privacyY + 18, { width: CONTENT_WIDTH - 20, lineGap: 2.5 }
     );
 
-    citY += 95;
-    doc.moveTo(50, citY).lineTo(W - 50, citY).strokeColor(LIGHT_GRAY).lineWidth(0.5).stroke();
-    citY += 15;
-
-    doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text('CRYPTOGRAPHIC DIGITAL AUTHENTICITY SEAL (SHA-256)', 50, citY);
+    // Cryptographic Seal
+    const sealY = privacyY + 54;
+    doc.font(FONT_BOLD).fontSize(7.5).fillColor(INK_BLACK).text('CRYPTOGRAPHIC AUTHENTICITY SEAL (SHA-256)', MARGIN_LEFT, sealY);
     const shaHash = crypto.createHash('sha256').update(data.id + data.createdAt + data.riskScore).digest('hex');
-    doc.font(FONT_MONO).fontSize(8.5).fillColor(FOREST_GREEN).text(`SHA-256: ${shaHash.slice(0, 32)}`, 50, citY + 14);
-    doc.text(`         ${shaHash.slice(32)}`, 50, citY + 24);
-
-    doc.font(FONT_BODY).fontSize(7).fillColor(GRAY_FOOTER).text(
-      'This certificate is digitally signed and sealed. Any tampering or unauthorized modification immediately invalidates this digital certificate.',
-      50, citY + 38, { width: 280 }
+    doc.font(FONT_MONO).fontSize(7.5).fillColor(FOREST_GREEN).text(`SHA-256: ${shaHash.slice(0, 32)} ${shaHash.slice(32)}`, MARGIN_LEFT, sealY + 10);
+    doc.font(FONT_BODY).fontSize(6.5).fillColor(GRAY_FOOTER).text(
+      `Certificate ID: EYES-RA-${data.id.slice(0, 8).toUpperCase()}  ·  Certified: ${dateStr}`,
+      MARGIN_LEFT, sealY + 22
     );
-
-    doc.font(FONT_BODY).fontSize(8).fillColor(GRAY_FOOTER).text(`Certificate ID: EYES-RA-${data.id.slice(0, 8).toUpperCase()}`, 350, citY + 14);
-    doc.text(`Certified: ${dateStr}`, 350, citY + 24);
   }
 
   /**
@@ -678,8 +488,8 @@ export class PDFGenerationService {
               subjectName = profile.name.trim();
             } else if (profile?.email?.trim()) {
               subjectName = profile.email.trim();
-            } else {
-              const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+            } else if ((supabase.auth as any)?.admin?.getUserById) {
+              const { data: authUser } = await (supabase.auth as any).admin.getUserById(userId);
               if (authUser?.user?.email) {
                 subjectName = authUser.user.user_metadata?.full_name || authUser.user.email;
               }
@@ -750,93 +560,82 @@ export class PDFGenerationService {
             };
           });
 
+          // Extract commitments and findings
+          const findingsData = (audit.extractedFindings || {}) as Record<string, any>;
+          const rawCommitments = (findingsData.commitments || audit.metadata?.commitments || []) as Commitment[];
+          const rawFindings = (findingsData.flagged_items || audit.metadata?.riskFindings || []) as RiskFinding[];
+          const rawOpportunities = (findingsData.opportunities || audit.metadata?.opportunities || []) as Opportunity[];
+          const rawEntities = (findingsData.entities || audit.metadata?.topEntities || []) as string[];
+
           const doc = new PDFDocument({
             size: 'A4',
-            margins: { top: 40, bottom: 40, left: 50, right: 50 },
+            margins: { top: 50, bottom: 55, left: 50, right: 50 },
+            autoFirstPage: true,
             bufferPages: true
           });
 
           const chunks: Buffer[] = [];
           doc.on('data', chunk => chunks.push(chunk));
           doc.on('end', () => resolve(Buffer.concat(chunks)));
-          doc.on('error', reject);
-
-          const memoryContentMap: Record<string, string> = {};
+          doc.on('error', err => reject(err));
 
           const normalized: NormalizedAuditData = {
             id: audit.id,
             createdAt: audit.createdAt || new Date().toISOString(),
-            subjectName: subjectName,
+            subjectName: subjectName || 'Account Holder',
             connectorsCovered: targetConnectors,
             mentionsCount: audit.mentionsCount || 0,
             commitmentsCount: audit.commitmentsCount || 0,
-            riskScore: audit.riskScore || 0,
+            riskScore: Number(audit.riskScore || 0),
             summaryNarrative: audit.summaryNarrative || '',
-            complianceRate: audit.metadata?.complianceRate || '100.00',
-            failureRate: audit.metadata?.failureRate || '0.00',
-            sentimentBalance: audit.metadata?.sentimentBalance || 1.0,
-            opportunities: (audit.metadata?.opportunities || []).map((o: unknown) => {
-              if (typeof o === 'object' && o !== null) {
-                const opt = o as Record<string, unknown>;
-                return {
-                  title: String(opt.title || ''),
-                  description: String(opt.description || ''),
-                  source: String(opt.source || 'Reputation Audit Insights'),
-                  priority: opt.priority ? String(opt.priority) : undefined,
-                  scoreReduction: opt.scoreReduction ? String(opt.scoreReduction) : undefined
-                };
-              }
-              return {
-                title: String(o),
-                description: String(o),
-                source: 'Reputation Audit Insights'
-              };
-            }),
-            topEntities: audit.metadata?.topEntities || [],
-            commitments: audit.metadata?.commitments || [],
-            riskFindings: audit.metadata?.riskFindings || [],
-            allExtractedFindings: ((audit.metadata as Record<string, unknown>)?.allExtractedFindings as RiskFinding[]) || audit.metadata?.riskFindings || [],
+            complianceRate: (audit.metadata as Record<string, string>)?.complianceRate || '100.00',
+            failureRate: (audit.metadata as Record<string, string>)?.failureRate || '0.00',
+            sentimentBalance: (audit.metadata as Record<string, number>)?.sentimentBalance ?? 1.0,
+            opportunities: rawOpportunities,
+            topEntities: rawEntities,
+            commitments: rawCommitments,
+            riskFindings: rawFindings,
             platformData: platformData,
-            auditType: audit.metadata?.audit_type || 'full',
-            crossLensConsistency: ((audit.metadata as Record<string, unknown>)?.crossLensConsistency as NormalizedAuditData['crossLensConsistency']) || undefined,
-            platformSentiment: (audit.metadata as Record<string, unknown>)?.platformSentiment || null,
-            memoryContentMap: memoryContentMap
+            auditType: (audit.metadata as Record<string, string>)?.audit_type || 'full',
           };
 
+          // Draw dynamic sections
           this.draw(doc, normalized);
 
-          // Second Pass: Add headers, footers & page numbering dynamically
+          // Second Pass: Add subtle borders, headers, and dynamic page count ("Page X of Y")
           const range = doc.bufferedPageRange();
           const totalPages = range.count;
           const W = doc.page.width;
           const H = doc.page.height;
+
           for (let i = 0; i < totalPages; i++) {
             doc.switchToPage(i);
             const origBottom = doc.page.margins.bottom;
             doc.page.margins.bottom = 0;
 
-            // Subtle watermark
+            // Watermark on background
             doc.save();
-            doc.opacity(0.04);
+            doc.opacity(0.03);
             doc.fillColor('#1F4D3F');
-            doc.font('Helvetica-Bold').fontSize(50);
+            doc.font('Helvetica-Bold').fontSize(45);
             doc.translate(W / 2, H / 2);
             doc.rotate(-45);
-            doc.text('CONFIDENTIAL', -250, -25, { width: 500, align: 'center' });
+            doc.text('CONFIDENTIAL', -250, -20, { width: 500, align: 'center' });
             doc.restore();
 
-            // Refined border outline
+            // Border outline
             doc.rect(35, 35, W - 70, H - 70)
                .strokeColor('#1F4D3F')
-               .lineWidth(1.0)
+               .lineWidth(0.8)
                .stroke();
 
             // Wordmark on subsequent pages
             if (i > 0) {
-              doc.fillColor('#1F4D3F').fontSize(10).font('Helvetica-Bold')
-                 .text('EYES', 50, 48);
+              doc.fillColor('#1F4D3F').fontSize(9).font('Helvetica-Bold')
+                 .text('EYES · Reputation Dossier', 50, 42);
             }
 
+            // Footer on every page
             const footerText1 = `Certificate ID: EYES-RA-${normalized.id.slice(0, 8).toUpperCase()}  ·  CONFIDENTIAL  ·  EYES`;
             const footerText2 = `Page ${i + 1} of ${totalPages}`;
 
@@ -857,29 +656,23 @@ export class PDFGenerationService {
   }
 
   /**
-   * Generates the PDF, writes it locally (if dev), and uploads it to Supabase Storage.
+   * Generates the PDF and uploads it to Supabase Storage if required.
    */
   static async generateAndUpload(audit: ReputationAudit, userId: string): Promise<string> {
     try {
       const pdfBuffer = await this.generateBuffer(audit, userId);
 
-      if (process.env.NODE_ENV === 'development' || process.env.TEST_PDF === 'true' || true) {
+      if (process.env.NODE_ENV === 'development' || process.env.TEST_PDF === 'true') {
         try {
           const localPath = path.join(process.cwd(), 'test_audit.pdf');
           fs.writeFileSync(localPath, pdfBuffer);
-          console.log('[PDF] Saved local copy to:', localPath);
-        } catch (localErr) {
-          console.error('[PDF] Failed to write local copy:', localErr);
-        }
+        } catch {}
       }
 
       const supabase = await createClient();
-
       try {
         await supabase.storage.createBucket('audits', { public: false });
-      } catch {
-        // Ignore if bucket exists
-      }
+      } catch {}
 
       const fileName = `audit_${audit.id}.pdf`;
       const filePath = `${userId}/${fileName}`;
@@ -891,23 +684,16 @@ export class PDFGenerationService {
           upsert: true
         });
 
-      if (uploadError) {
-        console.error('[PDF] Upload failed:', uploadError);
-        return null as unknown as string;
-      }
+      if (uploadError) return null as unknown as string;
 
       const { data: signedData, error: signedError } = await supabase.storage
         .from('audits')
         .createSignedUrl(filePath, 60 * 60 * 24 * 7);
 
-      if (signedError) {
-        console.error('[PDF] Signed URL generation failed:', signedError);
-        return null as unknown as string;
-      }
+      if (signedError) return null as unknown as string;
 
       return signedData.signedUrl;
-    } catch (err) {
-      console.error('[PDF] Upload/Write process failed:', err);
+    } catch {
       return null as unknown as string;
     }
   }
