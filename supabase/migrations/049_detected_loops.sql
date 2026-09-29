@@ -32,6 +32,7 @@ CREATE POLICY "Users can view own loops"
 
 CREATE POLICY "Service role has full access to loops"
   ON detected_loops FOR ALL
+  TO service_role
   USING (true)
   WITH CHECK (true);
 

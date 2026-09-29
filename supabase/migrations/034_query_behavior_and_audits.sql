@@ -66,5 +66,6 @@ CREATE POLICY "Users can update own audits"
 
 CREATE POLICY "Service role full access on audits"
   ON audits FOR ALL
+  TO service_role
   USING (TRUE)
   WITH CHECK (TRUE);

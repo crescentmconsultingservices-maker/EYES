@@ -49,6 +49,7 @@ async function executeEmailReplyAction(supabase: Awaited<ReturnType<typeof creat
       .from('memories')
       .select('source_id')
       .eq('id', messageId)
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (memory?.source_id) {
@@ -334,6 +335,7 @@ async function executeSlackReplyAction(supabase: Awaited<ReturnType<typeof creat
         .from('memories')
         .select('metadata')
         .eq('id', messageId)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (memory?.metadata) {

@@ -30,5 +30,6 @@ create policy "Users insert own sent logs"
 
 create policy "Service role full access sent logs"
   on public.action_sent_log for all
+  to service_role
   using (true)
   with check (true);

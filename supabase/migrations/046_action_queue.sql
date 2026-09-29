@@ -41,6 +41,7 @@ create policy "Users update own actions"
 
 create policy "Service role full access"
   on public.action_queue for all
+  to service_role
   using (true)
   with check (true);
 
@@ -60,5 +61,6 @@ create policy "Users manage own extraction log"
 
 create policy "Service role full access extraction log"
   on public.action_extraction_log for all
+  to service_role
   using (true)
   with check (true);

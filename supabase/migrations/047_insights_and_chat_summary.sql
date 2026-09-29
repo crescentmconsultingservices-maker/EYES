@@ -36,6 +36,7 @@ create policy "Users can read own insights"
 -- Service role can write (nightly job uses service key)
 create policy "Service role can manage insights"
   on public.insights for all
+  to service_role
   using (true)
   with check (true);
 
