@@ -37,20 +37,14 @@ export class AuditAnalysisService {
 
       const connectorsCovered = Array.from(new Set(events.map(e => e.platform)));
 
-      // Calculate actual scan window date range (historical only, capped at current time)
+      // Calculate 24-month audit scan window (matching PDF certificate standard: 24 months preceding audit)
       const nowTs = Date.now();
-      const validPastTimestamps = events
-        .map(e => new Date(e.timestamp).getTime())
-        .filter(t => !isNaN(t) && t <= nowTs && t >= nowTs - 3 * 365 * 24 * 60 * 60 * 1000);
-
-      const minDate = validPastTimestamps.length > 0
-        ? new Date(Math.min(...validPastTimestamps))
-        : new Date(nowTs - 24 * 30 * 24 * 60 * 60 * 1000);
+      const minDate = new Date(nowTs - 24 * 30 * 24 * 60 * 60 * 1000);
       const maxDate = new Date(nowTs);
 
-      const startMonthYear = minDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const endMonthYear = maxDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const actualScanWindow = `${startMonthYear} – ${endMonthYear}`;
+      const startRange = minDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const endRange = maxDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      const actualScanWindow = `${startRange} to ${endRange}`;
 
       // Stage: filter — smart record selection begins
       await setStage('filter', { metadata: { ...((auditRecord?.metadata as Record<string, unknown>) ?? {}), record_count: events.length } });
@@ -842,7 +836,7 @@ Return JSON ONLY (no markdown, no explanation):
         cleanNarrative = cleanNarrative
           .replace(/\b\d+\s+platform records\b/gi, `${events.length} interactions evaluated`)
           .replace(/\b\d+\s+records analysed\b/gi, `${events.length} records analysed`)
-          .replace(/\b\d+\s+total records\b/gi, `${events.length} total records`)
+          .replace(/during the [A-Za-z0-9, .–-]+?scan window/gi, `during the ${actualScanWindow} scan window`)
           .replace(/\b\d+-year scan window\s*(\([^)]+\))?/gi, `${actualScanWindow} scan window`)
           .replace(/Q\d\s+\d{4}\s*[-–]\s*Q\d\s+\d{4}/gi, actualScanWindow)
           .replace(/\b(?:from an investor perspective|investor perspective|behaviorally|professionally|four assessment dimensions)\b[,:\s]*/gi, '')
@@ -1029,6 +1023,7 @@ Return JSON ONLY (no markdown, no explanation):
           failureRate: failureRate.toFixed(2),
           complianceRate: complianceRate.toFixed(2),
           audit_type: auditType,
+          scan_window: actualScanWindow,
           crossLensConsistency: summaryResult.crossLensConsistency || null,
           platformSentiment: platformSentiment
         }
@@ -1042,6 +1037,7 @@ Return JSON ONLY (no markdown, no explanation):
           risk_score: finalRiskScore,
           narrative: cleanNarrative,
           metadata: {
+            scan_window: actualScanWindow,
             dominantPattern: summaryResult.dominantPattern || null,
             reputationProjection: summaryResult.reputationProjection || null,
             opportunities: extractedFindingsData.opportunities,

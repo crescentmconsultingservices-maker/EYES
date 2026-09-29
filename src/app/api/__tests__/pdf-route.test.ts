@@ -100,4 +100,38 @@ describe('GET /api/audit/[id]/pdf', () => {
     console.log('Test Generated PDF Size:', arrayBuffer.byteLength, 'bytes');
     expect(arrayBuffer.byteLength).toBeGreaterThan(0);
   });
+
+  it('synchronizes narrative scan window with the certificate header scan window', async () => {
+    // Inject disparate scan window into audit narrative
+    hoisted.audit.summary_narrative = 'Analysis of 120 interactions evaluated across gmail, slack during the May 2026 – Sep 2026 scan window indicates a clean operational profile.';
+    
+    const req = new Request(`http://localhost:3000/api/audit/${hoisted.audit.id}/pdf`);
+    const params = Promise.resolve({ id: hoisted.audit.id });
+
+    const response = await GET(req, { params });
+    expect(response.status).toBe(200);
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    
+    // Decompress and verify that the narrative text does not retain the mismatched 'May 2026 – Sep 2026'
+    const zlib = await import('zlib');
+    let text = '';
+    let pos = 0;
+    while ((pos = buffer.indexOf('stream', pos)) !== -1) {
+      pos += 6;
+      if (buffer[pos] === 0x0d && buffer[pos+1] === 0x0a) pos += 2;
+      else if (buffer[pos] === 0x0a) pos += 1;
+      const end = buffer.indexOf('endstream', pos);
+      if (end !== -1) {
+        try {
+          const decompressed = zlib.inflateSync(buffer.slice(pos, end)).toString('latin1');
+          text += decompressed;
+        } catch (e) {}
+        pos = end + 9;
+      }
+    }
+
+    // Verify 'May 2026' was scrubbed and replaced with the true computed scan window
+    expect(text.includes('May 2026')).toBe(false);
+  });
 });

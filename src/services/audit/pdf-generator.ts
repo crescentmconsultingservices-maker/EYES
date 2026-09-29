@@ -212,6 +212,7 @@ export class PDFGenerationService {
     const dateStr = `${dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} · ${dateObj.getUTCHours().toString().padStart(2, '0')}:${dateObj.getUTCMinutes().toString().padStart(2, '0')} UTC`;
     const startRange = new Date(new Date(data.createdAt).getTime() - 24 * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     const endRange = new Date(data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const scanWindow = `${startRange} to ${endRange}`;
 
     // 1. Plain summary line up top: one clear sentence
     let plainSummaryLine = '';
@@ -253,7 +254,7 @@ export class PDFGenerationService {
     doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(lensDisplayName, MARGIN_LEFT + 100, metaStartY);
 
     doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('SCAN WINDOW', col2X, metaStartY);
-    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(`${startRange} to ${endRange}`, col2X + 85, metaStartY);
+    doc.font(FONT_BODY).fontSize(8).fillColor(INK_BLACK).text(scanWindow, col2X + 85, metaStartY);
 
     doc.font(FONT_BOLD).fontSize(7.5).fillColor(GRAY_FOOTER).text('PREPARED FOR', MARGIN_LEFT, metaStartY + 15);
     doc.font(FONT_BOLD).fontSize(8.5).fillColor(INK_BLACK).text(data.subjectName, MARGIN_LEFT + 100, metaStartY + 15);
@@ -319,7 +320,11 @@ export class PDFGenerationService {
     doc.moveTo(MARGIN_LEFT, doc.y).lineTo(MARGIN_LEFT + CONTENT_WIDTH, doc.y).strokeColor(FOREST_GREEN).lineWidth(0.5).stroke();
     doc.y += 8;
 
-    const narrative = data.summaryNarrative || plainSummaryLine;
+    const rawNarrative = data.summaryNarrative || plainSummaryLine;
+    const narrative = rawNarrative
+      .replace(/during the [A-Za-z0-9, .–-]+?scan window/gi, `during the ${scanWindow} scan window`)
+      .replace(/\b\d+-year scan window\s*(\([^)]+\))?/gi, `${scanWindow} scan window`)
+      .replace(/Q\d\s+\d{4}\s*[-–]\s*Q\d\s+\d{4}/gi, scanWindow);
     doc.font(FONT_BODY).fontSize(8.5).fillColor(INK_BLACK).text(narrative, MARGIN_LEFT, doc.y, { width: CONTENT_WIDTH, lineGap: 3.5 });
     doc.y += 14;
 
